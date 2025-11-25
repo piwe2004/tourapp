@@ -1,0 +1,1 @@
+// Firestore DB types
