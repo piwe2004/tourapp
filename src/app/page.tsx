@@ -6,8 +6,11 @@ import ResultView from "@/components/ResultView";
 import { MOCK_COURSE } from "@/lib/mockData";
 
 export default function Home() {
+  // 결과 화면을 보여줄지 말지 결정하는 스위치 (처음엔 안 보여줌: false)
   const [showResult, setShowResult] = useState(false);
+  // 사용자가 입력한 여행지 글자 저장 (처음엔 빈칸: "")
   const [destination, setDestination] = useState("");
+  // 로딩 중인지 아닌지 체크 (처음엔 로딩 아님: false)
   const [isLoading, setIsLoading] = useState(false);
 
   const handleGenerate = () => {
