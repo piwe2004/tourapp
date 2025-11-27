@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Calendar, CheckCircle2, MapPin } from 'lucide-react';
 import { INITIAL_SCHEDULE } from '@/lib/constants';
 import { ScheduleItem } from '@/types';

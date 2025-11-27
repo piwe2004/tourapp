@@ -1,5 +1,3 @@
-import React from 'react';
-
 export type Tab = 'home' | 'plan';
 export type RegionKey = '전체' | '제주' | '강원' | '부산/경상' | '전라' | '서울/경기';
 

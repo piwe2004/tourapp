@@ -1,16 +1,15 @@
-import React from 'react';
 import { Baby, User, Sun, Utensils, Music, Mountain, Train, Camera } from 'lucide-react';
 import { Destination, ScheduleItem } from '@/types';
 
 export const TRAVEL_TYPES = [
     { label: '아이와 함께', icon: <Baby size={ 24} /> },
-{ label: '부모님 효도', icon: <User size={ 24 } /> },
-{ label: '커플 데이트', icon: <Sun size={ 24 } /> },
-{ label: '혼자 여행', icon: <User size={ 24 } /> },
-{ label: '맛집 투어', icon: <Utensils size={ 24 } /> },
-{ label: '휴양/힐링', icon: <Sun size={ 24 } /> },
-{ label: '문화/역사', icon: <Music size={ 24 } /> },
-{ label: '액티비티', icon: <Mountain size={ 24 } /> },
+    { label: '부모님 효도', icon: <User size={ 24 } /> },
+    { label: '커플 데이트', icon: <Sun size={ 24 } /> },
+    { label: '혼자 여행', icon: <User size={ 24 } /> },
+    { label: '맛집 투어', icon: <Utensils size={ 24 } /> },
+    { label: '휴양/힐링', icon: <Sun size={ 24 } /> },
+    { label: '문화/역사', icon: <Music size={ 24 } /> },
+    { label: '액티비티', icon: <Mountain size={ 24 } /> },
 ];
 
 export const DESTINATIONS_DB: Destination[] = [
@@ -26,7 +25,7 @@ export const DESTINATIONS_DB: Destination[] = [
 
 export const INITIAL_SCHEDULE: ScheduleItem[] = [
     { id: 1, time: "11:00", activity: "제주공항 도착", type: "sightseeing", icon: <Train size={ 16} />, memo: "셔틀버스 탑승장 이동" },
-{ id: 2, time: "12:30", activity: "애월 해안도로 드라이브", type: "sightseeing", icon: <Camera size={ 16 }/>, memo: "해안가 카페 들르기" },
-{ id: 3, time: "14:00", activity: "고기국수 점심 식사", type: "food", icon: <Utensils size={ 16 }/> },
-{ id: 4, time: "16:00", activity: "협재 해수욕장 산책", type: "sightseeing", icon: <Sun size={ 16 }/>, memo: "일몰 사진 포인트" },
+    { id: 2, time: "12:30", activity: "애월 해안도로 드라이브", type: "sightseeing", icon: <Camera size={ 16 }/>, memo: "해안가 카페 들르기" },
+    { id: 3, time: "14:00", activity: "고기국수 점심 식사", type: "food", icon: <Utensils size={ 16 }/> },
+    { id: 4, time: "16:00", activity: "협재 해수욕장 산책", type: "sightseeing", icon: <Sun size={ 16 }/>, memo: "일몰 사진 포인트" },
 ];

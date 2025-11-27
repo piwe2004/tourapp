@@ -1,4 +1,3 @@
-import React from 'react';
 import { TRAVEL_TYPES } from '@/lib/constants';
 
 export default function TravelCategories() {
