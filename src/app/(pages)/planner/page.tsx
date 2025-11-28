@@ -1,14 +1,15 @@
+'use client';
+
 import { useState } from 'react';
 import { Calendar, CheckCircle2, MapPin } from 'lucide-react';
 import { INITIAL_SCHEDULE } from '@/lib/constants';
 import { ScheduleItem } from '@/types';
 
 interface PlannerViewProps {
-    isResult?: boolean;
     destination?: string;
 }
 
-export default function PlannerView({ isResult, destination }: PlannerViewProps) {
+export default function PlannerView({ destination }: PlannerViewProps) {
     const [schedule, setSchedule] = useState<ScheduleItem[]>(INITIAL_SCHEDULE);
 
     return (
@@ -19,7 +20,7 @@ export default function PlannerView({ isResult, destination }: PlannerViewProps)
                     <div className="flex items-center gap-2 mb-2">
                         <span className="bg-indigo-100 text-indigo-700 px-2.5 py-0.5 rounded-lg text-xs font-bold border border-indigo-200">3박 4일</span>
                         <h2 className="text-3xl font-black text-slate-900">
-                            {isResult && destination ? `✨ ${destination} 맞춤 여행` : '🍊 제주도 힐링 여행'}
+                            {destination ? `✨ ${destination} 맞춤 여행` : '🍊 제주도 힐링 여행'}
                         </h2>
                     </div>
                     <p className="text-slate-500 text-sm font-medium flex items-center gap-2">

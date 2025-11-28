@@ -3,36 +3,30 @@
 import { useState } from 'react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import { Tab } from '@/types';
 import PlannerView from './(pages)/planner/page';
 import HomeView from './(pages)/(home)/page';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
   const [destination, setDestination] = useState("");
-  const [showResult, setShowResult] = useState(false);
-  const [activeTab, setActiveTab] = useState<Tab>('home');
 
+  const router = useRouter();
 
-
+  router.push(`/planner`);
 
   return (
     <div className="min-h-screen bg-white font-sans text-slate-900 selection:bg-indigo-100">
       {/* Header */}
-      <Header
-        setShowResult={setShowResult}
-        setActiveTab={setActiveTab}
-      />
+      <Header />
       {/* Main Content */}
       <main>
-        {activeTab === 'home' ? (
+        {destination === '' ? (
           <HomeView
             destination={destination}
             setDestination={setDestination}
-            setShowResult={setShowResult}
-            setActiveTab={setActiveTab}
           />
         ) : (
-          <PlannerView isResult={showResult} destination={destination} />
+          <PlannerView destination={destination} />
         )}
       </main>
       {/* Footer */}

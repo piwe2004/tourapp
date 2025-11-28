@@ -2,29 +2,22 @@ import { useEffect, useState } from "react";
 import { MapPin, Search, Settings } from "lucide-react";
 import { Tab } from "@/types";
 
-interface HeaderProps{
-    setShowResult: (val:boolean) => void;
-    setActiveTab: (val:Tab) => void;
-}
 
-export default function Header({
-        setShowResult,
-        setActiveTab,
-}:HeaderProps){
+export default function Header() {
     const [scrolled, setScrolled] = useState<boolean>(false);
 
     useEffect(() => {
         const handleScroll = () => { setScrolled(window.scrollY > 20); };
         if (typeof window !== 'undefined') {
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
+            window.addEventListener('scroll', handleScroll);
+            return () => window.removeEventListener('scroll', handleScroll);
         }
     }, []);
 
-    return(
+    return (
         <header className={`fixed w-full z-50 transition-all duration-300 ${scrolled ? 'bg-white/95 backdrop-blur-sm shadow-md py-4' : 'bg-transparent py-6'}`}>
             <div className="mx-auto px-6 md:px-12 flex justify-between items-center">
-                <div className="flex items-center gap-2 cursor-pointer group" onClick={() => { setActiveTab('home'); setShowResult(false); }}>
+                <div className="flex items-center gap-2 cursor-pointer group">
                     <div className="bg-indigo-600 text-white p-2.5 rounded-xl shadow-lg shadow-indigo-200 group-hover:scale-110 transition-transform duration-300">
                         <MapPin size={22} fill="currentColor" />
                     </div>
