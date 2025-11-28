@@ -57,7 +57,12 @@ export default function HeroSection({
                 className="flex-1 bg-transparent outline-none text-slate-900 font-bold ml-4 text-base placeholder-slate-400 w-full min-w-0"
                 value={destination}
                 onChange={(e) => setDestination(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
+                onKeyDown={(e) => {
+                  if(e.nativeEvent.isComposing) return;
+                  if(e.key === 'Enter'){
+                    handleGenerate();
+                  }
+                }}
               />
               <button
                 onClick={handleGenerate}

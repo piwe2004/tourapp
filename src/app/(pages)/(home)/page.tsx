@@ -5,25 +5,29 @@ import HeroSection from "@/components/home/HeroSection";
 import TravelCategories from "@/components/home/TravelCategories";
 import PopularDestinations from "@/components/home/PopularDestinations";
 
+interface HomeViewProps{
+    destination: string;
+    setDestination: (destination: string) => void;
+    onGenerate:(validDestination:string) => void;
+    isLoading:boolean;
+}
+
 export default function HomeView({
     destination,
     setDestination,
-}: {
-    destination: string;
-    setDestination: (destination: string) => void;
-}) {
-    const handleGenerate = () => {
+    onGenerate,
+    isLoading
+}: HomeViewProps) {
+
+    // 유효성 검사
+    const handleButtonClick = () => {
         if (!destination.trim()) {
-            alert("여행지를 입력해주세요!"); // 간단한 유효성 검사
+            alert("여행지를 입력해주세요!");
             return;
         }
-        setIsLoading(true);
-        // AI 생성 흉내 (1.5초 딜레이)
-        setTimeout(() => {
-            setIsLoading(false);
-        }, 1500);
+        
+        onGenerate(destination);
     };
-    const [isLoading, setIsLoading] = useState(false);
 
 
     return (
@@ -31,7 +35,7 @@ export default function HomeView({
             <HeroSection
                 destination={destination}
                 setDestination={setDestination}
-                handleGenerate={handleGenerate}
+                handleGenerate={handleButtonClick}
                 isLoading={isLoading}
             />
             <TravelCategories />
