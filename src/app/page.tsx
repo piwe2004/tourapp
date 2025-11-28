@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react';
 import HeroSection from '@/components/home/HeroSection';
 import TravelCategories from '@/components/home/TravelCategories';
 import PopularDestinations from '@/components/home/PopularDestinations';
-import PlannerView from '@/components/planner/PlannerView';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Tab } from '@/types';
+import PlannerView from './(pages)/planner/page';
 
 export default function Home() {
   const [destination, setDestination] = useState("");
