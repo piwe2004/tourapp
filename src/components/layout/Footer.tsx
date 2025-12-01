@@ -1,12 +1,23 @@
-export default function Footer(){
-    return(
-        <footer className="bg-slate-900 text-white py-10 mt-20">
-            <div className="max-w-7xl mx-auto px-6 text-center md:text-left flex flex-col md:flex-row justify-between items-center gap-4">
+import { Sparkles } from "lucide-react";
+
+export default function Footer() {
+    return (
+        <footer className="bg-slate-50 border-t border-slate-200 py-12 mt-0">
+            <div className="max-w-7xl mx-auto px-6 md:px-12 flex flex-col md:flex-row justify-between items-center gap-6 text-center md:text-left">
                 <div>
-                <span className="font-bold text-xl tracking-tight">TripMaker</span>
-                <p className="text-slate-400 text-sm mt-1 opacity-70">당신의 여행을 디자인합니다.</p>
+                    <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
+                        <div className="w-6 h-6 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
+                            <Sparkles size={12} fill="currentColor" />
+                        </div>
+                        <span className="font-bold text-lg text-slate-900">Planni</span>
+                    </div>
+                    <p className="text-slate-500 text-sm">가장 친한 여행 친구, 플래니와 함께 떠나보세요.</p>
                 </div>
-                <p className="text-xs text-slate-500 font-medium">© 2024 TripMaker Korea. All rights reserved.</p>
+                <div className="flex gap-6 text-xs font-bold text-slate-400">
+                    <span className="hover:text-indigo-600 cursor-pointer transition-colors">이용약관</span>
+                    <span className="hover:text-indigo-600 cursor-pointer transition-colors">개인정보처리방침</span>
+                    <span className="hover:text-indigo-600 cursor-pointer transition-colors">고객센터</span>
+                </div>
             </div>
         </footer>
     );

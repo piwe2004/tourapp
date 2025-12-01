@@ -22,11 +22,10 @@ export default function Header() {
 
   return (
     <header
-      className={`fixed w-full z-50 transition-all duration-300 ${
-        scrolled
+      className={`fixed w-full z-50 transition-all duration-300 ${scrolled
           ? "bg-white/95 backdrop-blur-sm shadow-md py-4"
           : "bg-transparent py-6"
-      }`}
+        }`}
     >
       <div className="mx-auto px-6 md:px-12 flex justify-between items-center">
         {/* 로고 영역: 클릭 시 홈으로 이동하도록 Link 태그 사용 권장 */}
@@ -35,9 +34,9 @@ export default function Header() {
             <MapPin size={22} fill="currentColor" />
           </div>
           {/* 브랜드명 변경: TripMaker -> Planni */}
-          <span className="text-2xl font-black tracking-tighter text-slate-900">
+          <h1 className="text-2xl font-black tracking-tighter text-slate-900">
             Planni
-          </span>
+          </h1>
         </Link>
 
         <div className="flex items-center gap-3">
