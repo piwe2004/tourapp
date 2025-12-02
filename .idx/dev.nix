@@ -6,5 +6,24 @@
       "bradlc.vscode-tailwindcss" # Tailwind CSS 인텔리센스 및 구문 강조
       "esbenp.prettier-vscode"    # 코드 포맷팅을 위한 Prettier
     ];
+    workspace = {
+      mcpServers = {
+        "fetch" = {
+          command = "npx";
+          args = [
+            "-y"
+            "@modelcontextprotocol/server-fetch" 
+          ];
+        },
+        "filesystem": {
+          "command": "npx",
+          "args": [
+            "-y",
+            "@modelcontextprotocol/server-filesystem",
+            "/workspaces/tourapp" 
+          ]
+        }
+      };
+    };
   };
 }

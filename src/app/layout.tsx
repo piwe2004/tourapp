@@ -30,6 +30,8 @@ export const viewport = {
 };
 
 
+import Script from 'next/script';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -38,6 +40,10 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
+        <Script
+          strategy="beforeInteractive"
+          src={`https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID}`}
+        />
         <div className="min-h-screen bg-white font-sans text-slate-900 selection:bg-indigo-100">
           {/* Header */}
           <Header />

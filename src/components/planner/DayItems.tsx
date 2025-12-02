@@ -3,7 +3,7 @@
 import { PlanItem } from "@/mockData";
 import { BedDouble, Camera, Car, Clock, Coffee, Utensils } from "lucide-react";
 
-export default function DayItems({ item, index, onClick }: { item: PlanItem; index: number; onClick?: () => void }) {
+export default function DayItems({ item, index, onClick, selected }: { item: PlanItem; index: number; onClick?: () => void; selected?: boolean }) {
 
     const getIconByType = (type: string) => {
         switch (type) {
@@ -18,7 +18,12 @@ export default function DayItems({ item, index, onClick }: { item: PlanItem; ind
     return(
          <div key={item.id} onClick={onClick} className="relative group animate-fade-in-up w-full min-w-[70%] cursor-pointer" >
             <div className="hidden md:block absolute -left-[51px] top-6 w-5 h-5 bg-white border-4 border-indigo-500 rounded-full z-10 shadow-sm"></div>
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg transition-all h-full flex flex-col justify-start">
+            <div className={`bg-white p-5 rounded-2xl border transition-all h-full flex flex-col justify-start
+                ${selected 
+                    ? 'border-indigo-500 shadow-md ring-2 ring-indigo-100' 
+                    : 'border-slate-200 shadow-sm hover:shadow-lg'
+                }
+            `}>
                 <div className="flex justify-between items-center mb-3">
                     <div className="flex items-center gap-2">
                         <span className="bg-indigo-600 text-white text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-wider">Step {index + 1}</span>

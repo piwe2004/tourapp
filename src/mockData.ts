@@ -7,6 +7,8 @@ export interface PlanItem {
   activity: string;
   type: 'sightseeing' | 'food' | 'cafe' | 'stay' | 'move';
   memo: string;
+  lat?: number;
+  lng?: number;
 }
 
 // 📌 [Mock] 제주도 1박 2일 더미 데이터
