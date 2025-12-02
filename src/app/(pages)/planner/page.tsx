@@ -2,19 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import {
-    ArrowLeft, Sparkles, Share2,
-    Utensils, Coffee, BedDouble, Car, Camera, Clock, Map as MapIcon,
-    ChevronLeft, ChevronRight, Calendar, Users, MapPin
-} from 'lucide-react';
+import { Sparkles, Share2, Map as MapIcon, Calendar, Users, MapPin } from 'lucide-react';
 import { getTravelPlan } from '@/lib/actions';
 import { PlanItem } from '@/mockData';
 import DateEditor from '@/components/planner/DateEditor';
 import GuestEditor from '@/components/planner/GuestEditor';
 import DestinationEditor from '@/components/planner/DestinationEditor';
+import DayItems from '@/components/planner/DayItems';
+import Button_type1 from '@/components/ui/Button_type1';
+import Map from '@/components/planner/Map';
 
 export default function PlannerView() {
-    const router = useRouter();
     const searchParams = useSearchParams();
     // URL 쿼리 파라미터에서 destination 가져오기 (없으면 기본값 설정)
     const initialDestination = searchParams.get('destination') || '여행지';
@@ -72,26 +70,6 @@ export default function PlannerView() {
     useEffect(() => {
         setCurrentSlide(0);
     }, [selectedDay]);
-
-    const handleBack = () => router.back();
-
-    // [New] 슬라이더 이전/다음 함수
-    const nextSlide = () => {
-        if (currentSlide < currentDayItems.length - 1) setCurrentSlide(prev => prev + 1);
-    };
-    const prevSlide = () => {
-        if (currentSlide > 0) setCurrentSlide(prev => prev - 1);
-    };
-
-    const getIconByType = (type: string) => {
-        switch (type) {
-            case 'food': return <Utensils size={18} className="text-orange-500" />;
-            case 'cafe': return <Coffee size={18} className="text-amber-700" />;
-            case 'stay': return <BedDouble size={18} className="text-indigo-500" />;
-            case 'move': return <Car size={18} className="text-slate-500" />;
-            default: return <Camera size={18} className="text-blue-500" />;
-        }
-    };
 
     // 날짜 포맷팅
     const formatDateRange = () => {
@@ -204,38 +182,14 @@ export default function PlannerView() {
                             {/* Day 탭 (공통) */}
                             <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
                                 {days.length > 0 ? days.map((day) => (
-                                    <button
-                                        key={day}
-                                        onClick={() => setSelectedDay(day)}
-                                        className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm border whitespace-nowrap ${selectedDay === day ? 'bg-slate-900 text-white scale-105' : 'bg-white text-slate-500 border-slate-200'
-                                            }`}
-                                    >
-                                        Day {day}
-                                    </button>
+                                    <Button_type1 key={day} onClick={() => setSelectedDay(day)} text={`Day ${day}`} active={selectedDay === day}/>
                                 )) : null}
                             </div>
 
                             {/* 🖥️ [Desktop Only] 세로 타임라인 UI (기존 유지) */}
-                            <div className="flex justify-between items-stretch gap-10 pb-5 overflow-x-scroll md:space-y-8 md:border-l-[3px] md:border-indigo-100 md:ml-4 md:pl-10 md:pb-10 md:block">
+                            <div className="flex justify-between items-stretch gap-10 pb-5 overflow-x-scroll md:overflow-visible md:space-y-8 md:border-l-[3px] md:border-indigo-100 md:ml-4 md:pl-10 md:pb-10 md:block">
                                 {currentDayItems.map((item, index) => (
-                                    <div key={item.id} className="relative group animate-fade-in-up w-full min-w-[70%]">
-                                        <div className="hidden md:block absolute -left-[51px] top-6 w-5 h-5 bg-white border-4 border-indigo-500 rounded-full z-10 shadow-sm"></div>
-                                        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg transition-all h-full flex flex-col justify-start">
-                                            <div className="flex justify-between items-center mb-3">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="bg-indigo-600 text-white text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-wider">Step {index + 1}</span>
-                                                    <div className="flex items-center gap-1 text-slate-500 text-sm font-bold bg-slate-50 px-2 py-1 rounded-lg"><Clock size={14} /> {item.time}</div>
-                                                </div>
-                                                <div className="bg-slate-50 p-2 rounded-full border border-slate-100">{getIconByType(item.type)}</div>
-                                            </div>
-                                            <h3 className="text-xl font-bold text-slate-900 mb-3">{item.activity}</h3>
-                                            {item.memo && (
-                                                <div className="text-slate-600 text-sm bg-slate-50/80 p-3 rounded-xl border border-slate-100">
-                                                    <span className="mr-2">💡</span>{item.memo}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
+                                   <DayItems item={item} index={index} key={item.id} onClick={() => {}}/>
                                 ))}
                             </div>
 
@@ -258,10 +212,11 @@ export default function PlannerView() {
 // 지도 및 로딩 컴포넌트는 기존과 동일
 function MockMap({ destination, day }: { destination: string, day: number }) {
     return (
-        <div className="w-full h-full flex flex-col items-center justify-center bg-indigo-50 text-indigo-300 relative overflow-hidden group">
-            <MapIcon size={64} className="mb-4 opacity-50" />
-            <p className="font-bold text-lg text-indigo-400">{destination} 지도</p>
-            <p className="text-sm text-indigo-300 font-medium bg-white/50 px-3 py-1 rounded-full mt-2">Day {day} 동선</p>
+        <div className="w-full lg:w-1/2 order-2">
+            <div className="lg:sticky lg:top-[160px] h-[300px] lg:h-[calc(100vh-180px)] rounded-3xl overflow-hidden shadow-xl border border-slate-200 bg-slate-100">
+                {/* [변경] 컴포넌트 이름 변경 */}
+                <Map schedule={schedule} selectedDay={selectedDay} />
+            </div>
         </div>
     );
 }
