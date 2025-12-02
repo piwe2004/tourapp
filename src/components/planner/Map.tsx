@@ -12,6 +12,8 @@ interface MapProps {
 export default function Map({ schedule, selectedDay, selectedItemId }: MapProps) {
   const mapElement = useRef<HTMLDivElement>(null);
   const mapRef = useRef<naver.maps.Map | null>(null);
+  const markersRef = useRef<naver.maps.Marker[]>([]); // 마커 관리용 ref
+  const polylineRef = useRef<naver.maps.Polyline | null>(null); // 경로 관리용 ref
 
   useEffect(() => {
     if (!window.naver || !window.naver.maps) return;
@@ -45,6 +47,15 @@ export default function Map({ schedule, selectedDay, selectedItemId }: MapProps)
 
     const map = mapRef.current;
 
+    // --- 기존 마커 및 경로 제거 (초기화) ---
+    markersRef.current.forEach(marker => marker.setMap(null));
+    markersRef.current = [];
+    
+    if (polylineRef.current) {
+      polylineRef.current.setMap(null);
+      polylineRef.current = null;
+    }
+
     // --- 마커 및 경로 그리기 ---
     const pathCoords: naver.maps.LatLng[] = [];
 
@@ -52,40 +63,56 @@ export default function Map({ schedule, selectedDay, selectedItemId }: MapProps)
       const position = new window.naver.maps.LatLng(item.lat!, item.lng!);
       pathCoords.push(position);
 
-      // 마커 생성 (기존 로직 유지)
-      new window.naver.maps.Marker({
+      const isSelected = selectedItemId === item.id;
+      
+      // 커스텀 마커 HTML (SVG 활용)
+      const markerContent = `
+        <div style="cursor: pointer; position: relative; display: flex; justify-content: center; align-items: center;">
+          <div style="
+            position: absolute;
+            bottom: 0;
+            width: ${isSelected ? '48px' : '36px'};
+            height: ${isSelected ? '48px' : '36px'};
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-origin: bottom center;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+            z-index: ${isSelected ? '100' : '10'};
+          ">
+            <svg viewBox="0 0 36 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%;">
+              <path d="M18 0C8.05888 0 0 8.05888 0 18C0 27.9411 18 48 18 48C18 48 36 27.9411 36 18C36 8.05888 27.9411 0 18 0Z" fill="${isSelected ? '#4338ca' : '#4f46e5'}"/>
+              <circle cx="18" cy="18" r="14" fill="white"/>
+              <circle cx="18" cy="18" r="12" fill="${isSelected ? '#4338ca' : '#4f46e5'}"/>
+            </svg>
+            <div style="
+              position: absolute;
+              top: ${isSelected ? '14px' : '10px'};
+              left: 50%;
+              transform: translateX(-50%);
+              color: white;
+              font-weight: 800;
+              font-size: ${isSelected ? '16px' : '13px'};
+              font-family: sans-serif;
+            ">${index + 1}</div>
+          </div>
+        </div>
+      `;
+
+      // 마커 생성
+      const marker = new window.naver.maps.Marker({
         position: position,
         map: map,
         title: item.activity,
         icon: {
-          content: `
-            <div style="
-              background-color: ${selectedItemId === item.id ? '#4338ca' : '#4f46e5'}; 
-              color: white; 
-              width: ${selectedItemId === item.id ? '32px' : '24px'}; 
-              height: ${selectedItemId === item.id ? '32px' : '24px'}; 
-              border-radius: 50%; 
-              display: flex; 
-              align-items: center; 
-              justify-content: center; 
-              font-weight: bold; 
-              font-size: ${selectedItemId === item.id ? '14px' : '12px'};
-              box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-              border: 2px solid white;
-              z-index: ${selectedItemId === item.id ? '100' : '1'};
-              transition: all 0.2s ease;
-            ">
-              ${index + 1}
-            </div>
-          `,
-          anchor: new window.naver.maps.Point(selectedItemId === item.id ? 16 : 12, selectedItemId === item.id ? 16 : 12),
+          content: markerContent,
+          anchor: new window.naver.maps.Point(isSelected ? 24 : 18, isSelected ? 48 : 36), // 이미지 하단 중앙이 좌표에 오도록 설정
         },
       });
+      markersRef.current.push(marker); // 생성된 마커 저장
     });
 
-    // 경로 그리기 (기존 로직 유지)
+    // 경로 그리기
     if (pathCoords.length > 1) {
-      new window.naver.maps.Polyline({
+      const polyline = new window.naver.maps.Polyline({
         map: map,
         path: pathCoords,
         strokeColor: "#4f46e5",
@@ -95,6 +122,7 @@ export default function Map({ schedule, selectedDay, selectedItemId }: MapProps)
         strokeLineCap: "round",
         strokeLineJoin: "round",
       });
+      polylineRef.current = polyline; // 생성된 경로 저장
     }
 
     // --- 뷰 조정 로직 ---
