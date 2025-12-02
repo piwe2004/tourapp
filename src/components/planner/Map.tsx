@@ -42,7 +42,7 @@ export default function Map({ schedule, selectedDay, selectedItemId }: MapProps)
         },
       };
       mapRef.current = new window.naver.maps.Map(mapElement.current, mapOptions);
-    } 
+    }
     // 지도 초기화 이후에는 아래 로직으로 뷰 제어
 
     const map = mapRef.current;
@@ -50,7 +50,7 @@ export default function Map({ schedule, selectedDay, selectedItemId }: MapProps)
     // --- 기존 마커 및 경로 제거 (초기화) ---
     markersRef.current.forEach(marker => marker.setMap(null));
     markersRef.current = [];
-    
+
     if (polylineRef.current) {
       polylineRef.current.setMap(null);
       polylineRef.current = null;
@@ -64,38 +64,6 @@ export default function Map({ schedule, selectedDay, selectedItemId }: MapProps)
       pathCoords.push(position);
 
       const isSelected = selectedItemId === item.id;
-      
-      // 커스텀 마커 HTML (SVG 활용)
-      const markerContent = `
-        <div style="cursor: pointer; position: relative; display: flex; justify-content: center; align-items: center;">
-          <div style="
-            position: absolute;
-            bottom: 0;
-            width: ${isSelected ? '48px' : '36px'};
-            height: ${isSelected ? '48px' : '36px'};
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            transform-origin: bottom center;
-            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
-            z-index: ${isSelected ? '100' : '10'};
-          ">
-            <svg viewBox="0 0 36 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%;">
-              <path d="M18 0C8.05888 0 0 8.05888 0 18C0 27.9411 18 48 18 48C18 48 36 27.9411 36 18C36 8.05888 27.9411 0 18 0Z" fill="${isSelected ? '#4338ca' : '#4f46e5'}"/>
-              <circle cx="18" cy="18" r="14" fill="white"/>
-              <circle cx="18" cy="18" r="12" fill="${isSelected ? '#4338ca' : '#4f46e5'}"/>
-            </svg>
-            <div style="
-              position: absolute;
-              top: ${isSelected ? '14px' : '10px'};
-              left: 50%;
-              transform: translateX(-50%);
-              color: white;
-              font-weight: 800;
-              font-size: ${isSelected ? '16px' : '13px'};
-              font-family: sans-serif;
-            ">${index + 1}</div>
-          </div>
-        </div>
-      `;
 
       // 마커 생성
       const marker = new window.naver.maps.Marker({
@@ -103,8 +71,10 @@ export default function Map({ schedule, selectedDay, selectedItemId }: MapProps)
         map: map,
         title: item.activity,
         icon: {
-          content: markerContent,
-          anchor: new window.naver.maps.Point(isSelected ? 24 : 18, isSelected ? 48 : 36), // 이미지 하단 중앙이 좌표에 오도록 설정
+          url: '/icons/maker2.svg',
+          size: new naver.maps.Size(25, 34),
+          scaledSize: new naver.maps.Size(25, 34),
+          anchor: new window.naver.maps.Point(isSelected ? 25 : 34, isSelected ? 48 : 36), // 이미지 하단 중앙이 좌표에 오도록 설정
         },
       });
       markersRef.current.push(marker); // 생성된 마커 저장
@@ -139,7 +109,7 @@ export default function Map({ schedule, selectedDay, selectedItemId }: MapProps)
         const bounds = new window.naver.maps.LatLngBounds(pathCoords[0], pathCoords[0]);
         pathCoords.forEach(coord => bounds.extend(coord));
         map.fitBounds(bounds, {
-            top: 50, bottom: 50, left: 50, right: 50 // 패딩 추가
+          top: 50, bottom: 50, left: 50, right: 50 // 패딩 추가
         });
       } else {
         // 데이터가 없으면 기본 위치로 이동
@@ -153,7 +123,7 @@ export default function Map({ schedule, selectedDay, selectedItemId }: MapProps)
   return (
     <div className="w-full h-full relative">
       <div ref={mapElement} className="w-full h-full bg-slate-100 rounded-2xl overflow-hidden" />
-      
+
       <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
         {!process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID && (
           <p className="bg-black/70 text-white px-4 py-2 rounded-lg text-sm backdrop-blur-md z-10">
