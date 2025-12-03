@@ -1,19 +1,9 @@
 "use client"
 
 import { PlanItem } from "@/mockData";
-import { BedDouble, Camera, Car, Clock, Coffee, Utensils } from "lucide-react";
+import { Clock } from "lucide-react";
 
 export default function DayItems({ item, index, onClick, selected }: { item: PlanItem; index: number; onClick?: () => void; selected?: boolean }) {
-
-    const getIconByType = (type: string) => {
-        switch (type) {
-            case 'food': return <Utensils size={18} className="text-orange-500" />;
-            case 'cafe': return <Coffee size={18} className="text-amber-700" />;
-            case 'stay': return <BedDouble size={18} className="text-indigo-500" />;
-            case 'move': return <Car size={18} className="text-slate-500" />;
-            default: return <Camera size={18} className="text-blue-500" />;
-        }
-    };
 
     return(
          <div key={item.id} onClick={onClick} className="relative group animate-fade-in-up w-full min-w-[70%] cursor-pointer" >
