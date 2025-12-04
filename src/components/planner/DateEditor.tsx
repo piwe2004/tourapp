@@ -12,8 +12,17 @@ interface DateEditorProps {
 
 export default function DateEditor({ startDate, endDate, onSave, onClose }: DateEditorProps) {
     // 임시 상태 (저장 버튼 누르기 전까지 유지)
-    const [tempStart, setTempStart] = useState<Date>(startDate);
-    const [tempEnd, setTempEnd] = useState<Date>(endDate);
+    // 초기값의 시간을 00:00:00으로 정규화하여 달력 날짜(00:00:00)와 비교가 정확하게 되도록 함
+    const [tempStart, setTempStart] = useState<Date>(() => {
+        const d = new Date(startDate);
+        d.setHours(0, 0, 0, 0);
+        return d;
+    });
+    const [tempEnd, setTempEnd] = useState<Date>(() => {
+        const d = new Date(endDate);
+        d.setHours(0, 0, 0, 0);
+        return d;
+    });
     const [currentMonth, setCurrentMonth] = useState(new Date(startDate));
 
     // 달력 생성 헬퍼 함수
@@ -36,20 +45,34 @@ export default function DateEditor({ startDate, endDate, onSave, onClose }: Date
     const handleDateClick = (day: number) => {
         const clickedDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
 
-        // 범위 선택 로직
-        // 1. 시작일과 종료일이 같거나, 이미 범위가 설정된 상태에서 새로 클릭하면 -> 시작일로 설정, 종료일도 시작일로
-        if (tempStart.getTime() === tempEnd.getTime() || (tempStart < tempEnd && clickedDate < tempStart)) {
+        // 날짜 비교를 위해 시간 초기화 (필요시)
+        clickedDate.setHours(0, 0, 0, 0);
+        const start = new Date(tempStart);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(tempEnd);
+        end.setHours(0, 0, 0, 0);
+
+        // 범위 선택 로직 개선
+        // 1. 이미 범위가 선택된 상태라면 (Start != End) -> 새로운 시작일로 리셋
+        if (start.getTime() !== end.getTime()) {
+            // Category: 날짜 선택 - 범위 재설정
             setTempStart(clickedDate);
             setTempEnd(clickedDate);
         }
-        // 2. 클릭한 날짜가 시작일보다 뒤면 -> 종료일로 설정
-        else if (clickedDate > tempStart) {
-            setTempEnd(clickedDate);
-        }
-        // 3. 그 외 (시작일보다 앞선 날짜 클릭 등) -> 시작일로 리셋
+        // 2. 단일 날짜가 선택된 상태라면 (Start == End)
         else {
-            setTempStart(clickedDate);
-            setTempEnd(clickedDate);
+            // 2-1. 클릭한 날짜가 시작일보다 이전이면 -> 시작일 변경 (새로운 시작점)
+            if (clickedDate < start) {
+                // Category: 날짜 선택 - 시작일 정정
+                setTempStart(clickedDate);
+                setTempEnd(clickedDate);
+            }
+            // 2-2. 클릭한 날짜가 시작일보다 이후면 -> 종료일 설정 (범위 완성)
+            else if (clickedDate > start) {
+                // Category: 날짜 선택 - 종료일 설정
+                setTempEnd(clickedDate);
+            }
+            // 2-3. 같은 날짜 클릭 -> 변경 없음 (또는 해제 로직이 필요하다면 추가)
         }
     };
 
@@ -153,7 +176,7 @@ export default function DateEditor({ startDate, endDate, onSave, onClose }: Date
 
                 <button
                     onClick={() => onSave(tempStart, tempEnd)}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-indigo-200 active:scale-95"
+                    className="w-full bg-indigo-600 cursor-pointer hover:bg-indigo-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-indigo-200 active:scale-95"
                 >
                     일정 적용하기
                 </button>

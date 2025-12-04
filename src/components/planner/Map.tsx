@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from 'react';
 import { PlanItem } from '@/mockData';
+import { getIconByType } from '../ui/MapIcons';
+import { renderToStaticMarkup } from 'react-dom/server';
 
 interface MapProps {
   schedule: PlanItem[];
@@ -43,8 +45,7 @@ export default function Map({ schedule, selectedDay, selectedItemId }: MapProps)
       };
       mapRef.current = new window.naver.maps.Map(mapElement.current, mapOptions);
     }
-    // 지도 초기화 이후에는 아래 로직으로 뷰 제어
-
+    
     const map = mapRef.current;
 
     // --- 기존 마커 및 경로 제거 (초기화) ---
@@ -64,34 +65,30 @@ export default function Map({ schedule, selectedDay, selectedItemId }: MapProps)
       pathCoords.push(position);
 
       const isSelected = selectedItemId === item.id;
-
-      // 마커 생성
-      const marker = new window.naver.maps.Marker({
-        position: position,
-        map: map,
-        title: item.activity,
-        icon: {
-          url: '/icons/maker.svg',
-          size: new naver.maps.Size(25, 34),
-          scaledSize: new naver.maps.Size(25, 34),
-          anchor: new window.naver.maps.Point(isSelected ? 25 : 34, isSelected ? 48 : 36), // 이미지 하단 중앙이 좌표에 오도록 설정
-        },
-      });
-      markersRef.current.push(marker); // 생성된 마커 저장
-
-
+      
+      // 마커 크기 정의
+      const width = isSelected ? 60 : 40;
+      const height = isSelected ? 69 : 49;
 
       const markerContent = `
-        <div style="cursor: pointer; position: relative; display: flex; justify-content: center; align-items: center;">
+        <div style="
+          width: ${width}px;
+          height: ${height}px;
+          cursor: pointer; 
+          position: relative; 
+          display: flex; 
+          justify-content: center; 
+          align-items: center;
+          z-index: ${isSelected ? '100' : '10'};
+        ">
           <div style="
             position: absolute;
             bottom: 0;
-            width: ${isSelected ? '30px' : '25px'};
-            height: ${isSelected ? '39px' : '34px'};
+            width: 100%;
+            height: 100%;
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             transform-origin: bottom center;
             filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
-            z-index: ${isSelected ? '100' : '10'};
           ">
             <svg viewBox="0 0 36 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%;">
               <path d="M18 0C8.05888 0 0 8.05888 0 18C0 27.9411 18 48 18 48C18 48 36 27.9411 36 18C36 8.05888 27.9411 0 18 0Z" fill="${isSelected ? '#4338ca' : '#4f46e5'}"/>
@@ -100,31 +97,35 @@ export default function Map({ schedule, selectedDay, selectedItemId }: MapProps)
             </svg>
             <div style="
               position: absolute;
-              top: ${isSelected ? '14px' : '10px'};
+              top: ${isSelected ? '5px' : '9px'};
               left: 50%;
               transform: translateX(-50%);
               color: white;
               font-weight: 800;
-              font-size: ${isSelected ? '16px' : '13px'};
               font-family: sans-serif;
-            ">${index + 1}</div>
+              width:${isSelected ? '42' : '20'}px;
+              height:${isSelected ? '42' : '20'}px;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+            ">
+              ${renderToStaticMarkup(getIconByType(item.type, isSelected ? 25 : 18, "text-white-500", "#ffffff"))}
+            </div>
           </div>
         </div>
       `;
-      const marker2 =new window.naver.maps.Marker({
-        // 마커 생성
-          position: position,
-          map: map,
-          title: item.activity,
-          icon: {
-            content: markerContent,
-            anchor: new window.naver.maps.Point(isSelected ? 24 : 18, isSelected ? 48 : 36),
-          }
-      })
-      markersRef.current.push(marker2); // 생성된 마커 저장
+      const marker = new window.naver.maps.Marker({
+        position: position,
+        map: map,
+        title: item.activity,
+        icon: {
+          content: markerContent,
+          // Anchor를 가로 중앙, 세로 하단으로 설정하여 핀의 끝이 정확한 좌표를 가리키게 함
+          anchor: new window.naver.maps.Point(width / 2, height),
+        }
+      });
+      markersRef.current.push(marker); // 생성된 마커 저장
     });
-
-
 
     // 경로 그리기
     if (pathCoords.length > 1) {

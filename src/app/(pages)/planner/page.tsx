@@ -11,6 +11,8 @@ import DestinationEditor from '@/components/planner/DestinationEditor';
 import DayItems from '@/components/planner/DayItems';
 import Button_type1 from '@/components/ui/Button_type1';
 import Map from '@/components/planner/Map';
+import PlaceReplacementModal from '@/components/planner/PlaceReplacementModal';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 
 export default function PlannerView() {
     const searchParams = useSearchParams();
@@ -19,7 +21,7 @@ export default function PlannerView() {
     const [isLoading, setIsLoading] = useState(true);
     const [schedule, setSchedule] = useState<PlanItem[]>([]);
     const [selectedDay, setSelectedDay] = useState(1);
-    const [selectedItemId, setSelectedItemId] = useState<number | null>(null); // 선택된 아이템 ID 상태 추가
+    const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
 
     const [destination, setDestination] = useState(initialDestination);
     const [dateRange, setDateRange] = useState<{ start: Date, end: Date }>({
@@ -31,6 +33,12 @@ export default function PlannerView() {
     const [isDateEditorOpen, setIsDateEditorOpen] = useState(false);
     const [isGuestEditorOpen, setIsGuestEditorOpen] = useState(false);
     const [isDestEditorOpen, setIsDestEditorOpen] = useState(false);
+    
+    // Replacement Modal State
+    const [replaceModalState, setReplaceModalState] = useState<{ isOpen: boolean; targetItem: PlanItem | null }>({
+        isOpen: false,
+        targetItem: null,
+    });
 
     const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -59,7 +67,7 @@ export default function PlannerView() {
 
     useEffect(() => {
         setCurrentSlide(0);
-        setSelectedItemId(null); // 날짜 변경 시 선택 초기화
+        setSelectedItemId(null);
     }, [selectedDay]);
 
     const formatDateRange = () => {
@@ -74,7 +82,34 @@ export default function PlannerView() {
     };
 
     const handleItemClick = (id: number) => {
-        setSelectedItemId(prev => prev === id ? null : id); // 이미 선택된 아이템 클릭 시 해제
+        setSelectedItemId(prev => prev === id ? null : id);
+    };
+
+    const onDragEnd = (result: DropResult) => {
+        if (!result.destination) return;
+
+        const items = Array.from(currentDayItems);
+        const [reorderedItem] = items.splice(result.source.index, 1);
+        items.splice(result.destination.index, 0, reorderedItem);
+
+        const otherItems = schedule.filter(item => item.day !== selectedDay);
+        
+        const newSchedule = [...otherItems, ...items].sort((a, b) => {
+            if (a.day !== b.day) return a.day - b.day;
+            const indexA = items.indexOf(a);
+            const indexB = items.indexOf(b);
+            if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+            return 0;
+        });
+
+        setSchedule(newSchedule);
+    };
+
+    const handleReplacePlace = (newItem: PlanItem) => {
+        setSchedule(prev => prev.map(item => 
+            item.id === replaceModalState.targetItem?.id ? newItem : item
+        ));
+        setReplaceModalState({ isOpen: false, targetItem: null });
     };
 
     return (
@@ -108,6 +143,15 @@ export default function PlannerView() {
                         setIsDestEditorOpen(false);
                     }}
                     onClose={() => setIsDestEditorOpen(false)}
+                />
+            )}
+            
+            {replaceModalState.isOpen && replaceModalState.targetItem && (
+                <PlaceReplacementModal
+                    isOpen={replaceModalState.isOpen}
+                    onClose={() => setReplaceModalState({ isOpen: false, targetItem: null })}
+                    onReplace={handleReplacePlace}
+                    originalItem={replaceModalState.targetItem}
                 />
             )}
 
@@ -156,17 +200,37 @@ export default function PlannerView() {
                                     <Button_type1 key={day} onClick={() => setSelectedDay(day)} text={`Day ${day}`} active={selectedDay === day}/>
                                 )) : null}
                             </div>
-                            <div className="flex justify-between items-stretch gap-10 pb-5 overflow-x-scroll md:overflow-visible md:space-y-8 md:border-l-[3px] md:border-indigo-100 md:ml-4 md:pl-10 md:pb-0 md:block">
-                                {currentDayItems.map((item, index) => (
-                                   <DayItems 
-                                        item={item} 
-                                        index={index} 
-                                        key={item.id} 
-                                        onClick={() => handleItemClick(item.id)}
-                                        selected={selectedItemId === item.id}
-                                    />
-                                ))}
-                            </div>
+                            
+                            <DragDropContext onDragEnd={onDragEnd}>
+                                <Droppable droppableId="day-items">
+                                    {(provided) => (
+                                        <div 
+                                            {...provided.droppableProps}
+                                            ref={provided.innerRef}
+                                            className="flex justify-between items-stretch gap-10 pb-5 overflow-x-scroll md:overflow-visible md:space-y-8 md:border-l-[3px] md:border-indigo-100 md:ml-4 md:pl-10 md:pb-0 md:block"
+                                        >
+                                            {currentDayItems.map((item, index) => (
+                                                <Draggable key={item.id} draggableId={item.id.toString()} index={index}>
+                                                    {(provided, snapshot) => (
+                                                        <DayItems 
+                                                            item={item} 
+                                                            index={index} 
+                                                            onClick={() => handleItemClick(item.id)}
+                                                            selected={selectedItemId === item.id}
+                                                            innerRef={provided.innerRef}
+                                                            draggableProps={provided.draggableProps}
+                                                            dragHandleProps={provided.dragHandleProps}
+                                                            isDragging={snapshot.isDragging}
+                                                            onReplaceClick={() => setReplaceModalState({ isOpen: true, targetItem: item })}
+                                                        />
+                                                    )}
+                                                </Draggable>
+                                            ))}
+                                            {provided.placeholder}
+                                        </div>
+                                    )}
+                                </Droppable>
+                            </DragDropContext>
                         </div>
                         <div className="w-full lg:w-1/2 order-2">
                             <div className="lg:sticky lg:top-[190px] h-[300px] lg:h-[calc(100vh-220px)] rounded-3xl overflow-hidden shadow-xl border border-slate-200 bg-slate-100">
