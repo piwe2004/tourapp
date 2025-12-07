@@ -194,8 +194,8 @@ export default function PlannerView() {
                     <LoadingSkeleton />
                 ) : (
                     <div className="flex flex-col lg:flex-row gap-8">
-                        <div className="w-full lg:w-1/2 order-1">
-                            <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+                        <div className="w-full lg:w-1/3 order-1">
+                            <div className="flex items-center gap-2 mb-6 pb-2 scrollbar-hide">
                                 {days.length > 0 ? days.map((day) => (
                                     <Button_type1 key={day} onClick={() => setSelectedDay(day)} text={`Day ${day}`} active={selectedDay === day}/>
                                 )) : null}
@@ -232,7 +232,7 @@ export default function PlannerView() {
                                 </Droppable>
                             </DragDropContext>
                         </div>
-                        <div className="w-full lg:w-1/2 order-2">
+                        <div className="w-full lg:w-2/3 order-2">
                             <div className="lg:sticky lg:top-[190px] h-[300px] lg:h-[calc(100vh-220px)] rounded-3xl overflow-hidden shadow-xl border border-slate-200 bg-slate-100">
                                 <Map schedule={schedule} selectedDay={selectedDay} selectedItemId={selectedItemId} />
                             </div>

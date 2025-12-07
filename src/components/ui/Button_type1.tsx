@@ -9,7 +9,7 @@ export default function Button_type1({ text, active, onClick }: ButtonProps) {
     return (
         <button 
             onClick={onClick}
-            className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm border whitespace-nowrap ${active ? 'bg-slate-900 text-white scale-105' : 'bg-white text-slate-500 border-slate-200'}`}
+            className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm border whitespace-nowrap ${active ? 'bg-slate-900 text-white scale-105' : 'bg-white text-slate-500 border-slate-200 cursor-pointer'}`}
         >
             {text}
         </button>

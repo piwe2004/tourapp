@@ -58,8 +58,7 @@ export default function DayItems({ item, index, onClick, selected, draggableProp
             `}>
                 <div className="flex justify-between items-center mb-3">
                     <div className="flex items-center gap-2">
-                        <span className="bg-indigo-600 text-white text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-wider">Step {index + 1}</span>
-                        <div className="flex items-center gap-1 text-slate-500 text-sm font-bold bg-slate-50 px-2 py-1 rounded-lg"><Clock size={14} /> {item.time}</div>
+                        <span className="flex items-center gap-1 text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded uppercase tracking-wider"><Clock size={10} /> {item.time}</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <button 
@@ -72,10 +71,12 @@ export default function DayItems({ item, index, onClick, selected, draggableProp
                         >
                             <RefreshCw size={14} />
                         </button>
-                        <div className="bg-slate-50 p-2 rounded-full border border-slate-100">{getIconByType(item.type)}</div>
                     </div>
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-3">{item.activity}</h3>
+                <h3 className="text-xl font-bold text-slate-900 mb-3 flex items-center gap-2">
+                    <div className="bg-slate-50 p-2 rounded-full border border-slate-100">{getIconByType(item.type)}</div>
+                    {item.activity}
+                </h3>
                 {item.memo && (
                     <div className="text-slate-600 text-sm bg-slate-50/80 p-3 rounded-xl border border-slate-100">
                         <span className="mr-2">💡</span>{item.memo}
