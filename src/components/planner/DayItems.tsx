@@ -1,11 +1,11 @@
 "use client"
 
 import { PlanItem } from "@/mockData";
-import { Clock, RefreshCw, Lock, LockOpen } from "lucide-react";
+import { Clock, RefreshCw, Lock, LockOpen, Trash2 } from "lucide-react";
 import { getIconByType } from "../ui/MapIcons";
 import { useRef, useState } from "react";
 
-export default function DayItems({ item, index, onClick, selected, draggableProps, dragHandleProps, innerRef, isDragging, onReplaceClick, onLockClick }: { 
+export default function DayItems({ item, index, onClick, selected, draggableProps, dragHandleProps, innerRef, isDragging, onReplaceClick, onLockClick, onDeleteClick }: { 
     item: PlanItem; 
     index: number; 
     onClick?: () => void; 
@@ -16,6 +16,7 @@ export default function DayItems({ item, index, onClick, selected, draggableProp
     isDragging?: boolean;
     onReplaceClick?: (e: React.MouseEvent) => void;
     onLockClick?: (e: React.MouseEvent) => void;
+    onDeleteClick?: (e: React.MouseEvent) => void;
 }) {
     const localRef = useRef<HTMLDivElement>(null);
     const [dragWidth, setDragWidth] = useState<number | undefined>(undefined);
@@ -50,9 +51,10 @@ export default function DayItems({ item, index, onClick, selected, draggableProp
             `}
             style={isDragging && dragWidth ? { ...draggableProps?.style, width: `${dragWidth}px` } : draggableProps?.style}
          >
-            <div className={`hidden md:block absolute -left-[51px] top-6 w-5 h-5 border-4 rounded-full z-10 shadow-sm transition-colors
-                ${item.isLocked ? 'bg-indigo-600 border-indigo-200' : 'bg-white border-indigo-500'}
-            `}></div>
+            <div 
+                className={`md:block absolute -left-[51px] top-6 w-5 h-5 border-4 rounded-full z-10 shadow-sm transition-colors
+                ${item.isLocked ? 'bg-indigo-600 border-indigo-200' : 'bg-white border-indigo-500'}`}
+            ></div>
             <div className={`bg-white p-5 rounded-2xl border transition-all h-full flex flex-col justify-start
                 ${selected 
                     ? 'border-indigo-500 shadow-md ring-2 ring-indigo-100' 
@@ -63,10 +65,10 @@ export default function DayItems({ item, index, onClick, selected, draggableProp
             `}>
                 <div className="flex justify-between items-center mb-3">
                     <div className="flex items-center gap-2">
-                        <span className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded uppercase tracking-wider
-                            ${item.isLocked ? 'bg-indigo-100 text-indigo-700' : 'bg-indigo-50 text-indigo-600'}
+                        <span className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded tracking-wider
+                            ${item.isLocked ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500'}
                         `}>
-                            <Clock size={10} /> {item.time}
+                            <Clock size={10} /> 약 {item.duration || 60}분
                         </span>
                         {item.isLocked && (
                              <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded border border-slate-200">Fixed</span>
@@ -89,18 +91,32 @@ export default function DayItems({ item, index, onClick, selected, draggableProp
                             {item.isLocked ? <Lock size={14} /> : <LockOpen size={14} />}
                         </button>
                         {!item.isLocked && (
-                            <button 
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onReplaceClick?.(e);
-                                }}
-                                className={`p-1.5 text-slate-400 cursor-pointer hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-all group-hover:opacity-100
-                                    ${selected ? 'opacity-100' : 'opacity-0'}
-                                `}
-                                title="장소 교체"
-                            >
-                                <RefreshCw size={14} />
-                            </button>
+                            <>
+                                <button 
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onReplaceClick?.(e);
+                                    }}
+                                    className={`p-1.5 text-slate-400 cursor-pointer hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-all group-hover:opacity-100
+                                        ${selected ? 'opacity-100' : 'opacity-0'}
+                                    `}
+                                    title="장소 교체"
+                                >
+                                    <RefreshCw size={14} />
+                                </button>
+                                <button 
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onDeleteClick?.(e);
+                                    }}
+                                    className={`p-1.5 text-slate-400 cursor-pointer hover:text-red-500 hover:bg-red-50 rounded-full transition-all group-hover:opacity-100
+                                        ${selected ? 'opacity-100' : 'opacity-0'}
+                                    `}
+                                    title="일정 삭제"
+                                >
+                                    <Trash2 size={14} />
+                                </button>
+                            </>
                         )}
                     </div>
                 </div>

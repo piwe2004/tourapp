@@ -8,9 +8,11 @@ interface DateEditorProps {
     endDate: Date;
     onSave: (start: Date, end: Date) => void;
     onClose: () => void;
+    isInline?: boolean;
 }
 
-export default function DateEditor({ startDate, endDate, onSave, onClose }: DateEditorProps) {
+
+export default function DateEditor({ startDate, endDate, onSave, onClose, isInline = false }: DateEditorProps) {
     // 임시 상태 (저장 버튼 누르기 전까지 유지)
     // 초기값의 시간을 00:00:00으로 정규화하여 달력 날짜(00:00:00)와 비교가 정확하게 되도록 함
     const [tempStart, setTempStart] = useState<Date>(() => {
@@ -122,9 +124,9 @@ export default function DateEditor({ startDate, endDate, onSave, onClose }: Date
         return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
     };
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 m-4 overflow-hidden">
+    const content = (
+        <div className={`bg-white rounded-3xl w-full p-6 ${isInline ? '' : 'shadow-2xl max-w-md m-4'} overflow-hidden`}>
+            {!isInline && (
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                         <CalendarIcon className="text-indigo-600" size={24} />
@@ -134,53 +136,63 @@ export default function DateEditor({ startDate, endDate, onSave, onClose }: Date
                         <X size={20} />
                     </button>
                 </div>
+            )}
 
-                {/* 달력 헤더 */}
-                <div className="flex justify-between items-center mb-4 px-2">
-                    <button onClick={handlePrevMonth} className="p-1 hover:bg-slate-100 rounded-full text-slate-600">
-                        <ChevronLeft size={20} />
-                    </button>
-                    <span className="text-lg font-bold text-slate-800">
-                        {currentMonth.getFullYear()}년 {currentMonth.getMonth() + 1}월
-                    </span>
-                    <button onClick={handleNextMonth} className="p-1 hover:bg-slate-100 rounded-full text-slate-600">
-                        <ChevronRight size={20} />
-                    </button>
-                </div>
-
-                {/* 요일 헤더 */}
-                <div className="grid grid-cols-7 mb-2 text-center">
-                    {['일', '월', '화', '수', '목', '금', '토'].map(day => (
-                        <div key={day} className="text-xs font-medium text-slate-400 uppercase tracking-wider py-1">
-                            {day}
-                        </div>
-                    ))}
-                </div>
-
-                {/* 날짜 그리드 */}
-                <div className="grid grid-cols-7 gap-y-1 mb-6">
-                    {renderCalendar()}
-                </div>
-
-                {/* 선택된 날짜 표시 */}
-                <div className="bg-slate-50 rounded-xl p-4 mb-6 flex justify-between items-center border border-slate-100">
-                    <div className="text-center w-1/2 border-r border-slate-200">
-                        <p className="text-xs text-slate-400 mb-1">시작일</p>
-                        <p className="font-bold text-indigo-600">{formatDate(tempStart)}</p>
-                    </div>
-                    <div className="text-center w-1/2">
-                        <p className="text-xs text-slate-400 mb-1">종료일</p>
-                        <p className="font-bold text-indigo-600">{formatDate(tempEnd)}</p>
-                    </div>
-                </div>
-
-                <button
-                    onClick={() => onSave(tempStart, tempEnd)}
-                    className="w-full bg-indigo-600 cursor-pointer hover:bg-indigo-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-indigo-200 active:scale-95"
-                >
-                    일정 적용하기
+            {/* 달력 헤더 */}
+            <div className="flex justify-between items-center mb-4 px-2">
+                <button onClick={handlePrevMonth} className="p-1 hover:bg-slate-100 rounded-full text-slate-600">
+                    <ChevronLeft size={20} />
+                </button>
+                <span className="text-lg font-bold text-slate-800">
+                    {currentMonth.getFullYear()}년 {currentMonth.getMonth() + 1}월
+                </span>
+                <button onClick={handleNextMonth} className="p-1 hover:bg-slate-100 rounded-full text-slate-600">
+                    <ChevronRight size={20} />
                 </button>
             </div>
+
+            {/* 요일 헤더 */}
+            <div className="grid grid-cols-7 mb-2 text-center">
+                {['일', '월', '화', '수', '목', '금', '토'].map(day => (
+                    <div key={day} className="text-xs font-medium text-slate-400 uppercase tracking-wider py-1">
+                        {day}
+                    </div>
+                ))}
+            </div>
+
+            {/* 날짜 그리드 */}
+            <div className="grid grid-cols-7 gap-y-1 mb-6">
+                {renderCalendar()}
+            </div>
+
+            {/* 선택된 날짜 표시 */}
+            <div className="bg-slate-50 rounded-xl p-4 mb-6 flex justify-between items-center border border-slate-100">
+                <div className="text-center w-1/2 border-r border-slate-200">
+                    <p className="text-xs text-slate-400 mb-1">시작일</p>
+                    <p className="font-bold text-indigo-600">{formatDate(tempStart)}</p>
+                </div>
+                <div className="text-center w-1/2">
+                    <p className="text-xs text-slate-400 mb-1">종료일</p>
+                    <p className="font-bold text-indigo-600">{formatDate(tempEnd)}</p>
+                </div>
+            </div>
+
+            <button
+                onClick={() => onSave(tempStart, tempEnd)}
+                className="w-full bg-indigo-600 cursor-pointer hover:bg-indigo-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-indigo-200 active:scale-95"
+            >
+                일정 적용하기
+            </button>
+        </div>
+    );
+
+    if (isInline) {
+        return content;
+    }
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
+             {content}
         </div>
     );
 }

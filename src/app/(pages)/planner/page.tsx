@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Sparkles, Share2, Calendar, Users, MapPin } from 'lucide-react';
+import { Sparkles, Share2, Calendar, Users, MapPin, Plus, X } from 'lucide-react';
 import { getTravelPlan } from '@/lib/actions';
 import { PlanItem } from '@/mockData';
 import DateEditor from '@/components/planner/DateEditor';
@@ -41,14 +41,18 @@ function PlannerContent() {
     });
     const [guests, setGuests] = useState({ adult: 2, teen: 0, child: 0 });
 
-    const [isDateEditorOpen, setIsDateEditorOpen] = useState(false);
-    const [isGuestEditorOpen, setIsGuestEditorOpen] = useState(false);
-    const [isDestEditorOpen, setIsDestEditorOpen] = useState(false);
+
     
     // Replacement Modal State
-    const [replaceModalState, setReplaceModalState] = useState<{ isOpen: boolean; targetItem: PlanItem | null }>({
+    const [replaceModalState, setReplaceModalState] = useState<{ 
+        isOpen: boolean; 
+        targetItem: PlanItem | null;
+        mode: 'replace' | 'add';
+        targetIndex?: number;
+    }>({
         isOpen: false,
         targetItem: null,
+        mode: 'replace'
     });
 
     // Re-planning State
@@ -61,6 +65,81 @@ function PlannerContent() {
         message: string;
         onConfirm: () => void;
     }>({ isOpen: false, message: "", onConfirm: () => {} });
+
+    // Mobile Map View State
+    const [isMobileMapOpen, setIsMobileMapOpen] = useState(false);
+
+    const handleReplacePlace = (newItem: PlanItem) => {
+        if (replaceModalState.mode === 'replace') {
+            setSchedule(prev => prev.map(item => 
+                // [Fix] 교체 시 기존 아이템의 날짜(day)와 시간(time) 유지
+                item.id === replaceModalState.targetItem?.id 
+                    ? { ...newItem, day: item.day, time: item.time, id: item.id } 
+                    : item
+            ));
+        } else if (replaceModalState.mode === 'add' && typeof replaceModalState.targetIndex === 'number') {
+            const index = replaceModalState.targetIndex;
+            // Re-fetch current items to ensure we have latest sort
+            const currentDayItems = schedule.filter(item => item.day === selectedDay).sort((a,b)=>a.time.localeCompare(b.time));
+            
+            let newTime = "12:00";
+            
+            // Logic to find a time slot between index-1 and index (currentDayItems[index] is the one AFTER insertion point? No, index comes from `index + 1` in the click handler)
+            // The button is rendered AFTER item `index`. So we want to insert at `index + 1` relative to the list *before* insertion.
+            // The `targetIndex` passed to `openAddModal` corresponds to the destination index in the *displayed* list.
+            
+            const prevItem = currentDayItems[index - 1];
+            const nextItem = currentDayItems[index];
+
+            if (prevItem && nextItem) {
+                // Calculate middle time
+                const [h1, m1] = prevItem.time.split(':').map(Number);
+                const [h2, m2] = nextItem.time.split(':').map(Number);
+                
+                const t1 = h1 * 60 + m1;
+                const t2 = h2 * 60 + m2;
+                const mid = Math.floor((t1 + t2) / 2);
+                
+                const h = Math.floor(mid / 60);
+                const m = mid % 60;
+                newTime = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+            } else if (prevItem) {
+                 // Last item
+                 const [h1, m1] = prevItem.time.split(':').map(Number);
+                 const t1 = h1 * 60 + m1 + 60; // Add 60 mins
+                 const h = Math.floor(t1 / 60) % 24;
+                 const m = t1 % 60;
+                 newTime = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`; 
+            }
+
+            const itemToAdd: PlanItem = {
+                ...newItem,
+                id: Date.now(),
+                day: selectedDay,
+                time: newTime,
+                isLocked: false,
+            };
+
+            setSchedule(prev => [...prev, itemToAdd]);
+        }
+
+        setReplaceModalState({ isOpen: false, targetItem: null, mode: 'replace' });
+    };
+
+    const openAddModal = (index: number) => {
+        setReplaceModalState({
+            isOpen: true,
+            targetItem: null,
+            mode: 'add',
+            targetIndex: index
+        });
+    };
+
+    const handleDeletePlace = (id: number) => {
+        if (confirm("정말로 이 일정을 삭제하시겠습니까?")) {
+            setSchedule(prev => prev.filter(item => item.id !== id));
+        }
+    };
 
     const getFormattedDate = (dayIndex: number) => {
         const date = new Date(dateRange.start);
@@ -117,7 +196,6 @@ function PlannerContent() {
     };
 
 
-
     const days = Array.from(new Set(schedule.map(item => item.day))).sort((a, b) => a - b);
     // [수정] 일정 아이템을 시간 순서대로 정렬하여 렌더링
     const currentDayItems = schedule
@@ -125,19 +203,24 @@ function PlannerContent() {
         .sort((a, b) => a.time.localeCompare(b.time));
 
     useEffect(() => {
+        console.log("Planner Page: useEffect triggered. Destination:", destination);
         const fetchData = async () => {
             if (!destination || destination === '여행지') {
+                console.log("Planner Page: No destination or default. Setting isLoading false.");
                 setIsLoading(false);
                 return;
             }
 
+            console.log("Planner Page: Fetching plan for", destination);
             setIsLoading(true);
             try {
                 const data = await getTravelPlan(destination);
+                console.log("Planner Page: Data fetched:", data?.length);
                 setSchedule(data);
             } catch (error) {
-                console.error(error);
+                console.error("Planner Page: Error fetching plan:", error);
             } finally {
+                console.log("Planner Page: Loading finished.");
                 setIsLoading(false);
             }
         };
@@ -171,7 +254,6 @@ function PlannerContent() {
             
             // 만약 현재 보고 있는 날짜가 삭제된 날짜라면 1일차로 이동
             if (selectedDay > totalDays) setSelectedDay(1);
-
         } else {
             // [CASE 2] 여행 기간이 늘어난 경우: 새로운 날짜에 기본 일정 추가
             const newItems: PlanItem[] = [];
@@ -233,11 +315,15 @@ function PlannerContent() {
         setSchedule(newSchedule);
     };
 
-    const handleReplacePlace = (newItem: PlanItem) => {
-        setSchedule(prev => prev.map(item => 
-            item.id === replaceModalState.targetItem?.id ? newItem : item
-        ));
-        setReplaceModalState({ isOpen: false, targetItem: null });
+
+
+    /**
+     * @desc 일정 고정/해제 토글 핸들러
+     */
+    const [activeSettingsTab, setActiveSettingsTab] = useState<'date' | 'guest' | 'dest' | null>(null);
+
+    const toggleSettings = (tab: 'date' | 'guest' | 'dest') => {
+        setActiveSettingsTab(prev => prev === tab ? null : tab);
     };
 
     /**
@@ -249,59 +335,27 @@ function PlannerContent() {
         ));
     };
 
-
-
     return (
         <div className="min-h-screen bg-slate-50 pb-20 pt-20">
-            {isDateEditorOpen && (
-                <DateEditor
-                    startDate={dateRange.start}
-                    endDate={dateRange.end}
-                    onSave={(start, end) => {
-                        setDateRange({ start, end });
-                        setIsDateEditorOpen(false);
-                    }}
-                    onClose={() => setIsDateEditorOpen(false)}
-                />
-            )}
-            {isGuestEditorOpen && (
-                <GuestEditor
-                    guests={guests}
-                    onSave={(newGuests) => {
-                        setGuests(newGuests);
-                        setIsGuestEditorOpen(false);
-                    }}
-                    onClose={() => setIsGuestEditorOpen(false)}
-                />
-            )}
-            {isDestEditorOpen && (
-                <DestinationEditor
-                    destination={destination}
-                    onSave={(newDest) => {
-                        setDestination(newDest);
-                        setIsDestEditorOpen(false);
-                    }}
-                    onClose={() => setIsDestEditorOpen(false)}
-                />
-            )}
-            
-            {replaceModalState.isOpen && replaceModalState.targetItem && (
+            {replaceModalState.isOpen && (
                 <PlaceReplacementModal
                     isOpen={replaceModalState.isOpen}
-                    onClose={() => setReplaceModalState({ isOpen: false, targetItem: null })}
+                    onClose={() => setReplaceModalState({ isOpen: false, targetItem: null, mode: 'replace' })}
                     onReplace={handleReplacePlace}
                     originalItem={replaceModalState.targetItem}
+                    mode={replaceModalState.mode}
                 />
             )}
 
-            <SmartMixModal 
-                isOpen={isSmartMixOpen}
-                onClose={() => setIsSmartMixOpen(false)}
-                onConfirm={handleSmartMixConfirm}
-                totalDays={days.length}
-                startDate={dateRange.start}
-                loading={isReplanning}
-            />
+            {isSmartMixOpen && (
+                <SmartMixModal
+                    isOpen={isSmartMixOpen}
+                    onClose={() => setIsSmartMixOpen(false)}
+                    onConfirm={handleSmartMixConfirm}
+                    totalDays={days.length > 0 ? days.length : 1}
+                    startDate={dateRange.start}
+                />
+            )}
 
             <ConfirmModal 
                 isOpen={confirmState.isOpen}
@@ -312,7 +366,8 @@ function PlannerContent() {
                 confirmText="진행하기"
             />
 
-            <div className="bg-white border-b border-slate-200 sticky top-[72px] z-30 shadow-sm">
+            {/* Sticky Header */}
+            <div className="bg-white border-b border-slate-200 sticky top-[72px] z-30 shadow-sm transition-all">
                 <div className="max-w-[1600px] mx-auto px-4 py-4">
                     <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                         <div>
@@ -323,17 +378,26 @@ function PlannerContent() {
                                 </span>
                             </h2>
                             <div className="flex items-center gap-3 mt-2 text-sm text-slate-500">
-                                <button onClick={() => setIsDateEditorOpen(true)} className="flex items-center gap-1 hover:text-indigo-600 hover:bg-indigo-50 px-2 py-1 rounded-lg transition-all -ml-2">
+                                <button 
+                                    onClick={() => toggleSettings('date')} 
+                                    className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-all -ml-2 ${activeSettingsTab === 'date' ? 'bg-indigo-100 text-indigo-700' : 'hover:text-indigo-600 hover:bg-indigo-50'}`}
+                                >
                                     <Calendar size={14} />
                                     <span className="font-medium">{formatDateRange()}</span>
                                 </button>
                                 <span className="text-slate-300">|</span>
-                                <button onClick={() => setIsGuestEditorOpen(true)} className="flex items-center gap-1 hover:text-indigo-600 hover:bg-indigo-50 px-2 py-1 rounded-lg transition-all">
+                                <button 
+                                    onClick={() => toggleSettings('guest')} 
+                                    className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-all ${activeSettingsTab === 'guest' ? 'bg-indigo-100 text-indigo-700' : 'hover:text-indigo-600 hover:bg-indigo-50'}`}
+                                >
                                     <Users size={14} />
                                     <span className="font-medium">{formatGuests()}</span>
                                 </button>
                                 <span className="text-slate-300">|</span>
-                                <button onClick={() => setIsDestEditorOpen(true)} className="flex items-center gap-1 hover:text-indigo-600 hover:bg-indigo-50 px-2 py-1 rounded-lg transition-all">
+                                <button 
+                                    onClick={() => toggleSettings('dest')} 
+                                    className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-all ${activeSettingsTab === 'dest' ? 'bg-indigo-100 text-indigo-700' : 'hover:text-indigo-600 hover:bg-indigo-50'}`}
+                                >
                                     <MapPin size={14} />
                                     <span className="font-medium">{destination}</span>
                                 </button>
@@ -346,14 +410,56 @@ function PlannerContent() {
                 </div>
             </div>
 
+            {/* Inline Settings Panel (Scrolls with content) */}
+            {activeSettingsTab && (
+                <div className="bg-slate-100 border-b border-indigo-100 animate-slide-down">
+                    <div className="max-w-xl mx-auto p-6">
+                        {activeSettingsTab === 'date' && (
+                            <DateEditor
+                                startDate={dateRange.start}
+                                endDate={dateRange.end}
+                                onSave={(start, end) => {
+                                    setDateRange({ start, end });
+                                    setActiveSettingsTab(null);
+                                }}
+                                onClose={() => setActiveSettingsTab(null)}
+                                isInline={true}
+                            />
+                        )}
+                        {activeSettingsTab === 'guest' && (
+                            <GuestEditor
+                                guests={guests}
+                                onSave={(newGuests) => {
+                                    setGuests(newGuests);
+                                    setActiveSettingsTab(null);
+                                }}
+                                onClose={() => setActiveSettingsTab(null)}
+                                isInline={true}
+                            />
+                        )}
+                        {activeSettingsTab === 'dest' && (
+                            <DestinationEditor
+                                destination={destination}
+                                onSave={(newDest) => {
+                                    setDestination(newDest);
+                                    setActiveSettingsTab(null);
+                                }}
+                                onClose={() => setActiveSettingsTab(null)}
+                                isInline={true}
+                            />
+                        )}
+                    </div>
+                </div>
+            )}
+
             <div className="max-w-[1600px] mx-auto px-4 mt-6">
                 {isLoading ? (
                     <LoadingSkeleton />
                 ) : (
                     <div className="flex flex-col lg:flex-row gap-8">
                         <div className="w-full lg:w-1/3 order-1">
-                            <div className="flex items-center justify-between mb-6">
-                                <div className="flex items-center gap-2 pb-2 scrollbar-hide overflow-x-auto">
+                            <div className="flex items-center justify-between mb-6 gap-2">
+                                <div className="no-scrollbar flex items-center gap-2 pt-2 pb-2 scrollbar-hide overflow-x-auto">
                                     {days.length > 0 ? days.map((day) => (
                                         <Button_type1 
                                             key={day} 
@@ -378,25 +484,41 @@ function PlannerContent() {
                                         <div 
                                             {...provided.droppableProps}
                                             ref={provided.innerRef}
-                                            className="flex justify-between items-stretch gap-10 pb-5 overflow-x-scroll md:overflow-visible md:space-y-8 md:border-l-[3px] md:border-indigo-100 md:ml-4 md:pl-10 md:pb-0 md:block"
+                                            className="pb-5 overflow-visible space-y-8 border-l-[3px] border-indigo-100 ml-4 pl-10 pb-0 block"
                                         >
                                             {currentDayItems.map((item, index) => (
-                                                <Draggable key={item.id} draggableId={item.id.toString()} index={index}>
-                                                    {(provided, snapshot) => (
-                                                        <DayItems 
-                                                            item={item} 
-                                                            index={index} 
-                                                            onClick={() => handleItemClick(item.id)}
-                                                            selected={selectedItemId === item.id}
-                                                            innerRef={provided.innerRef}
-                                                            draggableProps={provided.draggableProps}
-                                                            dragHandleProps={provided.dragHandleProps}
-                                                            isDragging={snapshot.isDragging}
-                                                            onReplaceClick={() => setReplaceModalState({ isOpen: true, targetItem: item })}
-                                                            onLockClick={() => handleToggleLock(item.id)}
-                                                        />
+                                                <div key={item.id} className="min-w-[90%] relative mb-0">
+                                                     <Draggable draggableId={item.id.toString()} index={index}>
+                                                        {(provided, snapshot) => (
+                                                            <DayItems 
+                                                                item={item} 
+                                                                index={index} 
+                                                                onClick={() => handleItemClick(item.id)}
+                                                                selected={selectedItemId === item.id}
+                                                                innerRef={provided.innerRef}
+                                                                draggableProps={provided.draggableProps}
+                                                                dragHandleProps={provided.dragHandleProps}
+                                                                isDragging={snapshot.isDragging}
+                                                                onReplaceClick={() => setReplaceModalState({ isOpen: true, targetItem: item, mode: 'replace' })}
+                                                                onLockClick={() => handleToggleLock(item.id)}
+                                                                onDeleteClick={() => handleDeletePlace(item.id)}
+                                                            />
+                                                        )}
+                                                    </Draggable>
+                                                    
+                                                    {/* Insert Button (between items) */}
+                                                    {index < currentDayItems.length - 1 && (
+                                                        <div className="flex justify-center items-center pt-4 pb-4 relative z-0 group/insert max-w-full">
+                                                            <button 
+                                                                onClick={() => openAddModal(index + 1)}
+                                                                className="opacity-100 w-6 h-6 rounded-full bg-white border-2 border-slate-300 text-slate-300 flex items-center justify-center hover:border-indigo-500 hover:text-indigo-600 hover:scale-110 transition-all z-20 shadow-sm md:opacity-0 md:group-hover/insert:opacity-100"
+                                                                title="이 위치에 장소 추가"
+                                                            >
+                                                                <Plus size={14} strokeWidth={3} />
+                                                            </button>
+                                                        </div>
                                                     )}
-                                                </Draggable>
+                                                </div>
                                             ))}
                                             {provided.placeholder}
                                         </div>
@@ -404,11 +526,45 @@ function PlannerContent() {
                                 </Droppable>
                             </DragDropContext>
                         </div>
-                        <div className="w-full lg:w-2/3 order-2">
-                            <div className="lg:sticky lg:top-[190px] h-[300px] lg:h-[calc(100vh-220px)] rounded-3xl overflow-hidden shadow-xl border border-slate-200 bg-slate-100">
+                        {/* Desktop Map (Hidden on Mobile) */}
+                        <div className="hidden lg:block w-full lg:w-2/3 order-2">
+                            <div className="lg:sticky lg:top-[190px] lg:h-[calc(100vh-220px)] rounded-3xl overflow-hidden shadow-xl border border-slate-200 bg-slate-100">
                                 <Map schedule={schedule} selectedDay={selectedDay} selectedItemId={selectedItemId} />
                             </div>
                         </div>
+
+                        {/* Mobile Map Button (FAB) */}
+                        <button
+                            onClick={() => setIsMobileMapOpen(true)}
+                            className="lg:hidden fixed bottom-6 right-6 z-40 bg-indigo-600 text-white p-4 rounded-full shadow-xl flex items-center justify-center hover:bg-indigo-700 transition-all animate-bounce-subtle"
+                        >
+                            <MapPin size={24} />
+                            <span className="ml-2 font-bold">전체경로 보기</span>
+                        </button>
+
+                        {/* Mobile Map Modal (Full Screen) */}
+                        {/* Mobile Map Modal (Card Style) */}
+                        {isMobileMapOpen && (
+                            <div className="lg:hidden fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm p-4 md:p-8 flex items-center justify-center animate-fade-in">
+                                <div className="w-full h-full max-h-[80vh] bg-white rounded-3xl shadow-2xl flex flex-col overflow-hidden ring-1 ring-white/20">
+                                    <div className="flex justify-between items-center p-4 border-b bg-white">
+                                        <h2 className="font-bold text-lg flex items-center gap-2">
+                                            <MapPin size={20} className="text-indigo-600"/>
+                                            전체 경로 보기
+                                        </h2>
+                                        <button 
+                                            onClick={() => setIsMobileMapOpen(false)}
+                                            className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                                        >
+                                            <X size={24} />
+                                        </button>
+                                    </div>
+                                    <div className="flex-1 relative">
+                                        <Map schedule={schedule} selectedDay={selectedDay} selectedItemId={selectedItemId} />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
