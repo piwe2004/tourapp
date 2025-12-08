@@ -34,7 +34,7 @@ export default function SmartMixModal({ isOpen, onClose, onConfirm, totalDays, s
     };
 
     return (
-        <div 
+        <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-4"
             onClick={(e) => {
                 if (e.target === e.currentTarget) onClose();
@@ -46,13 +46,13 @@ export default function SmartMixModal({ isOpen, onClose, onConfirm, totalDays, s
                     <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
                         <Sparkles size={120} />
                     </div>
-                    <h2 className="text-2xl font-bold flex items-center gap-2 relative z-10">
+                    <h2 className="text-[18px] md:text-2xl font-bold flex items-center gap-2 relative z-10">
                         <Sparkles className="animate-pulse" /> 일정 재구성 하기
                     </h2>
-                    <p className="opacity-90 mt-1 relative z-10 text-indigo-100">
+                    <p className="text-[14px] md:text-[16px] opacity-90 mt-1 relative z-10 text-indigo-100">
                         해당일의 일정을 재구성해서 최적의 일정을 만들어드릴게요.
                     </p>
-                    <button 
+                    <button
                         onClick={onClose}
                         className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 p-2 rounded-full transition-all z-20 cursor-pointer"
                     >
@@ -61,14 +61,14 @@ export default function SmartMixModal({ isOpen, onClose, onConfirm, totalDays, s
                 </div>
 
                 {/* Body */}
-                <div className="p-8">
+                <div className="p-4 md:p-8">
                     {/* Progress */}
-                    <div className="flex items-center justify-center mb-8 gap-4">
+                    <div className="flex items-center justify-between mb-8 gap-4">
                         <div className={`flex items-center gap-2 ${step >= 1 ? 'text-indigo-600 font-bold' : 'text-slate-300'}`}>
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${step >= 1 ? 'bg-indigo-100' : 'bg-slate-100'}`}>1</div>
                             변경 대상
                         </div>
-                        <div className="w-12 h-[2px] bg-slate-100"></div>
+                        <div className="w-5 md:w-12 h-[2px] bg-slate-100"></div>
                         <div className={`flex items-center gap-2 ${step >= 2 ? 'text-indigo-600 font-bold' : 'text-slate-300'}`}>
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${step >= 2 ? 'bg-indigo-100' : 'bg-slate-100'}`}>2</div>
                             테마 선택
@@ -77,13 +77,13 @@ export default function SmartMixModal({ isOpen, onClose, onConfirm, totalDays, s
 
                     {step === 1 && (
                         <div className="space-y-4 animate-fade-in-right">
-                             <h3 className="text-lg font-bold text-slate-800 mb-4 text-center">어떤 일정을 변경할까요?</h3>
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <h3 className="text-lg font-bold text-slate-800 mb-4 text-left md:text-center">어떤 일정을 변경할까요?</h3>
+                            <div >
                                 <button
                                     onClick={() => setSelectedScope('all')}
-                                    className={`p-6 rounded-2xl border-2 text-left transition-all relative overflow-hidden group
-                                        ${selectedScope === 'all' 
-                                            ? 'border-indigo-600 bg-indigo-50 ring-4 ring-indigo-50' 
+                                    className={`p-3 w-full mb-5 rounded-2xl border-2 text-left transition-all relative overflow-hidden group md:p-6
+                                        ${selectedScope === 'all'
+                                            ? 'border-indigo-600 bg-indigo-50 ring-4 ring-indigo-50'
                                             : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50'
                                         }
                                     `}
@@ -99,8 +99,8 @@ export default function SmartMixModal({ isOpen, onClose, onConfirm, totalDays, s
                                     </div>
                                     {selectedScope === 'all' && <div className="absolute top-4 right-4 text-indigo-600"><Check size={20} /></div>}
                                 </button>
-                                
-                                <div className="space-y-2">
+
+                                <div className="flex gap-2 flex-wrap justify-between items-start overflow-y-auto max-h-[200px]">
                                     {Array.from({ length: totalDays }).map((_, i) => {
                                         const day = i + 1;
                                         const dateStr = getFormattedDate(day);
@@ -109,24 +109,26 @@ export default function SmartMixModal({ isOpen, onClose, onConfirm, totalDays, s
                                             <button
                                                 key={day}
                                                 onClick={() => setSelectedScope(day)}
-                                                className={`w-full p-4 rounded-xl border-2 flex items-center justify-between transition-all
-                                                    ${isSelected 
-                                                        ? 'border-indigo-600 bg-indigo-50 text-indigo-900' 
+                                                className={`w-[48%] md:w-[32%] p-2 rounded-xl border-2 flex items-center justify-between transition-all md:p-4
+                                                    ${isSelected
+                                                        ? 'border-indigo-600 bg-indigo-50 text-indigo-900'
                                                         : 'border-slate-100 hover:border-indigo-200 hover:bg-slate-50 text-slate-600'
                                                     }
                                                 `}
                                             >
                                                 <div className="flex items-center gap-3">
                                                     <Calendar size={18} className={isSelected ? 'text-indigo-600' : 'text-slate-400'} />
-                                                    <span className="font-bold">Day {day}</span>
-                                                    <span className="text-sm opacity-60">({dateStr})</span>
+                                                    <p className='flex flex-col items-start md:gap-2 md:flex-row'>
+                                                        <span className="font-bold">Day {day}</span>
+                                                        <span className="text-sm opacity-60">({dateStr})</span>
+                                                    </p>
                                                 </div>
                                                 {isSelected && <Check size={16} className="text-indigo-600" />}
                                             </button>
                                         )
                                     })}
                                 </div>
-                             </div>
+                            </div>
                         </div>
                     )}
 
@@ -139,9 +141,9 @@ export default function SmartMixModal({ isOpen, onClose, onConfirm, totalDays, s
                 </div>
 
                 {/* Footer */}
-                <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
+                <div className="p-3 md:p-6 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
                     {step === 2 ? (
-                        <button 
+                        <button
                             onClick={() => setStep(1)}
                             className="text-slate-500 hover:text-slate-800 font-medium px-4 py-2 rounded-lg hover:bg-slate-200 transition-all"
                         >
@@ -150,7 +152,7 @@ export default function SmartMixModal({ isOpen, onClose, onConfirm, totalDays, s
                     ) : (
                         <div></div>
                     )}
-                    
+
                     <button
                         onClick={handleNext}
                         disabled={loading || (step === 1 && !selectedScope) || (step === 2 && !selectedTheme)}
