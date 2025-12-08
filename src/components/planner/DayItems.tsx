@@ -1,11 +1,11 @@
 "use client"
 
 import { PlanItem } from "@/mockData";
-import { Clock, RefreshCw } from "lucide-react";
+import { Clock, RefreshCw, Lock, LockOpen } from "lucide-react";
 import { getIconByType } from "../ui/MapIcons";
 import { useRef, useState } from "react";
 
-export default function DayItems({ item, index, onClick, selected, draggableProps, dragHandleProps, innerRef, isDragging, onReplaceClick }: { 
+export default function DayItems({ item, index, onClick, selected, draggableProps, dragHandleProps, innerRef, isDragging, onReplaceClick, onLockClick }: { 
     item: PlanItem; 
     index: number; 
     onClick?: () => void; 
@@ -15,6 +15,7 @@ export default function DayItems({ item, index, onClick, selected, draggableProp
     innerRef?: (element: HTMLElement | null) => void;
     isDragging?: boolean;
     onReplaceClick?: (e: React.MouseEvent) => void;
+    onLockClick?: (e: React.MouseEvent) => void;
 }) {
     const localRef = useRef<HTMLDivElement>(null);
     const [dragWidth, setDragWidth] = useState<number | undefined>(undefined);
@@ -49,28 +50,58 @@ export default function DayItems({ item, index, onClick, selected, draggableProp
             `}
             style={isDragging && dragWidth ? { ...draggableProps?.style, width: `${dragWidth}px` } : draggableProps?.style}
          >
-            <div className="hidden md:block absolute -left-[51px] top-6 w-5 h-5 bg-white border-4 border-indigo-500 rounded-full z-10 shadow-sm"></div>
+            <div className={`hidden md:block absolute -left-[51px] top-6 w-5 h-5 border-4 rounded-full z-10 shadow-sm transition-colors
+                ${item.isLocked ? 'bg-indigo-600 border-indigo-200' : 'bg-white border-indigo-500'}
+            `}></div>
             <div className={`bg-white p-5 rounded-2xl border transition-all h-full flex flex-col justify-start
                 ${selected 
                     ? 'border-indigo-500 shadow-md ring-2 ring-indigo-100' 
-                    : 'border-slate-200 shadow-sm hover:shadow-lg'
+                    : item.isLocked 
+                        ? 'border-indigo-200 bg-indigo-50/10 shadow-sm'
+                        : 'border-slate-200 shadow-sm hover:shadow-lg'
                 }
             `}>
                 <div className="flex justify-between items-center mb-3">
                     <div className="flex items-center gap-2">
-                        <span className="flex items-center gap-1 text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded uppercase tracking-wider"><Clock size={10} /> {item.time}</span>
+                        <span className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded uppercase tracking-wider
+                            ${item.isLocked ? 'bg-indigo-100 text-indigo-700' : 'bg-indigo-50 text-indigo-600'}
+                        `}>
+                            <Clock size={10} /> {item.time}
+                        </span>
+                        {item.isLocked && (
+                             <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded border border-slate-200">Fixed</span>
+                        )}
                     </div>
-                    <div className="flex items-center gap-2">
-                        <button 
+                    <div className="flex items-center gap-1">
+                        <button
                             onClick={(e) => {
                                 e.stopPropagation();
-                                onReplaceClick?.(e);
+                                onLockClick?.(e);
                             }}
-                            className="p-1.5 text-slate-400 cursor-pointer hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-all opacity-0 group-hover:opacity-100"
-                            title="장소 교체"
+                            className={`p-1.5 rounded-full transition-all cursor-pointer group-hover:opacity-100
+                                ${item.isLocked || selected
+                                    ? 'text-indigo-600 bg-indigo-50 opacity-100' 
+                                    : 'text-slate-300 hover:text-slate-600 hover:bg-slate-100 opacity-0'
+                                }
+                            `}
+                            title={item.isLocked ? "고정 해제" : "일정 고정"}
                         >
-                            <RefreshCw size={14} />
+                            {item.isLocked ? <Lock size={14} /> : <LockOpen size={14} />}
                         </button>
+                        {!item.isLocked && (
+                            <button 
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onReplaceClick?.(e);
+                                }}
+                                className={`p-1.5 text-slate-400 cursor-pointer hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-all group-hover:opacity-100
+                                    ${selected ? 'opacity-100' : 'opacity-0'}
+                                `}
+                                title="장소 교체"
+                            >
+                                <RefreshCw size={14} />
+                            </button>
+                        )}
                     </div>
                 </div>
                 <h3 className="text-xl font-bold text-slate-900 mb-3 flex items-center gap-2">

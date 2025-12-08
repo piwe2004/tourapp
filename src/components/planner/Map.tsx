@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PlanItem } from '@/mockData';
 import { getIconByType } from '../ui/MapIcons';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -17,21 +17,38 @@ export default function Map({ schedule, selectedDay, selectedItemId }: MapProps)
   const markersRef = useRef<naver.maps.Marker[]>([]); // 마커 관리용 ref
   const polylineRef = useRef<naver.maps.Polyline | null>(null); // 경로 관리용 ref
 
-  useEffect(() => {
-    if (!window.naver || !window.naver.maps) return;
-    if (!mapElement.current) return;
+  // 네이버 지도 SDK 로드 상태 감지
+  const [isMapLoaded, setIsMapLoaded] = useState(false);
 
-    // 선택된 날짜의 데이터 필터링
+  useEffect(() => {
+    const checkMapLoaded = setInterval(() => {
+      if (window.naver && window.naver.maps) {
+        setIsMapLoaded(true);
+        clearInterval(checkMapLoaded);
+      }
+    }, 100);
+
+    return () => clearInterval(checkMapLoaded);
+  }, []);
+
+  /**
+   * @desc 일정 데이터(schedule)가 변경되면 지도와 경로를 다시 그립니다.
+   */
+  useEffect(() => {
+    // 1. 지도 SDK가 로드되지 않았거나 DOM 요소가 없으면 중단
+    if (!isMapLoaded || !mapElement.current || !window.naver?.maps) return;
+
+    // 2. 현재 선택된 날짜의 아이템만 필터링 (위도/경도 있는 것만)
     const dayItems = schedule.filter(
       (item) => item.day === selectedDay && item.lat && item.lng
     );
 
-    // 중심 좌표 (데이터 없으면 제주공항)
+    // 3. 중심 좌표 계산 (데이터가 없으면 제주공항 기본값)
     const centerLat = dayItems.length > 0 ? dayItems[0].lat! : 33.5104;
     const centerLng = dayItems.length > 0 ? dayItems[0].lng! : 126.4913;
     const center = new window.naver.maps.LatLng(centerLat, centerLng);
 
-    // 지도 초기화
+    // 4. 지도 인스턴스 초기화 (한 번만 실행)
     if (!mapRef.current) {
       const mapOptions: naver.maps.MapOptions = {
         center: center,
@@ -48,7 +65,7 @@ export default function Map({ schedule, selectedDay, selectedItemId }: MapProps)
     
     const map = mapRef.current;
 
-    // --- 기존 마커 및 경로 제거 (초기화) ---
+    // 5. 기존 마커 및 경로 깨끗이 제거 (초기화)
     markersRef.current.forEach(marker => marker.setMap(null));
     markersRef.current = [];
 
@@ -57,16 +74,16 @@ export default function Map({ schedule, selectedDay, selectedItemId }: MapProps)
       polylineRef.current = null;
     }
 
-    // --- 마커 및 경로 그리기 ---
+    // 6. 새로운 마커 생성 및 경로 좌표 수집
     const pathCoords: naver.maps.LatLng[] = [];
 
-    dayItems.forEach((item, index) => {
+    dayItems.forEach((item) => {
       const position = new window.naver.maps.LatLng(item.lat!, item.lng!);
       pathCoords.push(position);
 
       const isSelected = selectedItemId === item.id;
       
-      // 마커 크기 정의
+      // 선택 여부에 따른 마커 스타일링
       const width = isSelected ? 60 : 40;
       const height = isSelected ? 69 : 49;
 
@@ -120,14 +137,13 @@ export default function Map({ schedule, selectedDay, selectedItemId }: MapProps)
         title: item.activity,
         icon: {
           content: markerContent,
-          // Anchor를 가로 중앙, 세로 하단으로 설정하여 핀의 끝이 정확한 좌표를 가리키게 함
           anchor: new window.naver.maps.Point(width / 2, height),
         }
       });
-      markersRef.current.push(marker); // 생성된 마커 저장
+      markersRef.current.push(marker);
     });
 
-    // 경로 그리기
+    // 7. 경로(Polyline) 그리기 - 아이템이 2개 이상일 때만 연결
     if (pathCoords.length > 1) {
       const polyline = new window.naver.maps.Polyline({
         map: map,
@@ -139,33 +155,32 @@ export default function Map({ schedule, selectedDay, selectedItemId }: MapProps)
         strokeLineCap: "round",
         strokeLineJoin: "round",
       });
-      polylineRef.current = polyline; // 생성된 경로 저장
+      polylineRef.current = polyline;
     }
 
-    // --- 뷰 조정 로직 ---
+    // 8. 뷰포트(View) 자동 조정
     if (selectedItemId) {
-      // 아이템 선택 시: 해당 위치로 줌인 및 이동
+      // 특정 아이템 선택 시 해당 위치로 부드럽게 이동
       const selectedItem = dayItems.find(item => item.id === selectedItemId);
       if (selectedItem && selectedItem.lat && selectedItem.lng) {
         const target = new window.naver.maps.LatLng(selectedItem.lat, selectedItem.lng);
-        map.morph(target, 14); // 부드럽게 이동하며 줌 레벨 14로 변경
+        map.morph(target, 14);
       }
     } else {
-      // 아이템 미선택 시: 전체 경로가 보이도록 조정
+      // 전체 경로가 보이도록 줌 레벨 조정
       if (pathCoords.length > 0) {
         const bounds = new window.naver.maps.LatLngBounds(pathCoords[0], pathCoords[0]);
         pathCoords.forEach(coord => bounds.extend(coord));
         map.fitBounds(bounds, {
-          top: 50, bottom: 50, left: 50, right: 50 // 패딩 추가
+          top: 50, bottom: 50, left: 50, right: 50
         });
       } else {
-        // 데이터가 없으면 기본 위치로 이동
         map.setCenter(center);
         map.setZoom(11);
       }
     }
 
-  }, [schedule, selectedDay, selectedItemId]); // selectedItemId 의존성 추가
+  }, [schedule, selectedDay, selectedItemId, isMapLoaded]); // isMapLoaded 의존성 추가로 로드 완료 시 즉시 렌더링됨
 
   return (
     <div className="w-full h-full relative">

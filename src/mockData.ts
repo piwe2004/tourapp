@@ -5,10 +5,11 @@ export interface PlanItem {
   day: number; // 1일차, 2일차 구분
   time: string;
   activity: string;
-  type: 'sightseeing' | 'food' | 'cafe' | 'stay' | 'move';
+  type: 'sightseeing' | 'food' | 'cafe' | 'stay' | 'move' | 'etc';
   memo: string;
   lat?: number;
   lng?: number;
+  isLocked?: boolean; // 사용자가 고정한 일정인지 여부
 }
 
 // 📌 [Mock] 제주도 1박 2일 더미 데이터

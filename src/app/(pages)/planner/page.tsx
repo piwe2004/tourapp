@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Sparkles, Share2, Map as MapIcon, Calendar, Users, MapPin } from 'lucide-react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Sparkles, Share2, Calendar, Users, MapPin } from 'lucide-react';
 import { getTravelPlan } from '@/lib/actions';
 import { PlanItem } from '@/mockData';
 import DateEditor from '@/components/planner/DateEditor';
@@ -12,9 +12,20 @@ import DayItems from '@/components/planner/DayItems';
 import Button_type1 from '@/components/ui/Button_type1';
 import Map from '@/components/planner/Map';
 import PlaceReplacementModal from '@/components/planner/PlaceReplacementModal';
+import SmartMixModal from '@/components/planner/SmartMixModal';
+import ConfirmModal from '@/components/ui/ConfirmModal';
+import { regenerateSchedule, PlannerTheme } from '@/services/ReplanningService';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 
 export default function PlannerView() {
+    return (
+        <Suspense fallback={<LoadingSkeleton />}>
+            <PlannerContent />
+        </Suspense>
+    );
+}
+
+function PlannerContent() {
     const searchParams = useSearchParams();
     const initialDestination = searchParams.get('destination') || '여행지';
 
@@ -40,10 +51,78 @@ export default function PlannerView() {
         targetItem: null,
     });
 
-    const [currentSlide, setCurrentSlide] = useState(0);
+    // Re-planning State
+    const [isSmartMixOpen, setIsSmartMixOpen] = useState(false);
+    const [isReplanning, setIsReplanning] = useState(false);
+    
+    // Confirm Modal State
+    const [confirmState, setConfirmState] = useState<{
+        isOpen: boolean;
+        message: string;
+        onConfirm: () => void;
+    }>({ isOpen: false, message: "", onConfirm: () => {} });
 
-    const days = Array.from(new Set(schedule.map(item => item.day))).sort();
-    const currentDayItems = schedule.filter((item) => item.day === selectedDay);
+    const getFormattedDate = (dayIndex: number) => {
+        const date = new Date(dateRange.start);
+        date.setDate(date.getDate() + (dayIndex - 1));
+        return `${date.getMonth() + 1}월 ${date.getDate()}일`;
+    };
+
+// ... (skipping unchanged code) ...
+
+    /**
+     * @desc 스마트 믹스 리플래닝 실행 핸들러 (Modal Confirm)
+     */
+    const handleSmartMixConfirm = async (scope: number | 'all', theme: PlannerTheme) => {
+        const runReplanning = async () => {
+            setIsReplanning(true);
+            try {
+                let newSchedule = [...schedule];
+
+                if (scope === 'all') {
+                    for (const day of days) {
+                        newSchedule = await regenerateSchedule(newSchedule, day, theme);
+                    }
+                } else {
+                    newSchedule = await regenerateSchedule(newSchedule, scope, theme);
+                }
+                
+                setSchedule(newSchedule);
+                setIsSmartMixOpen(false);
+            } catch (error) {
+                console.error("Re-planning failed:", error);
+                alert("일정 재구성에 실패했습니다. 잠시 후 다시 시도해주세요.");
+            } finally {
+                setIsReplanning(false);
+            }
+        };
+
+        // Check for locked items in the scope
+        let hasLockedItems = false;
+        if (scope === 'all') {
+            hasLockedItems = schedule.some(item => item.isLocked);
+        } else {
+            hasLockedItems = schedule.some(item => item.day === scope && item.isLocked);
+        }
+
+        if (hasLockedItems) {
+            setConfirmState({
+                isOpen: true,
+                message: "고정된 장소는\n변경되지 않고 유지됩니다.\n\n계속 진행하시겠습니까?",
+                onConfirm: runReplanning
+            });
+        } else {
+            runReplanning();
+        }
+    };
+
+
+
+    const days = Array.from(new Set(schedule.map(item => item.day))).sort((a, b) => a - b);
+    // [수정] 일정 아이템을 시간 순서대로 정렬하여 렌더링
+    const currentDayItems = schedule
+        .filter((item) => item.day === selectedDay)
+        .sort((a, b) => a.time.localeCompare(b.time));
 
     useEffect(() => {
         const fetchData = async () => {
@@ -65,8 +144,57 @@ export default function PlannerView() {
         fetchData();
     }, [destination]);
 
+    /**
+     * @desc 여행 기간(dateRange) 변경 시 스케줄(schedule)의 일수(Day)를 동기화합니다.
+     * 날짜가 늘어나면 새로운 Day를 추가하고, 줄어들면 초과된 Day를 제거합니다.
+     */
     useEffect(() => {
-        setCurrentSlide(0);
+        if (schedule.length === 0) return;
+
+        const startDate = new Date(dateRange.start);
+        const endDate = new Date(dateRange.end);
+        // 날짜 차이 계산: (종료일 - 시작일) 일수 + 1
+        const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+        const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+        // 현재 스케줄이 포함하는 최대 Day 계산
+        const currentMaxDay = schedule.length > 0 
+            ? Math.max(...schedule.map(item => item.day)) 
+            : 0;
+
+        // 변경이 필요 없는 경우 중단
+        if (totalDays === currentMaxDay) return;
+
+        if (totalDays < currentMaxDay) {
+            // [CASE 1] 여행 기간이 줄어든 경우: 초과된 날짜의 아이템 제거
+            setSchedule(prev => prev.filter(item => item.day <= totalDays));
+            
+            // 만약 현재 보고 있는 날짜가 삭제된 날짜라면 1일차로 이동
+            if (selectedDay > totalDays) setSelectedDay(1);
+
+        } else {
+            // [CASE 2] 여행 기간이 늘어난 경우: 새로운 날짜에 기본 일정 추가
+            const newItems: PlanItem[] = [];
+            for (let d = currentMaxDay + 1; d <= totalDays; d++) {
+                newItems.push({
+                    id: Date.now() + d, // 고유 ID 생성 (Timestamp 활용)
+                    day: d,
+                    time: "10:00",
+                    activity: "자유 일정",
+                    type: "etc", // 기타 타입
+                    memo: "새로 추가된 여행일입니다. 일정을 계획해보세요!",
+                    lat: 33.4996, // 제주공항/시내 인근 좌표
+                    lng: 126.5312,
+                    isLocked: false
+                });
+            }
+            setSchedule(prev => [...prev, ...newItems]);
+        }
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dateRange, schedule.length]); // schedule.length가 변하거나 dateRange가 변할 때 체크
+
+    useEffect(() => {
         setSelectedItemId(null);
     }, [selectedDay]);
 
@@ -112,6 +240,17 @@ export default function PlannerView() {
         setReplaceModalState({ isOpen: false, targetItem: null });
     };
 
+    /**
+     * @desc 일정 고정/해제 토글 핸들러
+     */
+    const handleToggleLock = (id: number) => {
+        setSchedule(prev => prev.map(item => 
+            item.id === id ? { ...item, isLocked: !item.isLocked } : item
+        ));
+    };
+
+
+
     return (
         <div className="min-h-screen bg-slate-50 pb-20 pt-20">
             {isDateEditorOpen && (
@@ -155,6 +294,24 @@ export default function PlannerView() {
                 />
             )}
 
+            <SmartMixModal 
+                isOpen={isSmartMixOpen}
+                onClose={() => setIsSmartMixOpen(false)}
+                onConfirm={handleSmartMixConfirm}
+                totalDays={days.length}
+                startDate={dateRange.start}
+                loading={isReplanning}
+            />
+
+            <ConfirmModal 
+                isOpen={confirmState.isOpen}
+                onClose={() => setConfirmState(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={confirmState.onConfirm}
+                message={confirmState.message}
+                title="일정 재구성 알림"
+                confirmText="진행하기"
+            />
+
             <div className="bg-white border-b border-slate-200 sticky top-[72px] z-30 shadow-sm">
                 <div className="max-w-[1600px] mx-auto px-4 py-4">
                     <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
@@ -162,7 +319,7 @@ export default function PlannerView() {
                             <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
                                 {destination} 여행 계획
                                 <span className="hidden md:inline-flex text-indigo-600 text-xs font-bold px-2 py-1 bg-indigo-50 rounded-full border border-indigo-100 items-center gap-1">
-                                    <Sparkles size={12} /> Planni's Pick
+                                    <Sparkles size={12} /> Planni&apos;s Pick
                                 </span>
                             </h2>
                             <div className="flex items-center gap-3 mt-2 text-sm text-slate-500">
@@ -195,10 +352,24 @@ export default function PlannerView() {
                 ) : (
                     <div className="flex flex-col lg:flex-row gap-8">
                         <div className="w-full lg:w-1/3 order-1">
-                            <div className="flex items-center gap-2 mb-6 pb-2 scrollbar-hide">
-                                {days.length > 0 ? days.map((day) => (
-                                    <Button_type1 key={day} onClick={() => setSelectedDay(day)} text={`Day ${day}`} active={selectedDay === day}/>
-                                )) : null}
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-2 pb-2 scrollbar-hide overflow-x-auto">
+                                    {days.length > 0 ? days.map((day) => (
+                                        <Button_type1 
+                                            key={day} 
+                                            onClick={() => setSelectedDay(day)} 
+                                            text={getFormattedDate(day)} 
+                                            active={selectedDay === day}
+                                        />
+                                    )) : null}
+                                </div>
+                                <button
+                                    onClick={() => setIsSmartMixOpen(true)}
+                                    className="flex-shrink-0 ml-2 bg-indigo-600 text-white p-2 rounded-xl shadow-md hover:bg-indigo-700 transition-all flex items-center gap-2 text-sm font-bold"
+                                >
+                                    <Sparkles size={16} /> 
+                                    <span className="hidden xl:inline">일정 재구성</span>
+                                </button>
                             </div>
                             
                             <DragDropContext onDragEnd={onDragEnd}>
@@ -222,6 +393,7 @@ export default function PlannerView() {
                                                             dragHandleProps={provided.dragHandleProps}
                                                             isDragging={snapshot.isDragging}
                                                             onReplaceClick={() => setReplaceModalState({ isOpen: true, targetItem: item })}
+                                                            onLockClick={() => handleToggleLock(item.id)}
                                                         />
                                                     )}
                                                 </Draggable>
