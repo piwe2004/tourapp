@@ -11,8 +11,16 @@ const config: Config = {
             colors: {
                 background: "var(--background)",
                 foreground: "var(--foreground)",
+                primary: '#FF5722', // Brand Orange
+                bg: '#F8FAFC',      // Light Gray Background
+                alert: '#FFEBEE',   // Alert Background
+                alertText: '#D32F2F', // Alert Text
             },
+            fontFamily: {
+                sans: ['var(--font-noto-sans-kr)', 'sans-serif'],
+
         },
+    },
     },
     plugins: [],
 };

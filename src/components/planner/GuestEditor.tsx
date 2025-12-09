@@ -133,7 +133,7 @@ export default function GuestEditor({ guests, onSave, onClose, isInline = false 
     if (isInline) return content;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
             {content}
         </div>
     );

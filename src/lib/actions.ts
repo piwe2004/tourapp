@@ -1,6 +1,10 @@
 'use server';
 
 import { MOCK_PLAN_JEJU, PlanItem } from "@/mockData";
+import { geminiModel } from "./gemini";
+import { db } from "@/lib/firebase";
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, Timestamp } from "firebase/firestore";
+import { headers } from "next/headers";
 
 // 지금은 API 연동 없이 더미 데이터만 반환합니다.
 export async function getTravelPlan(destination: string): Promise<PlanItem[]> {
@@ -11,4 +15,150 @@ export async function getTravelPlan(destination: string): Promise<PlanItem[]> {
 
   // 검색어와 상관없이 항상 준비된 '제주도 플랜'을 리턴합니다.
   return MOCK_PLAN_JEJU;
+}
+
+export interface TravelContext {
+  destination: string | null;
+  theme: string[];
+  party: {
+    adult: number;
+    child: number;
+  };
+  dateRange: {
+    start: string; // YYYY-MM-DD
+    end: string;   // YYYY-MM-DD
+  };
+}
+
+/**
+ * @desc IP 기반 속도 제한 (1분에 5회)
+ * @param ip 사용자 IP 주소
+ * @returns 통과 여부 (true: 통과, false: 차단)
+ */
+async function checkRateLimit(ip: string): Promise<boolean> {
+  // 로컬호스트나 IP가 없는 경우 제한 없이 통과
+  if (!ip || ip === 'unknown') return true;
+
+  const ref = doc(db, "rate_limits", ip);
+  const snapshot = await getDoc(ref);
+  const now = Date.now();
+  const ONE_MINUTE = 60 * 1000;
+
+  if (!snapshot.exists()) {
+    // 첫 요청: 문서 생성
+    await setDoc(ref, {
+      count: 1,
+      lastRequest: serverTimestamp(),
+    });
+    return true;
+  }
+
+  const data = snapshot.data();
+  const lastRequestTime = data.lastRequest instanceof Timestamp 
+    ? data.lastRequest.toMillis() 
+    : now; // 타임스탬프 없으면 현재 시간 간주
+
+  if (now - lastRequestTime > ONE_MINUTE) {
+    // 1분 지남: 카운트 리셋
+    await updateDoc(ref, {
+      count: 1,
+      lastRequest: serverTimestamp(),
+    });
+    return true;
+  } else {
+    // 1분 이내
+    if (data.count >= 5) {
+      return false; // 5회 초과 차단
+    }
+    // 카운트 증가
+    await updateDoc(ref, {
+      count: data.count + 1,
+    });
+    return true;
+  }
+}
+
+/**
+ * @desc 사용자의 자연어 쿼리를 분석하여 여행 조건을 추출하는 함수입니다.
+ * 보안 로직: 입력값 검증 및 Rate Limiting 포함
+ * @param query 사용자가 입력한 여행 관련 검색어 (예: "부산 맛집 여행")
+ */
+export async function extractTravelContext(query: string): Promise<TravelContext> {
+  const headersList = await headers();
+  const ip = headersList.get("x-forwarded-for")?.split(",")[0] || "unknown";
+
+  // 1. 입력값 검증: 길이 제한 (50자)
+  if (query.length > 50) {
+    throw new Error("검색어는 50자 이내여야 합니다.");
+  }
+
+  // 2. 입력값 검증: 스크립트 태그 방지 (간이 XSS 방어)
+  if (/<script/i.test(query)) {
+    throw new Error("허용되지 않는 입력이 포함되어 있습니다.");
+  }
+
+  // 3. Rate Limiting 체크
+  const isAllowed = await checkRateLimit(ip);
+  if (!isAllowed) {
+    throw new Error("요청이 너무 많습니다. 잠시 후 다시 시도해주세요.");
+  }
+
+  const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+
+  const prompt = `
+    You are a helpful travel assistant.
+    Analyze the following user query and extract travel context into JSON format.
+
+    Current Date: ${today}
+
+    User Query: "${query}"
+
+    Requirements:
+    1. "destination": Extract the city or region name. If not found, return null.
+    2. "theme": Extract keywords related to travel style (e.g., "food", "healing", "activity"). Return as a string array.
+    3. "party":
+       - "adult": Default to 2 if not specified.
+       - "child": Default to 0 if not specified.
+    4. "dateRange":
+       - "start": Calculate based on terms like "tomorrow", "next weekend", or specific dates relative to Current Date. If not specified, use Current Date.
+       - "end": Calculate based on duration (e.g., "2 nights"). If not specified, default to 1 night after start date.
+       - Format dates as "YYYY-MM-DD".
+
+    Response Format (JSON only):
+    {
+      "destination": string | null,
+      "theme": string[],
+      "party": {
+        "adult": number,
+        "child": number
+      },
+      "dateRange": {
+        "start": string,
+        "end": string
+      }
+    }
+  `;
+
+  try {
+    const result = await geminiModel.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+
+    console.log("[Gemini] Raw response:", text);
+
+    // Extract JSON from markdown code block if present
+    const jsonStr = text.replace(/```json|```/g, "").trim();
+    const data = JSON.parse(jsonStr) as TravelContext;
+
+    return data;
+  } catch (error) {
+    console.error("[Gemini] Error extracting context:", error);
+    // Fallback in case of error
+    return {
+      destination: null,
+      theme: [],
+      party: { adult: 2, child: 0 },
+      dateRange: { start: today, end: today },
+    };
+  }
 }

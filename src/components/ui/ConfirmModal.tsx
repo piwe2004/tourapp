@@ -23,7 +23,7 @@ export default function ConfirmModal({
 
     return (
         <div 
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-4"
+            className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-4"
             onClick={(e) => {
                 if (e.target === e.currentTarget) onClose();
             }}
