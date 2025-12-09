@@ -213,16 +213,12 @@ function PlannerContent() {
                 <div className="absolute left-1/2 transform -translate-x-1/2 flex flex-col items-center w-full max-w-[200px] lg:max-w-none pointer-events-none">
                     {/* [Mobile View] Compact & Interactive */}
                     <div className="flex flex-col items-center lg:hidden w-full pointer-events-auto">
-                        <button 
-                            onClick={() => setActiveEditor('dest')}
-                            className="flex items-center gap-1.5 px-3 py-1 rounded-lg transition active:bg-gray-50 pointer-events-auto"
-                        >
-                            <h1 className="text-sm font-bold text-gray-800 truncate max-w-[140px]">{destination} 여행</h1>
-                            <i className="fa-solid fa-chevron-down text-gray-400 text-[12px]"></i>
-                        </button>
+                        <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg transition active:bg-gray-50 pointer-events-auto">
+                            <h2 className="hidden lg:block text-sm font-bold text-gray-800 truncate max-w-[140px]">{destination} 여행</h2>
+                        </div>
                         <span 
                             onClick={() => setActiveEditor('date')}
-                            className="text-[10px] text-gray-400 font-medium tracking-wide cursor-pointer hover:text-[#4338CA] pointer-events-auto"
+                            className="hidden lgh:block text-[10px] text-gray-400 font-medium tracking-wide cursor-pointer hover:text-[#4338CA] pointer-events-auto"
                         >
                             {dateRange.start.toLocaleDateString()} - {dateRange.end.toLocaleDateString()}
                         </span>
@@ -230,7 +226,7 @@ function PlannerContent() {
 
                     {/* [PC View] Detailed & Static Title */}
                     <div className="hidden lg:flex flex-col items-center pointer-events-auto">
-                        <h1 className="text-lg font-bold text-gray-900">{destination} 여행</h1>
+                        <h2 className="text-lg font-bold text-gray-900">{destination} 여행</h2>
 
                         <div className="flex items-center gap-3 mt-1 text-[12px] font-medium text-gray-500">
                             {/* Region */}
@@ -271,31 +267,29 @@ function PlannerContent() {
             </header>
 
             {/* [Mobile Only] Custom Day Focus Header */}
-            <div className="lg:hidden bg-white px-6 pt-6 pb-2 shrink-0 z-20">
+            <div className="lg:hidden bg-white px-6 pt-6 pb-2 shrink-0 z-20 flex items-center justify-between">
                 {/* Row 1: Date & Tools */}
-                <div className="flex items-center justify-between mb-4">
-                    <span className="text-sm font-medium text-gray-400 tracking-tight">
+                <div className="flex items-start justify-between flex-col gap-2">
+                    <button onClick={() => setActiveEditor('date')} className="text-sm font-medium text-gray-400 tracking-tight">
                         {dateRange.start.toLocaleDateString()} ~ {dateRange.end.toLocaleDateString()}
-                    </span>
+                    </button>
+                    {/* Row 2: Title & Dropdown */}
                     <div className="flex items-center gap-3">
-                        <div className="bg-[#FFF7ED] text-[#F97316] px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm border border-[#FFEDD5]">
-                            <i className="fa-solid fa-sun text-[12px]"></i> 24°
-                        </div>
-                        <button className="w-9 h-9 rounded-full bg-white border border-gray-100 flex items-center justify-center text-gray-400 shadow-sm active:scale-95 transition">
-                            <i className="fa-solid fa-share-nodes text-[14px]"></i>
+                        <button 
+                            onClick={() => setActiveEditor('dest')}
+                            className="bg-gray-50 text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 active:bg-gray-100 transition"
+                        >
+                            {destination} · {guests.adult + guests.child + guests.teen}명 
+                            <i className="fa-solid fa-chevron-down text-[10px] text-gray-400"></i>
                         </button>
                     </div>
                 </div>
-
-                {/* Row 2: Title & Dropdown */}
                 <div className="flex items-center gap-3">
-                    <h1 className="text-[32px] font-black text-slate-900 leading-none tracking-tight">Day {selectedDay}</h1>
-                    <button 
-                        onClick={() => setActiveEditor('dest')}
-                        className="bg-gray-50 text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 active:bg-gray-100 transition"
-                    >
-                        {destination} · {guests.adult + guests.child + guests.teen}명 
-                        <i className="fa-solid fa-chevron-down text-[10px] text-gray-400"></i>
+                    <div className="bg-[#FFF7ED] text-[#F97316] px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm border border-[#FFEDD5]">
+                        <i className="fa-solid fa-sun text-[12px]"></i> 24°
+                    </div>
+                    <button className="w-9 h-9 rounded-full bg-white border border-gray-100 flex items-center justify-center text-gray-400 shadow-sm active:scale-95 transition">
+                        <i className="fa-solid fa-share-nodes text-[14px]"></i>
                     </button>
                 </div>
             </div>
