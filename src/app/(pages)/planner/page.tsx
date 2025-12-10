@@ -1,22 +1,29 @@
 'use client';
 
+/**
+ * @file PlannerView (page.tsx)
+ * @desc 여행 플래너의 메인 페이지 컨테이너입니다.
+ * 
+ * 주요 역할:
+ * 1. 상태 관리 (State Management) - usePlannerStore 및 로컬 useState 사용
+ * 2. 데이터 가져오기 (Data Fetching) - 여행 계획, 날씨, 추천 장소 등
+ * 3. 핸들러 정의 (Event Handlers) - 사용자 입력에 따른 상태 변경 로직
+ * 4. 레이아웃 조립 (Layout Composition) - PlannerTimeline, PlannerMapPanel, PlannerModals 컴포넌트 조합
+ */
+
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Sparkles, Share2, Calendar, Users, MapPin, Plus, X } from 'lucide-react';
 import { getTravelPlan } from '@/lib/actions';
 import { PlanItem } from '@/mockData';
-import DateEditor from '@/components/planner/DateEditor';
-import GuestEditor from '@/components/planner/GuestEditor';
-import DestinationEditor from '@/components/planner/DestinationEditor';
-import DayItems from '@/components/planner/DayItems';
-import Button_type1 from '@/components/ui/Button_type1';
-import Map from '@/components/planner/Map';
-import PlaceReplacementModal from '@/components/planner/PlaceReplacementModal';
-import SmartMixModal from '@/components/planner/SmartMixModal';
-import ConfirmModal from '@/components/ui/ConfirmModal';
+import { getPlanBRecommendations, RainyScheduleItem } from '@/lib/weather/actions';
 import { regenerateSchedule, PlannerTheme } from '@/services/ReplanningService';
-import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import useDraggableScroll from '@/hooks/useDraggableScroll';
+import { DropResult } from '@hello-pangea/dnd';
+import { usePlannerStore } from '@/store/plannerStore';
+
+// 분리된 컴포넌트들 Import
+import PlannerTimeline from '@/components/planner/PlannerTimeline';
+import PlannerMapPanel from '@/components/planner/PlannerMapPanel';
+import PlannerModals from '@/components/planner/PlannerModals';
 
 export default function PlannerView() {
     return (
@@ -27,24 +34,32 @@ export default function PlannerView() {
 }
 
 function PlannerContent() {
+    // URL 쿼리 파라미터에서 여행지 정보 가져오기
     const searchParams = useSearchParams();
     const initialDestination = searchParams.get('destination') || '여행지';
 
+    // 1. 전역 상태 (Global Store)
+    const { 
+        destination, dateRange, guests, activeEditor,
+        setDestination, setDateRange, setGuests, setActiveEditor 
+    } = usePlannerStore();
+
+    // 초기화: URL 파라미터로 받은 여행지를 스토어에 설정
+    useEffect(() => {
+        setDestination(initialDestination);
+    }, [initialDestination, setDestination]);
+
+    // 2. 로컬 상태 (Local State)
     const [isLoading, setIsLoading] = useState(true);
-    const [schedule, setSchedule] = useState<PlanItem[]>([]);
-    const [selectedDay, setSelectedDay] = useState(1);
-    const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
+    const [schedule, setSchedule] = useState<PlanItem[]>([]); // 전체 일정 데이터
+    const [selectedDay, setSelectedDay] = useState(1);        // 현재 선택된 날짜 (Day 1, 2...)
+    const [selectedItemId, setSelectedItemId] = useState<number | null>(null); // 지도/리스트에서 하이라이트된 아이템 ID
 
-    const [destination, setDestination] = useState(initialDestination);
-    const [dateRange, setDateRange] = useState<{ start: Date, end: Date }>({
-        start: new Date(),
-        end: new Date(new Date().setDate(new Date().getDate() + 2))
-    });
-    const [guests, setGuests] = useState({ adult: 2, teen: 0, child: 0 });
+    // 날씨 및 Plan B 관련 상태
+    const [rainRisks, setRainRisks] = useState<RainyScheduleItem[]>([]);
+    const [isPlanBOpen, setIsPlanBOpen] = useState(false);
 
-
-
-    // Replacement Modal State
+    // 모달 제어 상태
     const [replaceModalState, setReplaceModalState] = useState<{
         isOpen: boolean;
         targetItem: PlanItem | null;
@@ -56,80 +71,24 @@ function PlannerContent() {
         mode: 'replace'
     });
 
-    // Re-planning State
-    const [isSmartMixOpen, setIsSmartMixOpen] = useState(false);
-    const [isReplanning, setIsReplanning] = useState(false);
-
-    // Confirm Modal State
+    const [isSmartMixOpen, setIsSmartMixOpen] = useState(false); // 스마트 일정 재구성 모달
+    
     const [confirmState, setConfirmState] = useState<{
         isOpen: boolean;
         message: string;
         onConfirm: () => void;
     }>({ isOpen: false, message: "", onConfirm: () => { } });
 
-    // Mobile Map View State
-    const [isMobileMapOpen, setIsMobileMapOpen] = useState(false);
+    const [isMobileMapOpen, setIsMobileMapOpen] = useState(false); // 모바일 전체화면 지도
 
-    // Drag to Scroll Hook
-    const { ref: scrollRef, events: scrollEvents, isDragging: isScrollDragging } = useDraggableScroll();
+    // =========================================================================================
+    // Handlers (이벤트 처리 로직)
+    // =========================================================================================
 
-    const handleReplacePlace = (newItem: PlanItem) => {
-        if (replaceModalState.mode === 'replace') {
-            setSchedule(prev => prev.map(item =>
-                // [Fix] 교체 시 기존 아이템의 날짜(day)와 시간(time) 유지
-                item.id === replaceModalState.targetItem?.id
-                    ? { ...newItem, day: item.day, time: item.time, id: item.id }
-                    : item
-            ));
-        } else if (replaceModalState.mode === 'add' && typeof replaceModalState.targetIndex === 'number') {
-            const index = replaceModalState.targetIndex;
-            // Re-fetch current items to ensure we have latest sort
-            const currentDayItems = schedule.filter(item => item.day === selectedDay).sort((a, b) => a.time.localeCompare(b.time));
-
-            let newTime = "12:00";
-
-            // Logic to find a time slot between index-1 and index (currentDayItems[index] is the one AFTER insertion point? No, index comes from `index + 1` in the click handler)
-            // The button is rendered AFTER item `index`. So we want to insert at `index + 1` relative to the list *before* insertion.
-            // The `targetIndex` passed to `openAddModal` corresponds to the destination index in the *displayed* list.
-
-            const prevItem = currentDayItems[index - 1];
-            const nextItem = currentDayItems[index];
-
-            if (prevItem && nextItem) {
-                // Calculate middle time
-                const [h1, m1] = prevItem.time.split(':').map(Number);
-                const [h2, m2] = nextItem.time.split(':').map(Number);
-
-                const t1 = h1 * 60 + m1;
-                const t2 = h2 * 60 + m2;
-                const mid = Math.floor((t1 + t2) / 2);
-
-                const h = Math.floor(mid / 60);
-                const m = mid % 60;
-                newTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-            } else if (prevItem) {
-                // Last item
-                const [h1, m1] = prevItem.time.split(':').map(Number);
-                const t1 = h1 * 60 + m1 + 60; // Add 60 mins
-                const h = Math.floor(t1 / 60) % 24;
-                const m = t1 % 60;
-                newTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-            }
-
-            const itemToAdd: PlanItem = {
-                ...newItem,
-                id: Date.now(),
-                day: selectedDay,
-                time: newTime,
-                isLocked: false,
-            };
-
-            setSchedule(prev => [...prev, itemToAdd]);
-        }
-
-        setReplaceModalState({ isOpen: false, targetItem: null, mode: 'replace' });
-    };
-
+    /**
+     * @desc 일정 추가 모달 열기
+     * @param index 추가할 위치 (순서 인덱스)
+     */
     const openAddModal = (index: number) => {
         setReplaceModalState({
             isOpen: true,
@@ -139,29 +98,77 @@ function PlannerContent() {
         });
     };
 
-    const handleDeletePlace = (id: number) => {
-        if (confirm("정말로 이 일정을 삭제하시겠습니까?")) {
-            setSchedule(prev => prev.filter(item => item.id !== id));
+    /**
+     * @desc 장소 교체 또는 추가 완료 시 실행
+     * @param newItem 새로 선택된 장소 데이터
+     */
+    const handleReplacePlace = (newItem: PlanItem) => {
+        if (replaceModalState.mode === 'replace') {
+            // 기존 아이템 교체
+            setSchedule(prev => prev.map(item =>
+                item.id === replaceModalState.targetItem?.id
+                    ? { ...newItem, day: item.day, time: item.time, id: item.id }
+                    : item
+            ));
+        } else if (replaceModalState.mode === 'add') {
+            // 새 아이템 추가
+            const index = replaceModalState.targetIndex ?? 0;
+            const currentDayItems = schedule.filter(item => item.day === selectedDay).sort((a, b) => a.time.localeCompare(b.time));
+            let newTime = "12:00";
+            
+            // 시간 자동 계산 로직 (이전 아이템 시간 + 30분)
+            const prevItem = currentDayItems[index - 1];
+            if (prevItem) {
+                const [h, m] = prevItem.time.split(':').map(Number);
+                const nextM = m + 30;
+                const nextH = h + Math.floor(nextM / 60);
+                newTime = `${String(nextH % 24).padStart(2, '0')}:${String(nextM % 60).padStart(2, '0')}`;
+            }
+
+            const itemToAdd: PlanItem = {
+                ...newItem,
+                id: Date.now(),
+                day: selectedDay,
+                time: newTime,
+                isLocked: false,
+            };
+            setSchedule(prev => [...prev, itemToAdd]);
         }
+        setReplaceModalState({ isOpen: false, targetItem: null, mode: 'replace' });
     };
-
-    const getFormattedDate = (dayIndex: number) => {
-        const date = new Date(dateRange.start);
-        date.setDate(date.getDate() + (dayIndex - 1));
-        return `${date.getMonth() + 1}월 ${date.getDate()}일`;
-    };
-
-    // ... (skipping unchanged code) ...
 
     /**
-     * @desc 스마트 믹스 리플래닝 실행 핸들러 (Modal Confirm)
+     * @desc 아이템 삭제 (Confirm 확인 후 진행)
+     */
+    const handleDeletePlace = (id: number) => {
+        setConfirmState({
+            isOpen: true,
+            message: "정말로 이 일정을 삭제하시겠습니까?",
+            onConfirm: () => {
+                setSchedule(prev => prev.filter(item => item.id !== id));
+                setConfirmState(prev => ({ ...prev, isOpen: false }));
+            }
+        });
+    };
+
+    /**
+     * @desc 아이템 잠금 토글 (Lock/Unlock)
+     */
+    const handleToggleLock = (id: number) => {
+        setSchedule(prev => prev.map(item =>
+            item.id === id ? { ...item, isLocked: !item.isLocked } : item
+        ));
+    };
+
+    /**
+     * @desc 스마트 믹스(자동 재구성) 실행
+     * @param scope 적용 범위 (단일 날짜 or 전체 'all')
+     * @param theme 선택한 테마 (키즈, 힐링 등)
      */
     const handleSmartMixConfirm = async (scope: number | 'all', theme: PlannerTheme) => {
         const runReplanning = async () => {
-            setIsReplanning(true);
             try {
                 let newSchedule = [...schedule];
-
                 if (scope === 'all') {
                     for (const day of days) {
                         newSchedule = await regenerateSchedule(newSchedule, day, theme);
@@ -169,29 +176,23 @@ function PlannerContent() {
                 } else {
                     newSchedule = await regenerateSchedule(newSchedule, scope, theme);
                 }
-
                 setSchedule(newSchedule);
                 setIsSmartMixOpen(false);
             } catch (error) {
                 console.error("Re-planning failed:", error);
-                alert("일정 재구성에 실패했습니다. 잠시 후 다시 시도해주세요.");
-            } finally {
-                setIsReplanning(false);
+                alert("일정 재구성에 실패했습니다.");
             }
         };
 
-        // Check for locked items in the scope
-        let hasLockedItems = false;
-        if (scope === 'all') {
-            hasLockedItems = schedule.some(item => item.isLocked);
-        } else {
-            hasLockedItems = schedule.some(item => item.day === scope && item.isLocked);
-        }
+        const hasLockedItems = scope === 'all'
+            ? schedule.some(item => item.isLocked)
+            : schedule.some(item => item.day === scope && item.isLocked);
 
+        // 잠긴 아이템이 있으면 경고 표시 후 진행
         if (hasLockedItems) {
             setConfirmState({
                 isOpen: true,
-                message: "고정된 장소는\n변경되지 않고 유지됩니다.\n\n계속 진행하시겠습니까?",
+                message: "고정된 장소는 유지됩니다. 진행하시겠습니까?",
                 onConfirm: runReplanning
             });
         } else {
@@ -199,108 +200,62 @@ function PlannerContent() {
         }
     };
 
+    // =========================================================================================
+    // Effects & Computed State
+    // =========================================================================================
 
-    const days = Array.from(new Set(schedule.map(item => item.day))).sort((a, b) => a - b);
-    // [수정] 일정 아이템을 시간 순서대로 정렬하여 렌더링
-    const currentDayItems = schedule
-        .filter((item) => item.day === selectedDay)
-        .sort((a, b) => a.time.localeCompare(b.time));
-
+    // 데이터 로드
     useEffect(() => {
-        console.log("Planner Page: useEffect triggered. Destination:", destination);
         const fetchData = async () => {
-            if (!destination || destination === '여행지') {
-                console.log("Planner Page: No destination or default. Setting isLoading false.");
-                setIsLoading(false);
-                return;
-            }
-
-            console.log("Planner Page: Fetching plan for", destination);
             setIsLoading(true);
             try {
                 const data = await getTravelPlan(destination);
-                console.log("Planner Page: Data fetched:", data?.length);
                 setSchedule(data);
+
+                // Plan B 날씨 위험요소 체크 (데모용 Mock)
+                const todayStr = new Date().toISOString().split('T')[0];
+                const risks = await getPlanBRecommendations(123, todayStr);
+                setRainRisks(risks);
             } catch (error) {
-                console.error("Planner Page: Error fetching plan:", error);
+                console.error("Failed to fetch plan:", error);
             } finally {
-                console.log("Planner Page: Loading finished.");
                 setIsLoading(false);
             }
         };
         fetchData();
     }, [destination]);
 
-    /**
-     * @desc 여행 기간(dateRange) 변경 시 스케줄(schedule)의 일수(Day)를 동기화합니다.
-     * 날짜가 늘어나면 새로운 Day를 추가하고, 줄어들면 초과된 Day를 제거합니다.
-     */
+    // 날짜 범위에 따른 총 일수(days) 계산
+    const duration = Math.ceil((dateRange.end.getTime() - dateRange.start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const days = Array.from({ length: duration }, (_, i) => i + 1);
+
+    // 날짜가 줄어들었을 경우, 범위를 벗어난 일정 정리 (선택적)
     useEffect(() => {
         if (schedule.length === 0) return;
-
-        const startDate = new Date(dateRange.start);
-        const endDate = new Date(dateRange.end);
-        // 날짜 차이 계산: (종료일 - 시작일) 일수 + 1
-        const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
-        const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-
-        // 현재 스케줄이 포함하는 최대 Day 계산
-        const currentMaxDay = schedule.length > 0
-            ? Math.max(...schedule.map(item => item.day))
-            : 0;
-
-        // 변경이 필요 없는 경우 중단
-        if (totalDays === currentMaxDay) return;
-
-        if (totalDays < currentMaxDay) {
-            // [CASE 1] 여행 기간이 줄어든 경우: 초과된 날짜의 아이템 제거
-            setSchedule(prev => prev.filter(item => item.day <= totalDays));
-
-            // 만약 현재 보고 있는 날짜가 삭제된 날짜라면 1일차로 이동
-            if (selectedDay > totalDays) setSelectedDay(1);
-        } else {
-            // [CASE 2] 여행 기간이 늘어난 경우: 새로운 날짜에 기본 일정 추가
-            const newItems: PlanItem[] = [];
-            for (let d = currentMaxDay + 1; d <= totalDays; d++) {
-                newItems.push({
-                    id: Date.now() + d, // 고유 ID 생성 (Timestamp 활용)
-                    day: d,
-                    time: "10:00",
-                    activity: "자유 일정",
-                    type: "etc", // 기타 타입
-                    memo: "새로 추가된 여행일입니다. 일정을 계획해보세요!",
-                    lat: 33.4996, // 제주공항/시내 인근 좌표
-                    lng: 126.5312,
-                    isLocked: false
-                });
-            }
-            setSchedule(prev => [...prev, ...newItems]);
+        const currentMaxDay = Math.max(...schedule.map(item => item.day), 0);
+        
+        if (duration < currentMaxDay) {
+             setSchedule(prev => prev.filter(item => item.day <= duration));
+             if (selectedDay > duration) setSelectedDay(1);
         }
+    }, [duration, schedule, selectedDay]);
 
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [dateRange, schedule.length]); // schedule.length가 변하거나 dateRange가 변할 때 체크
-
+    // 날짜 변경 시 선택 아이템 초기화
     useEffect(() => {
         setSelectedItemId(null);
     }, [selectedDay]);
-
-    const formatDateRange = () => {
-        const start = `${dateRange.start.getMonth() + 1}.${dateRange.start.getDate()}`;
-        const end = `${dateRange.end.getMonth() + 1}.${dateRange.end.getDate()}`;
-        return `${start} - ${end}`;
-    };
-
-    const formatGuests = () => {
-        const total = guests.adult + guests.teen + guests.child;
-        return `총 ${total}명`;
-    };
 
     const handleItemClick = (id: number) => {
         setSelectedItemId(prev => prev === id ? null : id);
     };
 
+    // 드래그 앤 드롭 종료 시 처리
     const onDragEnd = (result: DropResult) => {
         if (!result.destination) return;
+
+        const currentDayItems = schedule
+            .filter(item => item.day === selectedDay)
+            .sort((a, b) => a.time.localeCompare(b.time));
 
         const items = Array.from(currentDayItems);
         const [reorderedItem] = items.splice(result.source.index, 1);
@@ -308,6 +263,7 @@ function PlannerContent() {
 
         const otherItems = schedule.filter(item => item.day !== selectedDay);
 
+        // 재정렬 후 병합
         const newSchedule = [...otherItems, ...items].sort((a, b) => {
             if (a.day !== b.day) return a.day - b.day;
             const indexA = items.indexOf(a);
@@ -319,262 +275,71 @@ function PlannerContent() {
         setSchedule(newSchedule);
     };
 
-
-
-    /**
-     * @desc 일정 고정/해제 토글 핸들러
-     */
-    const [activeSettingsTab, setActiveSettingsTab] = useState<'date' | 'guest' | 'dest' | null>(null);
-
-    const toggleSettings = (tab: 'date' | 'guest' | 'dest') => {
-        setActiveSettingsTab(prev => prev === tab ? null : tab);
-    };
-
-    /**
-     * @desc 일정 고정/해제 토글 핸들러
-     */
-    const handleToggleLock = (id: number) => {
-        setSchedule(prev => prev.map(item =>
-            item.id === id ? { ...item, isLocked: !item.isLocked } : item
-        ));
-    };
+    // =========================================================================================
+    // Render
+    // =========================================================================================
 
     return (
-        <div className="min-h-screen bg-slate-50 pb-20 pt-20">
-            {replaceModalState.isOpen && (
-                <PlaceReplacementModal
-                    isOpen={replaceModalState.isOpen}
-                    onClose={() => setReplaceModalState({ isOpen: false, targetItem: null, mode: 'replace' })}
-                    onReplace={handleReplacePlace}
-                    originalItem={replaceModalState.targetItem}
-                    mode={replaceModalState.mode}
+        <div className="h-screen w-full bg-white flex flex-col font-sans overflow-hidden">
+            {/* Main Content Area */}
+            <main className="flex flex-1 overflow-hidden relative">
+                {/* 1. 좌측 타임라인 패널 */}
+                <PlannerTimeline 
+                    days={days}
+                    dateRange={dateRange}
+                    selectedDay={selectedDay}
+                    schedule={schedule}
+                    isLoading={isLoading}
+                    rainRisks={rainRisks}
+                    selectedItemId={selectedItemId}
+                    onDaySelect={setSelectedDay}
+                    onSmartMixClick={() => setIsSmartMixOpen(true)}
+                    onItemClick={handleItemClick}
+                    onDragEnd={onDragEnd}
+                    onReplaceClick={(item) => setReplaceModalState({ isOpen: true, targetItem: item, mode: 'replace' })}
+                    onLockClick={handleToggleLock}
+                    onDeleteClick={handleDeletePlace}
+                    onAddStopClick={openAddModal}
+                    onPlanBClick={() => setIsPlanBOpen(true)}
+                    onMobileMapClick={() => setIsMobileMapOpen(true)}
+                    onAddDayClick={() => setReplaceModalState({ isOpen: true, targetItem: null, mode: 'add', targetIndex: schedule.filter(i => i.day === selectedDay).length })}
                 />
-            )}
 
-            {isSmartMixOpen && (
-                <SmartMixModal
-                    isOpen={isSmartMixOpen}
-                    onClose={() => setIsSmartMixOpen(false)}
-                    onConfirm={handleSmartMixConfirm}
-                    totalDays={days.length > 0 ? days.length : 1}
-                    startDate={dateRange.start}
+                {/* 2. 우측 지도 패널 (PCOnly) */}
+                <PlannerMapPanel 
+                    schedule={schedule}
+                    selectedDay={selectedDay}
+                    selectedItemId={selectedItemId}
                 />
-            )}
+            </main>
 
-            <ConfirmModal
-                isOpen={confirmState.isOpen}
-                onClose={() => setConfirmState(prev => ({ ...prev, isOpen: false }))}
-                onConfirm={confirmState.onConfirm}
-                message={confirmState.message}
-                title="일정 재구성 알림"
-                confirmText="진행하기"
+            {/* 3. 각종 모달 모음 */}
+            <PlannerModals 
+                schedule={schedule}
+                selectedDay={selectedDay}
+                selectedItemId={selectedItemId}
+                dateRange={dateRange}
+                destination={destination}
+                guests={guests}
+                days={days}
+                replaceModalState={replaceModalState}
+                isSmartMixOpen={isSmartMixOpen}
+                confirmState={confirmState}
+                isPlanBOpen={isPlanBOpen}
+                isMobileMapOpen={isMobileMapOpen}
+                activeEditor={activeEditor}
+                onReplaceClose={() => setReplaceModalState({ isOpen: false, targetItem: null, mode: 'replace' })}
+                onReplaceConfirm={handleReplacePlace}
+                onSmartMixClose={() => setIsSmartMixOpen(false)}
+                onSmartMixConfirm={handleSmartMixConfirm}
+                onConfirmClose={() => setConfirmState(prev => ({ ...prev, isOpen: false }))}
+                onPlanBClose={() => setIsPlanBOpen(false)}
+                onMobileMapClose={() => setIsMobileMapOpen(false)}
+                onDateSave={(start, end) => { setDateRange({ start, end }); setActiveEditor(null); }}
+                onGuestSave={(newGuests) => { setGuests(newGuests); setActiveEditor(null); }}
+                onDestSave={(newDest) => { setDestination(newDest); setActiveEditor(null); }}
+                onEditorClose={() => setActiveEditor(null)}
             />
-
-            {/* Sticky Header */}
-            <div className="bg-white border-b border-slate-200 sticky top-[72px] z-30 shadow-sm transition-all">
-                <div className="max-w-[1600px] mx-auto px-4 py-4">
-                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                        <div>
-                            <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                                {destination} 여행 계획
-                                <span className="hidden md:inline-flex text-indigo-600 text-xs font-bold px-2 py-1 bg-indigo-50 rounded-full border border-indigo-100 items-center gap-1">
-                                    <Sparkles size={12} /> Planni&apos;s Pick
-                                </span>
-                            </h2>
-                            <div className="flex items-center gap-3 mt-2 text-sm text-slate-500">
-                                <button
-                                    onClick={() => toggleSettings('date')}
-                                    className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-all -ml-2 ${activeSettingsTab === 'date' ? 'bg-indigo-100 text-indigo-700' : 'hover:text-indigo-600 hover:bg-indigo-50'}`}
-                                >
-                                    <Calendar size={14} />
-                                    <span className="font-medium">{formatDateRange()}</span>
-                                </button>
-                                <span className="text-slate-300">|</span>
-                                <button
-                                    onClick={() => toggleSettings('guest')}
-                                    className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-all ${activeSettingsTab === 'guest' ? 'bg-indigo-100 text-indigo-700' : 'hover:text-indigo-600 hover:bg-indigo-50'}`}
-                                >
-                                    <Users size={14} />
-                                    <span className="font-medium">{formatGuests()}</span>
-                                </button>
-                                <span className="text-slate-300">|</span>
-                                <button
-                                    onClick={() => toggleSettings('dest')}
-                                    className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-all ${activeSettingsTab === 'dest' ? 'bg-indigo-100 text-indigo-700' : 'hover:text-indigo-600 hover:bg-indigo-50'}`}
-                                >
-                                    <MapPin size={14} />
-                                    <span className="font-medium">{destination}</span>
-                                </button>
-                            </div>
-                        </div>
-                        <button className="absolute top-4 right-4 md:static p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-all">
-                            <Share2 size={20} />
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Settings Modals */}
-            {activeSettingsTab === 'date' && (
-                <DateEditor
-                    startDate={dateRange.start}
-                    endDate={dateRange.end}
-                    onSave={(start, end) => {
-                        setDateRange({ start, end });
-                        setActiveSettingsTab(null);
-                    }}
-                    onClose={() => setActiveSettingsTab(null)}
-                />
-            )}
-            {activeSettingsTab === 'guest' && (
-                <GuestEditor
-                    guests={guests}
-                    onSave={(newGuests) => {
-                        setGuests(newGuests);
-                        setActiveSettingsTab(null);
-                    }}
-                    onClose={() => setActiveSettingsTab(null)}
-                />
-            )}
-            {activeSettingsTab === 'dest' && (
-                <DestinationEditor
-                    destination={destination}
-                    onSave={(newDest) => {
-                        setDestination(newDest);
-                        setActiveSettingsTab(null);
-                    }}
-                    onClose={() => setActiveSettingsTab(null)}
-                />
-            )}
-
-            <div className="max-w-[1600px] mx-auto px-4 mt-6">
-                {isLoading ? (
-                    <LoadingSkeleton />
-                ) : (
-                    <div className="flex flex-col lg:flex-row gap-8">
-                        <div className="w-full lg:w-1/3 order-1">
-                            <div className="flex items-center justify-between mb-6 gap-2">
-                                <div
-                                    ref={scrollRef}
-                                    {...scrollEvents}
-                                    className="no-scrollbar flex items-center gap-2 pt-2 pb-2 scrollbar-hide overflow-x-auto cursor-grab active:cursor-grabbing"
-                                >
-                                    {days.length > 0 ? days.map((day) => (
-                                        <div key={day} onClickCapture={(e) => {
-                                            if (isScrollDragging) {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                            }
-                                        }}>
-                                            <Button_type1
-                                                onClick={() => {
-                                                    if (!isScrollDragging) setSelectedDay(day);
-                                                }}
-                                                text={getFormattedDate(day)}
-                                                active={selectedDay === day}
-                                            />
-                                        </div>
-                                    )) : null}
-                                </div>
-                                <button
-                                    onClick={() => setIsSmartMixOpen(true)}
-                                    className="flex-shrink-0 ml-2 bg-indigo-600 text-white p-2 rounded-xl shadow-md hover:bg-indigo-700 transition-all flex items-center gap-2 text-sm font-bold"
-                                >
-                                    <Sparkles size={16} />
-                                    <span className="hidden xl:inline">일정 재구성</span>
-                                </button>
-                            </div>
-
-                            <DragDropContext onDragEnd={onDragEnd}>
-                                <Droppable droppableId="day-items">
-                                    {(provided) => (
-                                        <div
-                                            {...provided.droppableProps}
-                                            ref={provided.innerRef}
-                                            className="overflow-visible space-y-8 border-l-[3px] border-indigo-100 ml-4 pl-10 pb-0 block"
-                                        >
-                                            {currentDayItems.map((item, index) => (
-                                                <div key={item.id} className="min-w-[90%] relative mb-0">
-                                                    <Draggable draggableId={item.id.toString()} index={index}>
-                                                        {(provided, snapshot) => (
-                                                            <DayItems
-                                                                item={item}
-                                                                index={index}
-                                                                onClick={() => handleItemClick(item.id)}
-                                                                selected={selectedItemId === item.id}
-                                                                innerRef={provided.innerRef}
-                                                                draggableProps={provided.draggableProps}
-                                                                dragHandleProps={provided.dragHandleProps}
-                                                                isDragging={snapshot.isDragging}
-                                                                onReplaceClick={() => setReplaceModalState({ isOpen: true, targetItem: item, mode: 'replace' })}
-                                                                onLockClick={() => handleToggleLock(item.id)}
-                                                                onDeleteClick={() => handleDeletePlace(item.id)}
-                                                            />
-                                                        )}
-                                                    </Draggable>
-
-                                                    {/* Insert Button (between items) */}
-                                                    {index < currentDayItems.length - 1 && (
-                                                        <div className="flex justify-center items-center pt-4 pb-4 relative z-0 group/insert max-w-full">
-                                                            <button
-                                                                onClick={() => openAddModal(index + 1)}
-                                                                className="opacity-100 w-6 h-6 rounded-full bg-white border-2 border-slate-300 text-slate-300 flex items-center justify-center hover:border-indigo-500 hover:text-indigo-600 hover:scale-110 transition-all z-20 shadow-sm md:opacity-0 md:group-hover/insert:opacity-100"
-                                                                title="이 위치에 장소 추가"
-                                                            >
-                                                                <Plus size={14} strokeWidth={3} />
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ))}
-                                            {provided.placeholder}
-                                        </div>
-                                    )}
-                                </Droppable>
-                            </DragDropContext>
-                        </div>
-                        {/* Desktop Map (Hidden on Mobile) */}
-                        <div className="hidden lg:block w-full lg:w-2/3 order-2">
-                            <div className="lg:sticky lg:top-[190px] lg:h-[calc(100vh-220px)] rounded-3xl overflow-hidden shadow-xl border border-slate-200 bg-slate-100">
-                                <Map schedule={schedule} selectedDay={selectedDay} selectedItemId={selectedItemId} />
-                            </div>
-                        </div>
-
-                        {/* Mobile Map Button (FAB) */}
-                        <button
-                            onClick={() => setIsMobileMapOpen(true)}
-                            className="lg:hidden fixed bottom-6 right-6 z-40 bg-indigo-600 text-white p-4 rounded-full shadow-xl flex items-center justify-center hover:bg-indigo-700 transition-all animate-bounce-subtle"
-                        >
-                            <MapPin size={24} />
-                            <span className="ml-2 font-bold">전체경로 보기</span>
-                        </button>
-
-                        {/* Mobile Map Modal (Full Screen) */}
-                        {/* Mobile Map Modal (Card Style) */}
-                        {isMobileMapOpen && (
-                            <div className="lg:hidden fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm p-4 md:p-8 flex items-center justify-center animate-fade-in">
-                                <div className="w-full h-full max-h-[80vh] bg-white rounded-3xl shadow-2xl flex flex-col overflow-hidden ring-1 ring-white/20">
-                                    <div className="flex justify-between items-center p-4 border-b bg-white">
-                                        <h2 className="font-bold text-lg flex items-center gap-2">
-                                            <MapPin size={20} className="text-indigo-600" />
-                                            전체 경로 보기
-                                        </h2>
-                                        <button
-                                            onClick={() => setIsMobileMapOpen(false)}
-                                            className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-                                        >
-                                            <X size={24} />
-                                        </button>
-                                    </div>
-                                    <div className="flex-1 relative">
-                                        <Map schedule={schedule} selectedDay={selectedDay} selectedItemId={selectedItemId} />
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                )}
-            </div>
         </div>
     );
 }
