@@ -280,7 +280,7 @@ function PlannerContent() {
     // =========================================================================================
 
     return (
-        <div className="h-screen w-full bg-white flex flex-col font-sans overflow-hidden">
+        <div className="h-[calc(100vh-224px)] min-h-[800px] w-full bg-white flex flex-col font-sans overflow-hidden">
             {/* Main Content Area */}
             <main className="flex flex-1 overflow-hidden relative">
                 {/* 1. 좌측 타임라인 패널 */}

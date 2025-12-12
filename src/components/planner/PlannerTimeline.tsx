@@ -93,7 +93,6 @@ export default function PlannerTimeline({
             {/* 3. 타임라인 리스트 영역 (스크롤 가능) */}
             <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 pb-10 relative bg-[#F8FAFC]">
                 {/* 타임라인 수직 연결선 (화면 크기에 따라 위치 조정됨) */}
-                <div className="absolute left-[26px] md:left-[41px] top-6 bottom-0 w-[2px] bg-indigo-100/80 h-full"></div>
 
                 {isLoading ? (
                     <LoadingSkeleton />
@@ -104,8 +103,9 @@ export default function PlannerTimeline({
                                 <div
                                     {...provided.droppableProps}
                                     ref={provided.innerRef}
-                                    className="space-y-0"
+                                    className="space-y-0 relative"
                                 >
+                                    <div className="absolute left-[26px] md:left-[17px] top-[0px]  w-[2px] bg-indigo-100/80 h-[calc(100%-4px)]"></div>
                                     {currentDayItems.map((item, index) => (
                                         <Draggable draggableId={item.id.toString()} index={index} key={item.id}>
                                             {(provided, snapshot) => (

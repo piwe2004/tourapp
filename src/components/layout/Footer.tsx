@@ -2,8 +2,8 @@ import { Sparkles } from "lucide-react";
 
 export default function Footer() {
     return (
-        <footer className="bg-slate-50 border-t border-slate-200 py-12 mt-0">
-            <div className="max-w-7xl mx-auto px-6 md:px-12 flex flex-col md:flex-row justify-between items-center gap-6 text-center md:text-left">
+        <footer className="bg-slate-50 border-t border-slate-200 py-12 md:py-0 md:h-[160px] md:flex md:items-center mt-0 shrink-0">
+            <div className="max-w-7xl mx-auto px-6 md:px-12 flex flex-col md:flex-row justify-between items-center gap-6 text-center md:text-left w-full">
                 <div>
                     <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
                         <div className="w-6 h-6 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
