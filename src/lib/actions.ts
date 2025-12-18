@@ -3,18 +3,88 @@
 import { MOCK_PLAN_JEJU, PlanItem } from "@/mockData";
 import { geminiModel } from "./gemini";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp, Timestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, Timestamp, collection, getDocs, query, limit, where } from "firebase/firestore";
 import { headers } from "next/headers";
+import { FirebasePlace } from "@/types/places";
 
-// 지금은 API 연동 없이 더미 데이터만 반환합니다.
+/**
+ * @desc Firebase PLACE 데이터를 앱 내부 PlanItem으로 변환
+ */
+function mapPlaceToPlanItem(place: FirebasePlace, day: number = 1, time: string = "10:00"): PlanItem {
+  // 카테고리 매핑 로직
+  let type: PlanItem['type'] = 'etc';
+  const mainCat = place.CATEGORY?.main || '';
+  const subCat = place.CATEGORY?.sub || '';
+
+  if (mainCat.includes('식당') || subCat.includes('식당') || subCat.includes('레스토랑')) type = 'food';
+  else if (mainCat.includes('카페') || subCat.includes('카페') || subCat.includes('베이커리')) type = 'cafe';
+  else if (mainCat.includes('관광') || subCat.includes('관광지') || mainCat.includes('명소')) type = 'sightseeing';
+  else if (mainCat.includes('숙소') || subCat.includes('호텔') || subCat.includes('펜션')) type = 'stay';
+  else if (mainCat.includes('이동')) type = 'move';
+
+  // 메모 구성: 하이라이트나 키워드 활용
+  const memo = place.HIGHLIGHTS && place.HIGHLIGHTS.length > 0 
+    ? place.HIGHLIGHTS.join(', ') 
+    : place.KEYWORDS?.slice(0, 3).join(', ') || '';
+
+  return {
+    id: place.PLACE_ID || Date.now() + Math.random(), // ID가 없으면 임시 생성
+    day,
+    time,
+    activity: place.NAME,
+    type,
+    memo,
+    lat: place.LOC_LAT,
+    lng: place.LOC_LNG,
+    duration: place.STAY_TIME || 60,
+    is_indoor: false, // 기본값 (데이터에 필드 추가 필요할 수 있음)
+  };
+}
+
+// Firebase에서 실제 데이터를 가져옵니다.
 export async function getTravelPlan(destination: string): Promise<PlanItem[]> {
-  console.log(`[Mock] "${destination}" 요청 받음. 더미 데이터를 반환합니다.`);
+  console.log(`[Server] "${destination}" 데이터 요청 (Firebase)`);
 
-  // 1.5초 딜레이를 줘서 '로딩 스켈레톤'이 잘 뜨는지 확인합니다.
-  await new Promise((resolve) => setTimeout(resolve, 1500));
+  try {
+    const placesRef = collection(db, "PLACES");
+    // 일단 10개만 가져옵니다. 추후 destination 기반 쿼리 등 추가 가능
+    // TODO: destination이 있으면 해당 지역(SUB_REGION 등)으로 필터링하는 로직 추가 필요
+    
+    // 예: 단순 쿼리 (랜덤 또는 상위 10개)
+    const q = query(placesRef, limit(10));
+    const querySnapshot = await getDocs(q);
 
-  // 검색어와 상관없이 항상 준비된 '제주도 플랜'을 리턴합니다.
-  return MOCK_PLAN_JEJU;
+    if (querySnapshot.empty) {
+      console.warn("[Server] 데이터가 없습니다. Mock 데이터를 반환합니다.");
+      return MOCK_PLAN_JEJU;
+    }
+
+    const items: PlanItem[] = [];
+    let dayCounter = 1;
+    let timeCounter = 9; // 9시부터 시작
+
+    querySnapshot.forEach((doc) => {
+      const placeData = doc.data() as FirebasePlace;
+      
+      // 시간/날짜 단순 분배 로직 (데모용)
+      const timeStr = `${String(timeCounter).padStart(2, '0')}:00`;
+      
+      items.push(mapPlaceToPlanItem(placeData, dayCounter, timeStr));
+
+      timeCounter += 2;
+      if (timeCounter > 20) {
+        timeCounter = 9;
+        dayCounter += 1;
+      }
+    });
+
+    console.log(`[Server] ${items.length}개의 장소를 가져왔습니다.`);
+    return items;
+
+  } catch (error) {
+    console.error("[Server] Firebase 데이터 가져오기 실패:", error);
+    return MOCK_PLAN_JEJU; // 에러 시 Mock 데이터 폴백
+  }
 }
 
 export interface TravelContext {

@@ -2,6 +2,19 @@ import { dfs_xy_conv } from "./coordinates";
 
 const KMA_API_KEY = process.env.NEXT_PUBLIC_KMA_API_KEY;
 
+// KMA API Key Smart Encoding
+function getEncodedKey(key: string | undefined): string {
+  if (!key) return "";
+  try {
+    // 1. 우선 디코딩하여 raw 상태(Decoding Key)로 만듭니다.
+    const decoded = decodeURIComponent(key);
+    // 2. 다시 인코딩하여 안전한 Service Key로 만듭니다.
+    return encodeURIComponent(decoded);
+  } catch (e) {
+    return key; // 에러 발생 시 원래 키 반환
+  }
+}
+
 export interface WeatherData {
   date: string; // YYYY-MM-DD
   sky: string; // 맑음, 구름많음, 흐림
@@ -42,10 +55,25 @@ async function fetchShortTermForecast(lat: number, lng: number, date: string): P
     // 단기예보는 0200, 0500, 0800... 3시간 간격. 가장 최근의 0500시 기준 사용 (안전하게)
     const baseTime = "0500"; 
     
-    const url = `http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=${KMA_API_KEY}&pageNo=1&numOfRows=1000&dataType=JSON&base_date=${baseDate}&base_time=${baseTime}&nx=${x}&ny=${y}`;
+    const serviceKey = getEncodedKey(KMA_API_KEY);
+    if (!serviceKey) throw new Error("KMA_API_KEY is missing");
+
+    // Debugging: 키의 일부만 노출하여 상태 확인 (보안 주의)
+    const keyPreview = serviceKey.length > 10 
+      ? `${serviceKey.substring(0, 5)}...${serviceKey.substring(serviceKey.length - 5)} (Length: ${serviceKey.length})`
+      : "INVALID_KEY";
+    console.log(`[Weather] Using Service Key: ${keyPreview}`);
+
+    const url = `http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=${serviceKey}&pageNo=1&numOfRows=1000&dataType=JSON&base_date=${baseDate}&base_time=${baseTime}&nx=${x}&ny=${y}`;
     
+    // 로그에서 키 전체 숨기기
+    console.log(`[Weather] Fetching URL: ${url.replace(serviceKey, "HIDDEN_KEY")}`);
+
     const res = await fetch(url, { next: { revalidate: 3600 } }); // 1시간 캐시
-    if (!res.ok) throw new Error(`KMA API Error: ${res.status}`);
+    if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`KMA API Error: ${res.status} ${res.statusText} - ${errorText.substring(0, 100)}`);
+    }
     
     const data = await res.json();
     const items = data.response?.body?.items?.item;
