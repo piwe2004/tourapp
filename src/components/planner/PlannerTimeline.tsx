@@ -2,6 +2,7 @@
 
 import { PlanItem } from '@/mockData';
 import { RainyScheduleItem } from '@/lib/weather/actions';
+import { WeatherData } from '@/lib/weather/service'; // Type Import
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import DayItems from '@/components/planner/DayItems';
 import Map from '@/components/planner/Map'; // 모바일용 맵 렌더링에 필요
@@ -10,9 +11,10 @@ import DaySelector from '@/components/planner/DaySelector'; // 타임라인 상�
 interface PlannerTimelineProps {
     days: number[];
     dateRange: { start: Date; end: Date };
-    selectedDay: number;
+    selectedDay: number; // Restore this
     schedule: PlanItem[];
     isLoading: boolean;
+    weatherData: WeatherData | null; // Prop 추가
     rainRisks: RainyScheduleItem[];
     selectedItemId: number | null;
     
@@ -45,6 +47,7 @@ export default function PlannerTimeline({
     selectedDay,
     schedule,
     isLoading,
+    weatherData, // Destructuring
     rainRisks,
     selectedItemId,
     onDaySelect,
@@ -77,6 +80,7 @@ export default function PlannerTimeline({
                 selectedDay={selectedDay}
                 onDaySelect={onDaySelect}
                 onSmartMixClick={onSmartMixClick}
+                weatherData={weatherData} // Pass to DaySelector
             />
 
             {/* 2. 모바일 전용 지도 미리보기 (LG 사이즈 이상에서는 숨김) */}

@@ -15,7 +15,8 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getTravelPlan } from '@/lib/actions';
 import { PlanItem } from '@/mockData';
-import { getPlanBRecommendations, RainyScheduleItem } from '@/lib/weather/actions';
+import { getPlanBRecommendations, RainyScheduleItem, getWeather } from '@/lib/weather/actions'; // getWeather 추가
+import { WeatherData } from '@/lib/weather/service'; // Type 추가
 import { regenerateSchedule, PlannerTheme } from '@/services/ReplanningService';
 import { DropResult } from '@hello-pangea/dnd';
 import { usePlannerStore } from '@/store/plannerStore';
@@ -36,7 +37,7 @@ export default function PlannerView() {
 function PlannerContent() {
     // URL 쿼리 파라미터에서 여행지 정보 가져오기
     const searchParams = useSearchParams();
-    const initialDestination = searchParams.get('destination') || '여행지';
+    const initialDestination = searchParams.get('destination') || '서울'; // 기본값 서울로 변경
 
     // 1. 전역 상태 (Global Store)
     const { 
@@ -58,6 +59,7 @@ function PlannerContent() {
     // 날씨 및 Plan B 관련 상태
     const [rainRisks, setRainRisks] = useState<RainyScheduleItem[]>([]);
     const [isPlanBOpen, setIsPlanBOpen] = useState(false);
+    const [weatherData, setWeatherData] = useState<WeatherData | null>(null); // 선택된 날짜의 날씨 상태 추가
 
     // 모달 제어 상태
     const [replaceModalState, setReplaceModalState] = useState<{
@@ -249,6 +251,37 @@ function PlannerContent() {
         setSelectedItemId(prev => prev === id ? null : id);
     };
 
+    // 날씨 데이터 가져오기 (selectedDay 변경 시)
+    useEffect(() => {
+        const fetchWeather = async () => {
+            setWeatherData(null); // 로딩 중 초기화
+            
+            // 1. 현재 선택된 날짜 계산
+            const targetDate = new Date(dateRange.start);
+            targetDate.setDate(targetDate.getDate() + (selectedDay - 1));
+            const dateStr = targetDate.toISOString().split('T')[0];
+
+            // 2. 해당 날짜의 첫 번째 일정 좌표 가져오기 (없으면 서울 시청 좌표 사용)
+            const dayItems = schedule.filter(item => item.day === selectedDay).sort((a, b) => a.time.localeCompare(b.time));
+            let lat = 37.5665; // 서울 기본값
+            let lng = 126.9780;
+
+            if (dayItems.length > 0) {
+                lat = dayItems[0].lat;
+                lng = dayItems[0].lng;
+            }
+
+            try {
+                const data = await getWeather(lat, lng, dateStr);
+                setWeatherData(data);
+            } catch (error) {
+                console.error("Weather fetch failed:", error);
+            }
+        };
+
+        fetchWeather();
+    }, [selectedDay, dateRange, schedule]);
+
     // 드래그 앤 드롭 종료 시 처리
     const onDragEnd = (result: DropResult) => {
         if (!result.destination) return;
@@ -264,12 +297,16 @@ function PlannerContent() {
         const otherItems = schedule.filter(item => item.day !== selectedDay);
 
         // 재정렬 후 병합
+        // 재정렬 후 병합
         const newSchedule = [...otherItems, ...items].sort((a, b) => {
             if (a.day !== b.day) return a.day - b.day;
             const indexA = items.indexOf(a);
             const indexB = items.indexOf(b);
+            // items.indexOf returns -1 if not found, enabling stable sort relative to 'items' order
             if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-            return 0;
+            if (indexA !== -1) return -1; // a is in items, b is not (should not happen in this logic)
+            if (indexB !== -1) return 1;
+            return 0; // neither in items (should not happen)
         });
 
         setSchedule(newSchedule);
@@ -290,6 +327,7 @@ function PlannerContent() {
                     selectedDay={selectedDay}
                     schedule={schedule}
                     isLoading={isLoading}
+                    weatherData={weatherData} // 날씨 데이터 전달
                     rainRisks={rainRisks}
                     selectedItemId={selectedItemId}
                     onDaySelect={setSelectedDay}

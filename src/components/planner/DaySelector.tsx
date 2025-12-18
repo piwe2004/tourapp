@@ -1,6 +1,7 @@
 'use client';
 
 import useDraggableScroll from '@/hooks/useDraggableScroll';
+import { WeatherData } from '@/lib/weather/service'; // Type Import
 
 interface DaySelectorProps {
     days: number[];
@@ -8,13 +9,14 @@ interface DaySelectorProps {
     selectedDay: number;
     onDaySelect: (day: number) => void;
     onSmartMixClick: () => void;
+    weatherData: WeatherData | null; // Prop 추가
 }
 
 /**
  * @desc 일자 선택(Day Tabs) 및 날씨 요약 위젯 컴포넌트.
  * 가로 드래그 스크롤(useDraggableScroll)을 지원합니다.
  */
-export default function DaySelector({ days, dateRange, selectedDay, onDaySelect, onSmartMixClick }: DaySelectorProps) {
+export default function DaySelector({ days, dateRange, selectedDay, onDaySelect, onSmartMixClick, weatherData }: DaySelectorProps) {
     const { ref: scrollRef, events: scrollEvents, isDragging: isScrollDragging } = useDraggableScroll();
 
     return (
@@ -60,14 +62,35 @@ export default function DaySelector({ days, dateRange, selectedDay, onDaySelect,
             <div className="mt-3 md:mt-5 bg-[#E0E7FF]/50 border border-indigo-100 rounded-2xl p-3 md:p-4 flex items-center justify-between">
                 <div className="flex items-center gap-2.5 md:gap-3.5">
                     <div className="w-9 h-9 md:w-11 md:h-11 bg-white rounded-full flex items-center justify-center text-lg md:text-xl shadow-sm border border-indigo-50 text-indigo-500">
-                        <i className="fa-solid fa-sun text-orange-500 text-[16px] md:text-[20px]"></i>
+                         {/* 날씨 아이콘 동적 렌더링 */}
+                         {weatherData ? (
+                            weatherData.pty !== '없음' ? (
+                                <i className="fa-solid fa-umbrella text-blue-500 text-[16px] md:text-[20px]"></i>
+                            ) : weatherData.sky === '맑음' ? (
+                                <i className="fa-solid fa-sun text-orange-500 text-[16px] md:text-[20px]"></i>
+                            ) : weatherData.sky === '구름많음' ? (
+                                <i className="fa-solid fa-cloud-sun text-yellow-500 text-[16px] md:text-[20px]"></i>
+                            ) : (
+                                <i className="fa-solid fa-cloud text-gray-400 text-[16px] md:text-[20px]"></i>
+                            )
+                        ) : (
+                            <i className="fa-solid fa-spinner animate-spin text-indigo-300 text-[16px] md:text-[20px]"></i>
+                        )}
                     </div>
                     <div className="flex flex-col">
                         <span className="text-[9px] md:text-[10px] font-bold text-indigo-400 tracking-wider">DAY {selectedDay} 기상정보</span>
-                        <div className="flex items-center gap-1.5 md:gap-2">
-                            <span className="text-xs md:text-sm font-bold text-gray-800">대체로 맑음</span>
-                            <span className="text-[10px] md:text-xs text-gray-400">|</span>
-                            <span className="text-xs md:text-sm font-bold text-[#4338CA]">22° / 24°</span>
+                        <div className="flex items-center gap-1.5 md:gap-2 h-[18px]">
+                             {weatherData ? (
+                                <>
+                                    <span className="text-xs md:text-sm font-bold text-gray-800">
+                                        {weatherData.pty !== '없음' ? weatherData.pty : weatherData.sky}
+                                    </span>
+                                    <span className="text-[10px] md:text-xs text-gray-400">|</span>
+                                    <span className="text-xs md:text-sm font-bold text-[#4338CA]">{weatherData.tmp}</span>
+                                </>
+                            ) : (
+                                <span className="text-xs text-gray-400">날씨 불러오는 중...</span>
+                            )}
                         </div>
                     </div>
                 </div>
