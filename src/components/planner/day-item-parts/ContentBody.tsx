@@ -24,27 +24,28 @@ export function ContentBody({
 
     return (
         <div className="flex-1">
-            {/* 1. 강수 위험 시 뱃지 표시 */}
-            {rainRisk && (
-                <div className="absolute -top-3 -right-2 bg-[#FEF2F2] border border-[#FECACA] text-[#DC2626] px-3 py-1 rounded-full text-[11px] font-bold flex items-center gap-1 shadow-sm animate-bounce z-40">
-                    <i className="fa-solid fa-umbrella text-[10px]"></i> 비 예보 {rainRisk.weather.pop}
-                </div>
-            )}
-
+            {/* [Modified] 1. 강수 위험 시 뱃지 표시 (기존 Absolute 제거 후 Time 옆으로 이동) */}
+            
             {/* 2. 시간 및 태그 */}
             <div className="flex items-center gap-2 mb-3">
                 <span className={cn(
-                    "text-xs md:text-[13px] font-bold px-2 py-0.5 rounded border",
-                    selected 
-                        ? 'bg-[#4338CA] text-white border-[#4338CA]' 
-                        : 'bg-gray-50 text-gray-600 border-gray-100'
+                    "text-xs md:text-sm font-bold px-2 py-0.5 rounded text-gray-800 bg-gray-100",
                 )}>
                     {item.time}
                 </span>
+                
+
                 {isExternal && (
                     <span className="flex items-center gap-1 text-[10px] font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200" title="네이버 검색 결과">
                         <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> N 검색
                     </span>
+                )}
+                
+                {/* [New] Rain Risk Badge */}
+                {rainRisk && (
+                    <div className="bg-alert text-alertText px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 animate-pulse">
+                         <i className="fa-solid fa-triangle-exclamation"></i> 비 예보 {rainRisk.weather.pop}
+                    </div>
                 )}
             </div>
 
@@ -52,17 +53,29 @@ export function ContentBody({
             <div className="flex gap-3 md:gap-4">
                 {/* 카테고리 아이콘 */}
                 <div className={cn(
-                    "w-10 h-10 md:w-[52px] md:h-[52px] rounded-2xl flex items-center justify-center text-lg md:text-xl shrink-0",
-                    rainRisk ? 'bg-green-50 text-green-600' : 'bg-indigo-50 text-[#4338CA]'
+                    "w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center text-lg md:text-xl shrink-0",
+                    getIconColor(item.type, item.is_indoor)
                 )}>
-                    {getIcon(item.type)}
+                    <i className={cn(
+                        "", 
+                        getIcon(item.type)
+                    )}
+                    ></i>
                 </div>
                 
                 {/* 타이틀 및 메모 */}
                 <div className="flex-1 pr-6">
-                    <h3 className="text-[15px] md:text-[16px] font-bold text-gray-900 leading-tight mb-1">
+                    <h3 className="text-[15px] md:text-lg font-bold text-gray-800 leading-tight mb-1 flex gap-1 items-end">
                         {item.activity}
-                        {rainRisk && <span className="ml-2 text-[10px] text-gray-400 border border-gray-200 px-1 rounded font-normal">야외</span>}
+                        {/* [New] 실내/야외 여부 표시 (User Edit Refined) */}
+                        {typeof item.is_indoor !== 'undefined' && (
+                             <span className={cn(
+                                "text-xs font-normal",
+                                item.is_indoor ? "text-blue-500" : "text-green-600"
+                            )}>
+                                {item.is_indoor ? "실내" : "야외"}
+                            </span>
+                        )}
                     </h3>
                     <p className="text-xs text-gray-400 font-medium line-clamp-1">
                         {item.memo || "상세 설명이 없습니다."}
@@ -85,14 +98,32 @@ export function ContentBody({
     );
 }
 
+// 아이콘 컬러 매핑 헬퍼
+function getIconColor(type: string, is_indoor?: boolean) {
+    switch (type) {
+        case 'sightseeing':
+            return is_indoor ? 'bg-indigo-50 text-indigo-600' : 'bg-green-50 text-green-600';
+        case 'food':
+            return 'bg-orange-50 text-orange-600';
+        case 'cafe':
+            return 'bg-amber-50 text-amber-600';
+        case 'move':
+            return 'bg-blue-50 text-blue-600';
+        case 'stay':
+            return 'bg-cyan-900 text-cyan-50';
+        default:
+            return 'bg-gray-50 text-gray-600';
+    }
+}
+
 // 아이콘 매핑 헬퍼
 function getIcon(type: string) {
     switch (type) {
-        case 'move': return <i className="fa-solid fa-plane text-[14px] md:text-[16px]"></i>;
-        case 'food': return <i className="fa-solid fa-utensils text-[14px] md:text-[16px]"></i>;
-        case 'cafe': return <i className="fa-solid fa-mug-hot text-[14px] md:text-[16px]"></i>;
-        case 'sightseeing': return <i className="fa-solid fa-camera text-[14px] md:text-[16px]"></i>;
-        case 'stay': return <i className="fa-solid fa-hotel text-[14px] md:text-[16px]"></i>;
-        default: return <i className="fa-solid fa-map-pin text-[14px] md:text-[16px]"></i>;
+        case 'move': return "fa-solid fa-plane";
+        case 'food': return "fa-solid fa-utensils";
+        case 'cafe': return "fa-solid fa-coffee";
+        case 'sightseeing': return "fa-solid fa-camera";
+        case 'stay': return "fa-solid fa-hotel";
+        default: return "fa-solid fa-map-pin";
     }
 }

@@ -31,13 +31,15 @@ export async function checkRainySchedule(plan: PlanItem[], date: string): Promis
     if (item.is_indoor) continue;
 
     // 2. 날씨 조회 (해당 장소, 해당 날짜)
-    // 실제로는 item.day에 따라 날짜를 계산해야 하지만, 여기서는 단순화를 위해 입력받은 date 사용
-    // (또는 Mock 데이터가 1박2일이므로 date + (item.day-1) 로직 필요)
+    // [Fix] item.day에 따라 날짜 계산
+    const targetDate = new Date(date);
+    targetDate.setDate(targetDate.getDate() + (item.day - 1));
+    const dateStr = targetDate.toISOString().split('T')[0];
     
     // 좌표가 없으면 패스
     if (!item.lat || !item.lng) continue;
 
-    const weather = await getWeatherForDate(item.lat, item.lng, date);
+    const weather = await getWeatherForDate(item.lat, item.lng, dateStr);
 
     // 3. 비 예보 판단 (POP >= 60% OR PTY != "없음")
     const popVal = parseInt(weather.pop.replace("%", "")) || 0;

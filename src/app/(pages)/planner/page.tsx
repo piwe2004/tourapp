@@ -59,7 +59,10 @@ function PlannerContent() {
     // 날씨 및 Plan B 관련 상태
     const [rainRisks, setRainRisks] = useState<RainyScheduleItem[]>([]);
     const [isPlanBOpen, setIsPlanBOpen] = useState(false);
-    const [weatherData, setWeatherData] = useState<WeatherData | null>(null); // 선택된 날짜의 날씨 상태 추가
+
+    // [Mod] 날씨 캐시 상태 추가 (Day 번호 -> 날씨 데이터)
+    const [weatherCache, setWeatherCache] = useState<Record<number, WeatherData>>({}); 
+    // const [weatherData, setWeatherData] = useState<WeatherData | null>(null); // 기존 단일 상태 제거
 
     // 모달 제어 상태
     const [replaceModalState, setReplaceModalState] = useState<{
@@ -214,9 +217,9 @@ function PlannerContent() {
                 const data = await getTravelPlan(destination);
                 setSchedule(data);
 
-                // Plan B 날씨 위험요소 체크 (데모용 Mock)
-                const todayStr = new Date().toISOString().split('T')[0];
-                const risks = await getPlanBRecommendations(123, todayStr);
+                // Plan B 날씨 위험요소 체크
+                const startDateStr = dateRange.start.toISOString().split('T')[0];
+                const risks = await getPlanBRecommendations(123, startDateStr);
                 setRainRisks(risks);
             } catch (error) {
                 console.error("Failed to fetch plan:", error);
@@ -231,26 +234,59 @@ function PlannerContent() {
     const duration = Math.ceil((dateRange.end.getTime() - dateRange.start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     const days = Array.from({ length: duration }, (_, i) => i + 1);
 
-    // 날짜가 줄어들었을 경우, 범위를 벗어난 일정 정리 (선택적)
+    // [New] 전체 일정 날씨 일괄 조회 (Batch Fetching)
     useEffect(() => {
-        if (schedule.length === 0) return;
-        const currentMaxDay = Math.max(...schedule.map(item => item.day), 0);
-        
-        if (duration < currentMaxDay) {
-             setSchedule(prev => prev.filter(item => item.day <= duration));
-             if (selectedDay > duration) setSelectedDay(1);
+        const fetchAllWeather = async () => {
+            if (schedule.length === 0) return;
+
+            // 이미 캐시가 꽉 차있으면 스킵 (선택 사항: 리프레시 버튼 등으로 강제 갱신 가능)
+            // 여기서는 단순화를 위해 schedule이 변경될 때마다 재조회하거나, 
+            // 혹은 기존 캐시에 없는 Day만 조회하도록 최적화 가능.
+            // 이번 구현: schedule/dateRange 변경 시 전체 재조회 (날짜가 바뀌면 날씨도 바뀌므로)
+            
+            const newCache: Record<number, WeatherData> = {};
+            
+            const promises = days.map(async (day) => {
+                // 해당 날짜 계산
+                const targetDate = new Date(dateRange.start);
+                targetDate.setDate(targetDate.getDate() + (day - 1));
+                const dateStr = targetDate.toISOString().split('T')[0];
+
+                // 해당 날짜의 첫 번째 일정 좌표 (없으면 서울)
+                const dayItems = schedule.filter(item => item.day === day).sort((a, b) => a.time.localeCompare(b.time));
+                let lat = 37.5665;
+                let lng = 126.9780;
+
+                if (dayItems.length > 0) {
+                    lat = dayItems[0].lat;
+                    lng = dayItems[0].lng;
+                }
+
+                try {
+                    const data = await getWeather(lat, lng, dateStr);
+                    newCache[day] = data;
+                } catch (error) {
+                    console.error(`Day ${day} weather fetch failed:`, error);
+                }
+            });
+
+            await Promise.all(promises);
+            setWeatherCache(newCache);
+        };
+
+        // 디바운싱 혹은 일정 로딩 완료 후 실행
+        // schedule이 로드된 후 실행되어야 정확한 좌표를 쓸 수 있음
+        if (!isLoading && schedule.length > 0) {
+            fetchAllWeather();
         }
-    }, [duration, schedule, selectedDay]);
+    }, [dateRange, schedule, isLoading, days.length]); // days 배열 자체보다는 length 의존이 안전
 
-    // 날짜 변경 시 선택 아이템 초기화
-    useEffect(() => {
-        setSelectedItemId(null);
-    }, [selectedDay]);
-
+    // [Restored] 아이템 클릭 핸들러
     const handleItemClick = (id: number) => {
         setSelectedItemId(prev => prev === id ? null : id);
     };
 
+    /* 기존 개별 조회 useEffect 제거
     // 날씨 데이터 가져오기 (selectedDay 변경 시)
     useEffect(() => {
         const fetchWeather = async () => {
@@ -281,6 +317,7 @@ function PlannerContent() {
 
         fetchWeather();
     }, [selectedDay, dateRange, schedule]);
+    */
 
     // 드래그 앤 드롭 종료 시 처리
     const onDragEnd = (result: DropResult) => {
@@ -327,7 +364,7 @@ function PlannerContent() {
                     selectedDay={selectedDay}
                     schedule={schedule}
                     isLoading={isLoading}
-                    weatherData={weatherData} // 날씨 데이터 전달
+                    weatherData={weatherCache[selectedDay] || null} // [Mod] 캐시에서 현재 날짜 데이터 전달
                     rainRisks={rainRisks}
                     selectedItemId={selectedItemId}
                     onDaySelect={setSelectedDay}
