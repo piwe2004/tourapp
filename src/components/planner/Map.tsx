@@ -2,8 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { PlanItem } from '@/mockData';
-import { getIconByType } from '../ui/MapIcons';
-import { renderToStaticMarkup } from 'react-dom/server';
 
 interface MapProps {
   schedule: PlanItem[];
@@ -77,67 +75,39 @@ export default function Map({ schedule, selectedDay, selectedItemId }: MapProps)
     // 6. 새로운 마커 생성 및 경로 좌표 수집
     const pathCoords: naver.maps.LatLng[] = [];
 
-    dayItems.forEach((item) => {
+    dayItems.forEach((item, index) => {
       const position = new window.naver.maps.LatLng(item.lat!, item.lng!);
       pathCoords.push(position);
 
       const isSelected = selectedItemId === item.id;
       
       // 선택 여부에 따른 마커 스타일링
-      const width = isSelected ? 60 : 40;
-      const height = isSelected ? 69 : 49;
-
+      // z-index: 선택된 마커가 100, hover시 50(group-hover로 처리)
+      
       const markerContent = `
-        <div style="
-          width: ${width}px;
-          height: ${height}px;
-          cursor: pointer; 
-          position: relative; 
-          display: flex; 
-          justify-content: center; 
-          align-items: center;
-          z-index: ${isSelected ? '100' : '10'};
-        ">
-          <div style="
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            height: 100%;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            transform-origin: bottom center;
-            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
-          ">
-            <svg viewBox="0 0 36 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%;">
-              <path d="M18 0C8.05888 0 0 8.05888 0 18C0 27.9411 18 48 18 48C18 48 36 27.9411 36 18C36 8.05888 27.9411 0 18 0Z" fill="${isSelected ? '#4338ca' : '#4f46e5'}"/>
-              <circle cx="18" cy="18" r="14" fill="white"/>
-              <circle cx="18" cy="18" r="12" fill="${isSelected ? '#4338ca' : '#4f46e5'}"/>
-            </svg>
-            <div style="
-              position: absolute;
-              top: ${isSelected ? '5px' : '9px'};
-              left: 50%;
-              transform: translateX(-50%);
-              color: white;
-              font-weight: 800;
-              font-family: sans-serif;
-              width:${isSelected ? '42' : '20'}px;
-              height:${isSelected ? '42' : '20'}px;
-              display: flex;
-              justify-content: center;
-              align-items: center;
-            ">
-              ${renderToStaticMarkup(getIconByType(item.type, isSelected ? 25 : 18, "text-white-500", "#ffffff"))}
+        <div style="position: absolute; left: 0px; top: 0px; width: 40px; height: 40px;" class="group/marker cursor-pointer">
+            <!-- Tooltip -->
+            <div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-white px-3 py-1.5 rounded-lg shadow-xl mb-2 text-xs font-bold text-gray-800 whitespace-nowrap transform translate-y-2 opacity-0 group-hover/marker:opacity-100 group-hover/marker:translate-y-0 transition-all pointer-events-none z-[100]">
+                ${item.activity}
+                <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rotate-45 border-b border-r border-gray-100"></div>
             </div>
-          </div>
+            
+            <!-- Map Marker Circle -->
+            <div class="w-10 h-10 rounded-full text-white bg-[#4338CA] border-4 border-white shadow-lg flex items-center justify-center font-bold text-sm transform transition-all duration-300 group-hover/marker:scale-120 group-hover/marker:z-50 ${isSelected ? 'scale-120 z-50 ring-2 ' : ''}">
+                ${index + 1}
+            </div>
         </div>
       `;
+
       const marker = new window.naver.maps.Marker({
         position: position,
         map: map,
         title: item.activity,
+        zIndex: isSelected ? 100 : 10,
         icon: {
           content: markerContent,
-          anchor: new window.naver.maps.Point(width / 2, height),
+          size: new window.naver.maps.Size(20, 20),
+          anchor: new window.naver.maps.Point(20, 20),
         }
       });
       markersRef.current.push(marker);

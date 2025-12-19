@@ -68,7 +68,6 @@ export default function DayItems({
                 <Marker 
                     index={index} 
                     selected={selected} 
-                    hasRainRisk={!!rainRisk} 
                 />
 
                 {/* 2. 메인 카드 영역 */}
