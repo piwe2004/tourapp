@@ -13,6 +13,7 @@ import { ActionMenu } from "./day-item-parts/ActionMenu";
 import { ContentBody } from "./day-item-parts/ContentBody";
 import { TravelTime } from "./day-item-parts/TravelTime";
 import DetailPopup from "./DetailPopup";
+import { openBooking, BOOKING_PLATFORMS, BookingPlatform } from "@/lib/bookingService";
 
 interface DayItemsProps {
     item: PlanItem;
@@ -134,11 +135,48 @@ export default function DayItems({
                                         </button>
                                     </div>
                                     
+                                    
                                     {/* (옵션) 간단한 팁이나 추가 정보 한 줄 */}
                                     {item.memo && (
                                         <div className="text-xs text-gray-400 px-1 flex items-center gap-2">
                                             <i className="fa-solid fa-quote-left text-gray-300"></i>
                                             <span className="line-clamp-1">{item.memo}</span>
+                                        </div>
+                                    )}
+
+                                    {/* [New] 숙소 예약 버튼 (확장 시 노출) */}
+                                    {item.type === 'stay' && (
+                                        <div className="mt-2 pt-3 border-t border-gray-100">
+                                            <p className="text-xs font-bold text-gray-500 mb-2 flex items-center gap-1">
+                                                <i className="fa-solid fa-bed text-indigo-500"></i> 최저가 예약하기
+                                            </p>
+                                            <div className="grid grid-cols-4 gap-1.5">
+                                                {(Object.keys(BOOKING_PLATFORMS) as BookingPlatform[]).map((platform) => (
+                                                    <button
+                                                        key={platform}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const today = new Date();
+                                                            const checkInDate = new Date(today);
+                                                            checkInDate.setDate(today.getDate() + item.day);
+                                                            
+                                                            const checkOutDate = new Date(checkInDate);
+                                                            checkOutDate.setDate(checkInDate.getDate() + 1);
+
+                                                            const inStr = checkInDate.toISOString().split('T')[0];
+                                                            const outStr = checkOutDate.toISOString().split('T')[0];
+
+                                                            openBooking(platform, item.activity, inStr, outStr);
+                                                        }}
+                                                        className={cn(
+                                                            "text-[10px] py-1.5 rounded-lg border transition-all font-bold shadow-sm",
+                                                            BOOKING_PLATFORMS[platform].style
+                                                        )}
+                                                    >
+                                                        {BOOKING_PLATFORMS[platform].name}
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </div>
                                     )}
 

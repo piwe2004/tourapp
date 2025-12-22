@@ -1,7 +1,9 @@
 import { PlanItem } from "@/mockData";
-import { X, MapPin, Clock, Calendar, Utensils } from "lucide-react";
+import { X, MapPin, Clock, Calendar, Utensils, BedDouble } from "lucide-react";
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
+import { openBooking, BOOKING_PLATFORMS, BookingPlatform } from "@/lib/bookingService";
+import { cn } from "@/lib/utils";
 
 interface DetailPopupProps {
     item: PlanItem;
@@ -12,6 +14,7 @@ interface DetailPopupProps {
 /**
  * @desc 여행 상세 정보를 보여주는 팝업 모달
  *       [Updated] 이미 가져온(pre-fetched) 상세 정보를 즉시 표시
+ *       [Updated] 숙소(stay) 타입일 경우 최저가 예약 버튼 노출
  */
 export default function DetailPopup({ item, isOpen, onClose }: DetailPopupProps) {
     // ESC 키 핸들링
@@ -28,6 +31,27 @@ export default function DetailPopup({ item, isOpen, onClose }: DetailPopupProps)
             document.body.style.overflow = 'unset';
         };
     }, [isOpen, onClose]);
+
+    // 예약 핸들러
+    const handleBooking = (platform: BookingPlatform) => {
+        // 날짜 계산 (임시: 현재 일정의 day를 기준으로 오늘+day일 후, 1박)
+        // 실제로는 전체 일정의 시작일(startDate)을 알아야 정확하지만, 
+        // 여기서는 Mocking을 위해 오늘 날짜 기준으로 계산하거나, 
+        // 향후 dateRange를 props로 받아야 함.
+        // 임시 로직: 오늘 + (item.day)일
+        
+        const today = new Date();
+        const checkInDate = new Date(today);
+        checkInDate.setDate(today.getDate() + item.day); // 예: 1일차면 내일 체크인
+        
+        const checkOutDate = new Date(checkInDate);
+        checkOutDate.setDate(checkInDate.getDate() + 1); // 1박 2일
+
+        const inStr = checkInDate.toISOString().split('T')[0];
+        const outStr = checkOutDate.toISOString().split('T')[0];
+
+        openBooking(platform, item.activity, inStr, outStr);
+    };
 
     if (!isOpen) return null;
 
@@ -144,6 +168,30 @@ export default function DetailPopup({ item, isOpen, onClose }: DetailPopupProps)
                                 <div className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-400 group-hover:text-indigo-600 group-hover:border-indigo-200 transition-all">
                                     <i className="fa-solid fa-copy text-xs"></i>
                                 </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* [New] Booking Buttons (Only for Stay) */}
+                    {item.type === 'stay' && (
+                        <div className="border-t border-gray-100 pt-5">
+                            <h3 className="text-sm font-bold text-gray-900 mb-2.5 flex items-center gap-2">
+                                <BedDouble size={18} className="text-indigo-600" />
+                                최저가 예약하기
+                            </h3>
+                            <div className="grid grid-cols-2 gap-2">
+                                {(Object.keys(BOOKING_PLATFORMS) as BookingPlatform[]).map((platform) => (
+                                    <button
+                                        key={platform}
+                                        onClick={() => handleBooking(platform)}
+                                        className={cn(
+                                            "py-3 rounded-xl border transition-all font-bold shadow-sm flex items-center justify-center gap-2",
+                                            BOOKING_PLATFORMS[platform].style
+                                        )}
+                                    >
+                                        {BOOKING_PLATFORMS[platform].name}
+                                    </button>
+                                ))}
                             </div>
                         </div>
                     )}
