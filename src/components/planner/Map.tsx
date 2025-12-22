@@ -7,9 +7,10 @@ interface MapProps {
   schedule: PlanItem[];
   selectedDay: number;
   selectedItemId?: number | null; // 선택된 아이템 ID prop 추가
+  onItemClick: (id: number) => void; // [New] 마커 클릭 핸들러
 }
 
-export default function Map({ schedule, selectedDay, selectedItemId }: MapProps) {
+export default function Map({ schedule, selectedDay, selectedItemId, onItemClick }: MapProps) {
   const mapElement = useRef<HTMLDivElement>(null);
   const mapRef = useRef<naver.maps.Map | null>(null);
   const markersRef = useRef<naver.maps.Marker[]>([]); // 마커 관리용 ref
@@ -110,6 +111,12 @@ export default function Map({ schedule, selectedDay, selectedItemId }: MapProps)
           anchor: new window.naver.maps.Point(20, 20),
         }
       });
+
+      // [New] 마커 클릭 이벤트 핸들러 추가
+      window.naver.maps.Event.addListener(marker, 'click', () => {
+        onItemClick(item.id);
+      });
+
       markersRef.current.push(marker);
     });
 
@@ -150,7 +157,7 @@ export default function Map({ schedule, selectedDay, selectedItemId }: MapProps)
       }
     }
 
-  }, [schedule, selectedDay, selectedItemId, isMapLoaded]); // isMapLoaded 의존성 추가로 로드 완료 시 즉시 렌더링됨
+  }, [schedule, selectedDay, selectedItemId, isMapLoaded, onItemClick]); // onItemClick 의존성 추가
 
   return (
     <div className="w-full h-full relative">

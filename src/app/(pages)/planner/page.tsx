@@ -385,6 +385,7 @@ function PlannerContent() {
                     schedule={schedule}
                     selectedDay={selectedDay}
                     selectedItemId={selectedItemId}
+                    onItemClick={handleItemClick} // [New] 마커 클릭 핸들러 전달
                 />
             </main>
 

@@ -1,0 +1,195 @@
+import { PlanItem } from "@/mockData";
+import { X, MapPin, Clock, Calendar, Utensils } from "lucide-react";
+import { useEffect } from "react";
+import { createPortal } from "react-dom";
+
+interface DetailPopupProps {
+    item: PlanItem;
+    isOpen: boolean;
+    onClose: () => void;
+}
+
+/**
+ * @desc 여행 상세 정보를 보여주는 팝업 모달
+ *       [Updated] 이미 가져온(pre-fetched) 상세 정보를 즉시 표시
+ */
+export default function DetailPopup({ item, isOpen, onClose }: DetailPopupProps) {
+    // ESC 키 핸들링
+    useEffect(() => {
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
+        if (isOpen) {
+            window.addEventListener('keydown', handleEsc);
+            document.body.style.overflow = 'hidden';
+        } 
+        return () => {
+            window.removeEventListener('keydown', handleEsc);
+            document.body.style.overflow = 'unset';
+        };
+    }, [isOpen, onClose]);
+
+    if (!isOpen) return null;
+
+    return createPortal(
+        <div 
+            className="fixed inset-0 z-9999 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+            onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (e.target === e.currentTarget) onClose();
+            }}
+        >
+            <div 
+                className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden relative animate-scale-up"
+                onClick={(e) => e.stopPropagation()} // 내부 클릭 시 부모(배경)으로 이벤트 전파 방지
+            >
+                
+                {/* Header Image Area */}
+                <div className="h-56 bg-indigo-50 relative flex items-center justify-center overflow-hidden">
+                     {/* Pre-fetched Image or Fallback */}
+                     {item.imageUrl ? (
+                        <img 
+                            src={item.imageUrl} 
+                            alt={item.activity} 
+                            className="absolute inset-0 w-full h-full object-cover"
+                        />
+                     ) : (
+                        <span className="text-6xl text-indigo-200 opacity-50 relative z-0">
+                            <i className={`fa-solid ${getIcon(item.type)}`}></i>
+                        </span>
+                     )}
+                     
+                     <div className="absolute inset-0 bg-linear-to-t from-black/60 via-black/10 to-transparent z-10"></div>
+                     
+                     <div className="absolute bottom-5 left-6 z-20 text-white w-[calc(100%-48px)]">
+                        <span className="bg-white/20 backdrop-blur-md text-xs font-bold px-2 py-1 rounded mb-2 inline-block border border-white/30">
+                            {getActivityTypeLabel(item.type)}
+                        </span>
+                        <h2 className="text-2xl md:text-3xl font-bold leading-tight drop-shadow-sm">{item.activity}</h2>
+                        
+                        {/* Address Display (Header) */}
+                        {item.address && (
+                            <p className="text-white/90 text-sm mt-1 flex items-center gap-1 font-medium truncate">
+                                <MapPin size={14} className="text-white/80" />
+                                {item.address}
+                            </p>
+                        )}
+                     </div>
+
+                    <button 
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onClose();
+                        }}
+                        className="absolute top-4 right-4 z-30 bg-black/20 hover:bg-black/40 text-white p-2 rounded-full backdrop-blur-md transition-all ring-1 ring-white/10"
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
+
+                {/* Content Body */}
+                <div className="p-6 space-y-6">
+                    
+                    {/* Key Info Grid */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-gray-50 p-3.5 rounded-2xl flex items-center gap-3 border border-gray-100">
+                            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 shadow-sm">
+                                <Clock size={18} />
+                            </div>
+                            <div>
+                                <p className="text-xs text-gray-500 font-medium mb-0.5">소요 시간</p>
+                                <p className="font-bold text-gray-900 leading-none">{item.duration || 60}분</p>
+                            </div>
+                        </div>
+                        <div className="bg-gray-50 p-3.5 rounded-2xl flex items-center gap-3 border border-gray-100">
+                            <div className="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0 shadow-sm">
+                                <Calendar size={18} />
+                            </div>
+                            <div>
+                                <p className="text-xs text-gray-500 font-medium mb-0.5">일차</p>
+                                <p className="font-bold text-gray-900 leading-none">{item.day}일차 일정</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* [New] Representative Menu / Key Point */}
+                    {item.menu && (
+                        <div className="border-t border-gray-100 pt-5">
+                            <h3 className="text-sm font-bold text-gray-900 mb-2.5 flex items-center gap-2">
+                                <Utensils size={16} className="text-orange-500" />
+                                {item.type === 'food' || item.type === 'cafe' ? '추천 메뉴' : '주요 포인트'}
+                            </h3>
+                            <div className="bg-orange-50/50 p-4 rounded-2xl border border-orange-100 text-sm font-medium text-gray-700 flex items-start gap-4">
+                                <span className="bg-white text-orange-600 font-bold px-2 py-1 rounded text-xs border border-orange-200 shrink-0">
+                                    HIT
+                                </span>
+                                {item.menu}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* [New] Location Info (Address) */}
+                    {item.address && (
+                        <div className="border-t border-gray-100 pt-5">
+                            <h3 className="text-sm font-bold text-gray-900 mb-2.5 flex items-center gap-2">
+                                <MapPin size={16} className="text-rose-500" />
+                                위치 정보
+                            </h3>
+                            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 text-sm md:text-base font-medium text-gray-800 flex items-center justify-between group cursor-pointer hover:bg-gray-100 transition-colors">
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-xs text-gray-400 font-normal">도로명 주소</span>
+                                    <span>{item.address}</span>
+                                </div>
+                                <div className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-400 group-hover:text-indigo-600 group-hover:border-indigo-200 transition-all">
+                                    <i className="fa-solid fa-copy text-xs"></i>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                </div>
+
+
+                {/* Footer Actions */}
+                <div className="p-4 border-t border-gray-100 bg-gray-50 flex gap-3">
+                    <button 
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onClose();
+                        }}
+                        className="flex-1 py-3.5 rounded-xl font-bold bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm"
+                    >
+                        닫기
+                    </button>
+                </div>
+
+            </div>
+        </div>,
+        document.body
+    );
+}
+
+// Helper Functions
+function getIcon(type: string) {
+    switch (type) {
+        case 'move': return "fa-plane";
+        case 'food': return "fa-utensils";
+        case 'cafe': return "fa-coffee";
+        case 'sightseeing': return "fa-camera";
+        case 'stay': return "fa-hotel";
+        default: return "fa-map-pin";
+    }
+}
+
+function getActivityTypeLabel(type: string) {
+    const map: Record<string, string> = {
+        sightseeing: '관광',
+        food: '식사',
+        cafe: '카페',
+        stay: '숙소',
+        move: '이동',
+        etc: '기타'
+    };
+    return map[type] || '기타';
+}

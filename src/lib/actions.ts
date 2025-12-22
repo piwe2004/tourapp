@@ -37,7 +37,12 @@ function mapPlaceToPlanItem(place: FirebasePlace, day: number = 1, time: string 
     lat: place.LOC_LAT,
     lng: place.LOC_LNG,
     duration: place.STAY_TIME || 60,
-    is_indoor: false, // 기본값 (데이터에 필드 추가 필요할 수 있음)
+    is_indoor: false, // 기본값
+    imageUrl: place.IMAGE_URL, // [New] 미리 가져오기
+    address: place.ADDRESS,   // [New] 미리 가져오기
+    menu: place.HIGHLIGHTS && place.HIGHLIGHTS.length > 0 
+      ? place.HIGHLIGHTS.join(', ') 
+      : place.KEYWORDS?.slice(0, 3).join(', ') // [New] 미리 가져오기
   };
 }
 

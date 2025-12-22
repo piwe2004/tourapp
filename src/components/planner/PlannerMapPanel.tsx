@@ -7,6 +7,7 @@ interface PlannerMapPanelProps {
     schedule: PlanItem[];
     selectedDay: number;
     selectedItemId: number | null;
+    onItemClick: (id: number) => void; // [New]
 }
 
 /**
@@ -20,7 +21,8 @@ interface PlannerMapPanelProps {
 export default function PlannerMapPanel({
     schedule,
     selectedDay,
-    selectedItemId
+    selectedItemId,
+    onItemClick
 }: PlannerMapPanelProps) {
     return (
         <section className="hidden lg:block flex-1 bg-[#EEF2F5] relative overflow-hidden group">
@@ -35,7 +37,8 @@ export default function PlannerMapPanel({
                 <Map 
                     schedule={schedule} 
                     selectedDay={selectedDay} 
-                    selectedItemId={selectedItemId} 
+                    selectedItemId={selectedItemId}
+                    onItemClick={onItemClick} 
                 />
             </div>
 
