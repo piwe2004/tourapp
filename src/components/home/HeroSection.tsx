@@ -26,16 +26,9 @@ export default function HeroSection() {
   };
 
   return (
-    <section className="relative pt-24 min-h-screen flex items-center bg-white overflow-hidden">
-      {/* 배경 장식 요소 (기존 디자인 유지) */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-0 right-0 w-2/3 h-full bg-slate-50 -skew-x-12 translate-x-1/4 z-0"></div>
-        <div className="absolute top-20 right-20 w-96 h-96 bg-indigo-100 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-pulse"></div>
-        <div className="absolute bottom-20 right-1/3 w-96 h-96 bg-purple-100 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-pulse" style={{ animationDelay: '2s' }}></div>
-      </div>
-
+    <section className="relative pt-24 min-h-screen flex items-center bg-[#F8FAFC] overflow-hidden">
       <div className="w-full max-w-[1600px] mx-auto px-6 md:px-12 lg:px-16 grid lg:grid-cols-12 gap-12 relative z-10">
-        
+
         {/* 왼쪽: 텍스트 및 입력 영역 */}
         <div className="lg:col-span-7 flex flex-col justify-center items-start text-left pt-10 lg:pt-0">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold mb-6 border border-indigo-100 animate-fade-in-up">
@@ -54,23 +47,23 @@ export default function HeroSection() {
 
           {/* [핵심 변경] div -> form 태그로 변경하여 엔터키 이슈 해결 */}
           <div className="bg-white p-2 rounded-[2rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] border-2 border-slate-100 w-full max-w-2xl transform transition-transform hover:-translate-y-1">
-            <form 
+            <form
               onSubmit={handleSubmit}
               className="flex items-center px-4 py-3 bg-slate-50 rounded-[1.5rem] border border-slate-200 hover:border-indigo-300 hover:bg-white transition-colors group cursor-text h-16"
             >
               <div className="bg-white p-2.5 rounded-full text-indigo-600 shadow-sm border border-slate-100 transition-colors shrink-0">
                 <Sparkles size={20} className={isLoading ? "animate-spin" : ""} />
               </div>
-              
+
               <input
                 type="text"
                 placeholder="예: 이번 주말 부모님과 함께 갈 편안한 여행지 추천해줘"
                 className="flex-1 bg-transparent outline-none text-slate-900 font-bold ml-4 text-base placeholder-slate-400 w-full min-w-0"
                 value={destination}
                 onChange={(e) => setDestination(e.target.value)}
-                // onKeyDown 삭제: form onSubmit이 알아서 처리함
+              // onKeyDown 삭제: form onSubmit이 알아서 처리함
               />
-              
+
               <button
                 type="submit" // onClick 대신 submit 타입 사용
                 disabled={isLoading}

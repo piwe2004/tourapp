@@ -2,9 +2,9 @@ import { DESTINATIONS_DB } from '@/lib/constants';
 
 export default function PopularDestinations() {
     return (
-        <section className="py-24 px-6 md:px-12 max-w-7xl mx-auto bg-white">
-            <div className="text-center mb-16">
-                <h2 className="text-4xl font-black text-slate-900 mb-6">인기 급상승 여행지</h2>
+        <section className="py-12 px-5 md:px-0 max-w-7xl mx-auto bg-white">
+            <div className="mb-5">
+                <h2 className="text-xl md:text-2xl font-black text-slate-900 mb-10">인기 급상승 여행지</h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                 {DESTINATIONS_DB.map((dest) => (
