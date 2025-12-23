@@ -1,4 +1,4 @@
-import { PlanItem, MOCK_PLAN_JEJU } from "@/mockData";
+import { PlanItem } from "@/mockData";
 
 export type PlannerTheme = 'cafe' | 'photo' | 'indoor' | 'walk' | 'activity';
 

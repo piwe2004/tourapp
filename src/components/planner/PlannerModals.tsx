@@ -1,5 +1,5 @@
 import { PlanItem } from '@/mockData';
-// import { RainyScheduleItem } from '@/lib/weather/actions'; // Unused type removed
+import { RainyScheduleItem } from '@/lib/weather/actions';
 import { MapPin, X } from 'lucide-react';
 import Map from '@/components/planner/Map';
 import PlaceReplacementModal from '@/components/planner/PlaceReplacementModal';
@@ -19,6 +19,7 @@ interface PlannerModalsProps {
     destination: string;
     guests: { adult: number; teen: number; child: number };
     days: number[]; // For SmartMixModal
+    rainRisks: RainyScheduleItem[];
 
     // Modal Visibility & State Objects
     replaceModalState: {
@@ -39,6 +40,8 @@ interface PlannerModalsProps {
     // Handlers
     onReplaceClose: () => void;
     onReplaceConfirm: (newItem: PlanItem) => void;
+
+    onItemClick: (id: number) => void; // For Mobile Map
     
     onSmartMixClose: () => void;
     onSmartMixConfirm: (scope: number | 'all', theme: PlannerTheme) => void;
@@ -75,6 +78,7 @@ export default function PlannerModals({
     destination,
     guests,
     days,
+    rainRisks,
     replaceModalState,
     isSmartMixOpen,
     confirmState,
@@ -88,6 +92,7 @@ export default function PlannerModals({
     onConfirmClose,
     onPlanBClose,
     onMobileMapClose,
+    onItemClick,
     onDateSave,
     onGuestSave,
     onDestSave,
@@ -169,16 +174,43 @@ export default function PlannerModals({
                             </button>
                         </div>
                         <div className="p-6 bg-gray-50 max-h-[60vh] overflow-y-auto custom-scrollbar">
-                            {/* Mock Data - 실제로는 rainRisk.recommendations를 받아와야 함 */}
-                            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 mb-3 hover:border-[#4338CA] cursor-pointer transition flex gap-4 group">
-                                 <div className="w-16 h-16 rounded-xl bg-orange-100 text-orange-500 flex items-center justify-center shrink-0">
-                                    <i className="fa-solid fa-utensils text-[24px]"></i>
-                                 </div>
-                                 <div className="flex-1">
-                                    <h4 className="font-bold text-gray-900">제주 아르떼 뮤지엄</h4>
-                                    <p className="text-xs text-gray-500 mt-1">몰입형 미디어아트 전시관</p>
-                                 </div>
-                            </div>
+                            {rainRisks.length === 0 ? (
+                                <div className="p-8 text-center text-gray-500">
+                                    <i className="fa-solid fa-sun text-4xl mb-4 text-orange-400"></i>
+                                    <p>현재 비 예보가 있는 야외 일정이 없습니다.</p>
+                                </div>
+                            ) : (
+                                rainRisks.map((risk, idx) => (
+                                    <div key={idx} className="mb-6 last:mb-0">
+                                        <h4 className="text-sm font-bold text-gray-500 mb-2 flex items-center gap-2">
+                                            <span className="w-1.5 h-1.5 bg-red-400 rounded-full"></span>
+                                            {risk.item.activity} 대체 추천
+                                        </h4>
+                                        {risk.recommendations.length > 0 ? (
+                                            risk.recommendations.map((rec) => (
+                                                <div key={rec.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 mb-3 hover:border-[#4338CA] cursor-pointer transition flex gap-4 group">
+                                                     <div className="w-16 h-16 rounded-xl bg-orange-100 text-orange-500 flex items-center justify-center shrink-0 overflow-hidden">
+                                                        {rec.imageUrl ? (
+                                                            <img src={rec.imageUrl} alt={rec.activity} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <i className={`fa-solid ${getIcon(rec.type)} text-[24px]`}></i> 
+                                                        )}
+                                                     </div>
+                                                     <div className="flex-1">
+                                                        <h4 className="font-bold text-gray-900 group-hover:text-indigo-700 transition-colors">{rec.activity}</h4>
+                                                        <p className="text-xs text-gray-500 mt-1 line-clamp-1">{rec.memo}</p>
+                                                        <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded mt-2 inline-block">
+                                                            {rec.category.main} {rec.category.sub && `> ${rec.category.sub}`}
+                                                        </span>
+                                                     </div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                             <p className="text-sm text-gray-400 p-2">근처에 적절한 실내 추천 장소가 없습니다.</p>
+                                        )}
+                                    </div>
+                                ))
+                            )}
                         </div>
                     </div>
                 </div>
@@ -201,11 +233,23 @@ export default function PlannerModals({
                             </button>
                         </div>
                         <div className="flex-1 relative">
-                            <Map schedule={schedule} selectedDay={selectedDay} selectedItemId={selectedItemId} />
+                            <Map schedule={schedule} selectedDay={selectedDay} selectedItemId={selectedItemId} onItemClick={onItemClick} />
                         </div>
                     </div>
                 </div>
             )}
         </>
     );
+}
+
+// Helper Functions
+function getIcon(type: string) {
+    switch (type) {
+        case 'move': return "fa-plane";
+        case 'food': return "fa-utensils";
+        case 'cafe': return "fa-coffee";
+        case 'sightseeing': return "fa-camera";
+        case 'stay': return "fa-hotel";
+        default: return "fa-map-pin";
+    }
 }

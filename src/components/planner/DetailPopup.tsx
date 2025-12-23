@@ -132,13 +132,15 @@ export default function DetailPopup({ item, isOpen, onClose }: DetailPopupProps)
                             </div>
                             <div>
                                 <p className="text-xs text-gray-500 font-medium mb-0.5">일차</p>
-                                <p className="font-bold text-gray-900 leading-none">{item.day}일차 일정</p>
+                                <p className="font-bold text-gray-900 leading-none">
+                                    {item.day > 0 ? `${item.day}일차 일정` : 'Plan B 추천'}
+                                </p>
                             </div>
                         </div>
                     </div>
 
                     {/* [New] Representative Menu / Key Point */}
-                    {item.menu && (
+                    {item.highlights && (
                         <div className="border-t border-gray-100 pt-5">
                             <h3 className="text-sm font-bold text-gray-900 mb-2.5 flex items-center gap-2">
                                 <Utensils size={16} className="text-orange-500" />
@@ -148,7 +150,7 @@ export default function DetailPopup({ item, isOpen, onClose }: DetailPopupProps)
                                 <span className="bg-white text-orange-600 font-bold px-2 py-1 rounded text-xs border border-orange-200 shrink-0">
                                     HIT
                                 </span>
-                                {item.menu}
+                                {item.highlights}
                             </div>
                         </div>
                     )}

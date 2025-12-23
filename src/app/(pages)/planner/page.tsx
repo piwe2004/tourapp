@@ -15,7 +15,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getTravelPlan } from '@/lib/actions';
 import { PlanItem } from '@/mockData';
-import { getPlanBRecommendations, RainyScheduleItem, getWeather } from '@/lib/weather/actions'; // getWeather 추가
+import { RainyScheduleItem, getWeather, getPlanBRecommendations } from '@/lib/weather/actions'; // getWeather, getPlanBRecommendations 추가
 import { WeatherData } from '@/lib/weather/service'; // Type 추가
 import { regenerateSchedule, PlannerTheme } from '@/services/ReplanningService';
 import { DropResult } from '@hello-pangea/dnd';
@@ -219,7 +219,7 @@ function PlannerContent() {
 
                 // Plan B 날씨 위험요소 체크
                 const startDateStr = dateRange.start.toISOString().split('T')[0];
-                const risks = await getPlanBRecommendations(123, startDateStr);
+                const risks = await getPlanBRecommendations(data, startDateStr);
                 setRainRisks(risks);
             } catch (error) {
                 console.error("Failed to fetch plan:", error);
@@ -398,6 +398,7 @@ function PlannerContent() {
                 destination={destination}
                 guests={guests}
                 days={days}
+                rainRisks={rainRisks}
                 replaceModalState={replaceModalState}
                 isSmartMixOpen={isSmartMixOpen}
                 confirmState={confirmState}
@@ -411,6 +412,7 @@ function PlannerContent() {
                 onConfirmClose={() => setConfirmState(prev => ({ ...prev, isOpen: false }))}
                 onPlanBClose={() => setIsPlanBOpen(false)}
                 onMobileMapClose={() => setIsMobileMapOpen(false)}
+                onItemClick={handleItemClick} // [New]
                 onDateSave={(start, end) => { setDateRange({ start, end }); setActiveEditor(null); }}
                 onGuestSave={(newGuests) => { setGuests(newGuests); setActiveEditor(null); }}
                 onDestSave={(newDest) => { setDestination(newDest); setActiveEditor(null); }}

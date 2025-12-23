@@ -1,6 +1,6 @@
 'use server';
 
-import { MOCK_PLAN_JEJU, PlanItem } from "@/mockData";
+import { PlanItem } from "@/mockData";
 import { geminiModel } from "./gemini";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, Timestamp, collection, getDocs, query, limit, where } from "firebase/firestore";
@@ -40,7 +40,7 @@ function mapPlaceToPlanItem(place: FirebasePlace, day: number = 1, time: string 
     is_indoor: false, // 기본값
     imageUrl: place.IMAGE_URL, // [New] 미리 가져오기
     address: place.ADDRESS,   // [New] 미리 가져오기
-    menu: place.HIGHLIGHTS && place.HIGHLIGHTS.length > 0 
+    highlights: place.HIGHLIGHTS && place.HIGHLIGHTS.length > 0 
       ? place.HIGHLIGHTS.join(', ') 
       : place.KEYWORDS?.slice(0, 3).join(', ') // [New] 미리 가져오기
   };
@@ -60,8 +60,8 @@ export async function getTravelPlan(destination: string): Promise<PlanItem[]> {
     const querySnapshot = await getDocs(q);
 
     if (querySnapshot.empty) {
-      console.warn("[Server] 데이터가 없습니다. Mock 데이터를 반환합니다.");
-      return MOCK_PLAN_JEJU;
+      console.warn("[Server] 데이터가 없습니다.");
+      return [];
     }
 
     const items: PlanItem[] = [];
@@ -88,7 +88,7 @@ export async function getTravelPlan(destination: string): Promise<PlanItem[]> {
 
   } catch (error) {
     console.error("[Server] Firebase 데이터 가져오기 실패:", error);
-    return MOCK_PLAN_JEJU; // 에러 시 Mock 데이터 폴백
+    return []; // 에러 시 빈 배열 반환
   }
 }
 
