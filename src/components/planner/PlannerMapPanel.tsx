@@ -1,13 +1,13 @@
 'use client';
 
-import { PlanItem } from '@/mockData';
+import { PlanItem } from '@/types/place';
 import Map from '@/components/planner/Map';
 
 interface PlannerMapPanelProps {
     schedule: PlanItem[];
     selectedDay: number;
-    selectedItemId: number | null;
-    onItemClick: (id: number) => void; // [New]
+    selectedItemId: string | null;
+    onItemClick: (id: string) => void; // [New]
 }
 
 /**

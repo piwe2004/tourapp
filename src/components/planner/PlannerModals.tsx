@@ -1,4 +1,4 @@
-import { PlanItem } from '@/mockData';
+import { PlanItem } from '@/types/place';
 import { RainyScheduleItem } from '@/lib/weather/actions';
 import { MapPin, X } from 'lucide-react';
 import Map from '@/components/planner/Map';
@@ -14,7 +14,7 @@ interface PlannerModalsProps {
     // Shared State
     schedule: PlanItem[];
     selectedDay: number;
-    selectedItemId: number | null;
+    selectedItemId: string | null;
     dateRange: { start: Date; end: Date };
     destination: string;
     guests: { adult: number; teen: number; child: number };
@@ -41,7 +41,7 @@ interface PlannerModalsProps {
     onReplaceClose: () => void;
     onReplaceConfirm: (newItem: PlanItem) => void;
 
-    onItemClick: (id: number) => void; // For Mobile Map
+    onItemClick: (id: string) => void; // For Mobile Map
     
     onSmartMixClose: () => void;
     onSmartMixConfirm: (scope: number | 'all', theme: PlannerTheme) => void;
@@ -184,23 +184,23 @@ export default function PlannerModals({
                                     <div key={idx} className="mb-6 last:mb-0">
                                         <h4 className="text-sm font-bold text-gray-500 mb-2 flex items-center gap-2">
                                             <span className="w-1.5 h-1.5 bg-red-400 rounded-full"></span>
-                                            {risk.item.activity} 대체 추천
+                                            {risk.item.NAME} 대체 추천
                                         </h4>
                                         {risk.recommendations.length > 0 ? (
                                             risk.recommendations.map((rec) => (
-                                                <div key={rec.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 mb-3 hover:border-[#4338CA] cursor-pointer transition flex gap-4 group">
+                                                <div key={rec.PLACE_ID} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 mb-3 hover:border-[#4338CA] cursor-pointer transition flex gap-4 group">
                                                      <div className="w-16 h-16 rounded-xl bg-orange-100 text-orange-500 flex items-center justify-center shrink-0 overflow-hidden">
-                                                        {rec.imageUrl ? (
-                                                            <img src={rec.imageUrl} alt={rec.activity} className="w-full h-full object-cover" />
+                                                        {rec.IMAGE_URL ? (
+                                                            <img src={rec.IMAGE_URL} alt={rec.NAME} className="w-full h-full object-cover" />
                                                         ) : (
                                                             <i className={`fa-solid ${getIcon(rec.type)} text-[24px]`}></i> 
                                                         )}
                                                      </div>
                                                      <div className="flex-1">
-                                                        <h4 className="font-bold text-gray-900 group-hover:text-indigo-700 transition-colors">{rec.activity}</h4>
-                                                        <p className="text-xs text-gray-500 mt-1 line-clamp-1">{rec.memo}</p>
+                                                        <h4 className="font-bold text-gray-900 group-hover:text-indigo-700 transition-colors">{rec.NAME}</h4>
+                                                        <p className="text-xs text-gray-500 mt-1 line-clamp-1">{rec.HIGHTLIGHTS}</p>
                                                         <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded mt-2 inline-block">
-                                                            {rec.category.main} {rec.category.sub && `> ${rec.category.sub}`}
+                                                            {rec.CATEGORY.main} {rec.CATEGORY.sub && `> ${rec.CATEGORY.sub}`}
                                                         </span>
                                                      </div>
                                                 </div>

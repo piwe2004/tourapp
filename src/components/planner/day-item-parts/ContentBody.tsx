@@ -1,6 +1,6 @@
 'use client';
 
-import { PlanItem } from "@/mockData";
+import { PlanItem } from "@/types/place";
 import { RainyScheduleItem } from '@/lib/weather/actions';
 import { cn } from "@/lib/utils";
 
@@ -20,7 +20,7 @@ export function ContentBody({
     rainRisk,
     onPlanBClick
 }: ContentBodyProps) {
-    const isExternal = String(item.id).startsWith('naver-');
+    const isExternal = String(item.PLACE_ID).startsWith('naver-');
 
     return (
         <div className="flex-1">
@@ -34,7 +34,6 @@ export function ContentBody({
                     {item.time}
                 </span>
                 
-
                 {isExternal && (
                     <span className="flex items-center gap-1 text-[10px] font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200" title="네이버 검색 결과">
                         <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> N 검색
@@ -66,7 +65,7 @@ export function ContentBody({
                 {/* 타이틀 및 메모 */}
                 <div className="flex-1 pr-6">
                     <h3 className="text-[15px] md:text-lg font-bold text-gray-800 leading-tight mb-1 flex gap-1 items-end">
-                        {item.activity}
+                        {item.NAME}
                         {/* [New] 실내/야외 여부 표시 (User Edit Refined) */}
                         {typeof item.is_indoor !== 'undefined' && (
                              <span className={cn(
@@ -78,7 +77,7 @@ export function ContentBody({
                         )}
                     </h3>
                     <p className="text-xs text-gray-400 font-medium line-clamp-1">
-                        {item.memo || "상세 설명이 없습니다."}
+                        {item.HIGHTLIGHTS || "상세 설명이 없습니다."}
                     </p>
                 </div>
             </div>

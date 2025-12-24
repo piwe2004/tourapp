@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { PlanItem } from '@/mockData';
+import { PlanItem } from '@/types/place';
 
 interface MapProps {
   schedule: PlanItem[];
   selectedDay: number;
-  selectedItemId?: number | null; // 선택된 아이템 ID prop 추가
-  onItemClick: (id: number) => void; // [New] 마커 클릭 핸들러
+  selectedItemId?: string | null; // 선택된 아이템 ID prop 추가
+  onItemClick: (id: string) => void; // [New] 마커 클릭 핸들러
 }
 
 export default function Map({ schedule, selectedDay, selectedItemId, onItemClick }: MapProps) {
@@ -39,12 +39,12 @@ export default function Map({ schedule, selectedDay, selectedItemId, onItemClick
 
     // 2. 현재 선택된 날짜의 아이템만 필터링 (위도/경도 있는 것만)
     const dayItems = schedule.filter(
-      (item) => item.day === selectedDay && item.lat && item.lng
+      (item) => item.day === selectedDay && item.LOC_LAT && item.LOC_LNG
     );
 
     // 3. 중심 좌표 계산 (데이터가 없으면 제주공항 기본값)
-    const centerLat = dayItems.length > 0 ? dayItems[0].lat! : 33.5104;
-    const centerLng = dayItems.length > 0 ? dayItems[0].lng! : 126.4913;
+    const centerLat = dayItems.length > 0 ? dayItems[0].LOC_LAT! : 33.5104;
+    const centerLng = dayItems.length > 0 ? dayItems[0].LOC_LNG! : 126.4913;
     const center = new window.naver.maps.LatLng(centerLat, centerLng);
 
     // 4. 지도 인스턴스 초기화 (한 번만 실행)
@@ -77,10 +77,10 @@ export default function Map({ schedule, selectedDay, selectedItemId, onItemClick
     const pathCoords: naver.maps.LatLng[] = [];
 
     dayItems.forEach((item, index) => {
-      const position = new window.naver.maps.LatLng(item.lat!, item.lng!);
+      const position = new window.naver.maps.LatLng(item.LOC_LAT!, item.LOC_LNG!);
       pathCoords.push(position);
 
-      const isSelected = selectedItemId === item.id;
+      const isSelected = selectedItemId === item.PLACE_ID;
       
       // 선택 여부에 따른 마커 스타일링
       // z-index: 선택된 마커가 100, hover시 50(group-hover로 처리)
@@ -89,7 +89,7 @@ export default function Map({ schedule, selectedDay, selectedItemId, onItemClick
         <div style="position: absolute; left: 0px; top: 0px; width: 40px; height: 40px;" class="group/marker cursor-pointer">
             <!-- Tooltip -->
             <div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-white px-3 py-1.5 rounded-lg shadow-xl mb-2 text-xs font-bold text-gray-800 whitespace-nowrap transform translate-y-2 opacity-0 group-hover/marker:opacity-100 group-hover/marker:translate-y-0 transition-all pointer-events-none z-[100]">
-                ${item.activity}
+                ${item.NAME}
                 <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rotate-45 border-b border-r border-gray-100"></div>
             </div>
             
@@ -103,7 +103,7 @@ export default function Map({ schedule, selectedDay, selectedItemId, onItemClick
       const marker = new window.naver.maps.Marker({
         position: position,
         map: map,
-        title: item.activity,
+        title: item.NAME,
         zIndex: isSelected ? 100 : 10,
         icon: {
           content: markerContent,
@@ -114,7 +114,7 @@ export default function Map({ schedule, selectedDay, selectedItemId, onItemClick
 
       // [New] 마커 클릭 이벤트 핸들러 추가
       window.naver.maps.Event.addListener(marker, 'click', () => {
-        onItemClick(item.id);
+        onItemClick(item.PLACE_ID);
       });
 
       markersRef.current.push(marker);
@@ -138,9 +138,9 @@ export default function Map({ schedule, selectedDay, selectedItemId, onItemClick
     // 8. 뷰포트(View) 자동 조정
     if (selectedItemId) {
       // 특정 아이템 선택 시 해당 위치로 부드럽게 이동
-      const selectedItem = dayItems.find(item => item.id === selectedItemId);
-      if (selectedItem && selectedItem.lat && selectedItem.lng) {
-        const target = new window.naver.maps.LatLng(selectedItem.lat, selectedItem.lng);
+      const selectedItem = dayItems.find(item => item.PLACE_ID === selectedItemId);
+      if (selectedItem && selectedItem.LOC_LAT && selectedItem.LOC_LNG) {
+        const target = new window.naver.maps.LatLng(selectedItem.LOC_LAT, selectedItem.LOC_LNG);
         map.morph(target, 14);
       }
     } else {

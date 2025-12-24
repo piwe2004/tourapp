@@ -1,6 +1,6 @@
 'use client';
 
-import { PlanItem } from '@/mockData';
+import { PlanItem } from '@/types/place';
 import { RainyScheduleItem } from '@/lib/weather/actions';
 import { WeatherData } from '@/lib/weather/service'; // Type Import
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
@@ -16,16 +16,16 @@ interface PlannerTimelineProps {
     isLoading: boolean;
     weatherData: WeatherData | null; // Prop 추가
     rainRisks: RainyScheduleItem[];
-    selectedItemId: number | null;
+    selectedItemId: string | null;
     
     // Handlers
     onDaySelect: (day: number) => void;
     onSmartMixClick: () => void;
-    onItemClick: (id: number) => void;
+    onItemClick: (id: string) => void;
     onDragEnd: (result: DropResult) => void;
     onReplaceClick: (item: PlanItem) => void;
-    onLockClick: (id: number) => void;
-    onDeleteClick: (id: number) => void;
+    onLockClick: (id: string) => void;
+    onDeleteClick: (id: string) => void;
     onAddStopClick: (index: number) => void;
     onPlanBClick: () => void;
     onMobileMapClick: () => void;
@@ -69,7 +69,7 @@ export default function PlannerTimeline({
         .sort((a, b) => a.time.localeCompare(b.time));
 
     // 특정 아이템의 강수 확률 정보를 가져오는 헬퍼 함수
-    const getRainRisk = (itemId: number) => rainRisks.find(r => r.item.id === itemId);
+    const getRainRisk = (itemId: string) => rainRisks.find(r => r.item.PLACE_ID === itemId);
 
     return (
         <section className="w-full lg:w-[480px] xl:w-[540px] bg-[#F8FAFC] h-full flex flex-col border-r border-gray-200 z-10 shadow-xl relative shrink-0">
@@ -85,7 +85,7 @@ export default function PlannerTimeline({
 
             {/* 2. 모바일 전용 지도 미리보기 (LG 사이즈 이상에서는 숨김) */}
             <div className="lg:hidden w-full h-[200px] shrink-0 relative bg-gray-100">
-                <Map schedule={schedule} selectedDay={selectedDay} selectedItemId={selectedItemId} />
+                <Map schedule={schedule} selectedDay={selectedDay} selectedItemId={selectedItemId} onItemClick={onItemClick} />
                 <button 
                     className="absolute bottom-2 right-2 bg-white/90 p-2 rounded-lg text-xs font-bold shadow-md z-10" 
                     onClick={onMobileMapClick}
@@ -111,23 +111,23 @@ export default function PlannerTimeline({
                                 >
                                     <div className="absolute left-[26px] md:left-[17px] top-[0px]  w-[2px] bg-indigo-100/80 h-[calc(100%-4px)]"></div>
                                     {currentDayItems.map((item, index) => (
-                                        <Draggable draggableId={item.id.toString()} index={index} key={item.id}>
+                                        <Draggable draggableId={item.PLACE_ID.toString()} index={index} key={item.PLACE_ID}>
                                             {(provided, snapshot) => (
                                                 <DayItems
                                                     item={item}
                                                     index={index}
-                                                    onClick={() => onItemClick(item.id)}
-                                                    selected={selectedItemId === item.id}
+                                                    onClick={() => onItemClick(item.PLACE_ID)}
+                                                    selected={selectedItemId === item.PLACE_ID}
                                                     innerRef={provided.innerRef}
                                                     draggableProps={provided.draggableProps}
                                                     dragHandleProps={provided.dragHandleProps}
                                                     isDragging={snapshot.isDragging}
                                                     onReplaceClick={() => onReplaceClick(item)}
-                                                    onLockClick={() => onLockClick(item.id)}
-                                                    onDeleteClick={() => onDeleteClick(item.id)}
+                                                    onLockClick={() => onLockClick(item.PLACE_ID)}
+                                                    onDeleteClick={() => onDeleteClick(item.PLACE_ID)}
                                                     onAddStopClick={() => onAddStopClick(index + 1)} // 현재 아이템 다음 위치에 추가
                                                     onPlanBClick={onPlanBClick}
-                                                    rainRisk={getRainRisk(item.id)}
+                                                    rainRisk={getRainRisk(item.PLACE_ID)}
                                                     isLastItem={index === currentDayItems.length - 1} // 마지막 아이템은 연결선 처리 다르게 할 수 있음
                                                 />
                                             )}

@@ -14,7 +14,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getTravelPlan } from '@/lib/actions';
-import { PlanItem } from '@/mockData';
+import { PlanItem } from '@/types/place';
 import { RainyScheduleItem, getWeather, getPlanBRecommendations } from '@/lib/weather/actions'; // getWeather, getPlanBRecommendations 추가
 import { WeatherData } from '@/lib/weather/service'; // Type 추가
 import { regenerateSchedule, PlannerTheme } from '@/services/ReplanningService';
@@ -54,7 +54,7 @@ function PlannerContent() {
     const [isLoading, setIsLoading] = useState(true);
     const [schedule, setSchedule] = useState<PlanItem[]>([]); // 전체 일정 데이터
     const [selectedDay, setSelectedDay] = useState(1);        // 현재 선택된 날짜 (Day 1, 2...)
-    const [selectedItemId, setSelectedItemId] = useState<number | null>(null); // 지도/리스트에서 하이라이트된 아이템 ID
+    const [selectedItemId, setSelectedItemId] = useState<string | null>(null); // 지도/리스트에서 하이라이트된 아이템 ID
 
     // 날씨 및 Plan B 관련 상태
     const [rainRisks, setRainRisks] = useState<RainyScheduleItem[]>([]);
@@ -111,14 +111,14 @@ function PlannerContent() {
         if (replaceModalState.mode === 'replace') {
             // 기존 아이템 교체
             setSchedule(prev => prev.map(item =>
-                item.id === replaceModalState.targetItem?.id
-                    ? { ...newItem, day: item.day, time: item.time, id: item.id }
+                item.PLACE_ID === replaceModalState.targetItem?.PLACE_ID
+                    ? { ...newItem, day: item.day, time: item.time, PLACE_ID: item.PLACE_ID }
                     : item
             ));
         } else if (replaceModalState.mode === 'add') {
             // 새 아이템 추가
             const index = replaceModalState.targetIndex ?? 0;
-            const currentDayItems = schedule.filter(item => item.day === selectedDay).sort((a, b) => a.time.localeCompare(b.time));
+            const currentDayItems = schedule.filter(item => item.day === selectedDay).sort((a, b) => a.STAY_TIME - b.STAY_TIME);
             let newTime = "12:00";
             
             // 시간 자동 계산 로직 (이전 아이템 시간 + 30분)
@@ -132,7 +132,7 @@ function PlannerContent() {
 
             const itemToAdd: PlanItem = {
                 ...newItem,
-                id: Date.now(),
+                PLACE_ID: Date.now().toString(),
                 day: selectedDay,
                 time: newTime,
                 isLocked: false,
@@ -145,12 +145,12 @@ function PlannerContent() {
     /**
      * @desc 아이템 삭제 (Confirm 확인 후 진행)
      */
-    const handleDeletePlace = (id: number) => {
+    const handleDeletePlace = (id: string) => {
         setConfirmState({
             isOpen: true,
             message: "정말로 이 일정을 삭제하시겠습니까?",
             onConfirm: () => {
-                setSchedule(prev => prev.filter(item => item.id !== id));
+                setSchedule(prev => prev.filter(item => item.PLACE_ID !== id));
                 setConfirmState(prev => ({ ...prev, isOpen: false }));
             }
         });
@@ -159,9 +159,9 @@ function PlannerContent() {
     /**
      * @desc 아이템 잠금 토글 (Lock/Unlock)
      */
-    const handleToggleLock = (id: number) => {
+    const handleToggleLock = (id: string) => {
         setSchedule(prev => prev.map(item =>
-            item.id === id ? { ...item, isLocked: !item.isLocked } : item
+            item.PLACE_ID === id ? { ...item, isLocked: !item.isLocked } : item
         ));
     };
 
@@ -215,6 +215,7 @@ function PlannerContent() {
             setIsLoading(true);
             try {
                 const data = await getTravelPlan(destination);
+                console.log("data : ", data);
                 setSchedule(data);
 
                 // Plan B 날씨 위험요소 체크
@@ -253,13 +254,13 @@ function PlannerContent() {
                 const dateStr = targetDate.toISOString().split('T')[0];
 
                 // 해당 날짜의 첫 번째 일정 좌표 (없으면 서울)
-                const dayItems = schedule.filter(item => item.day === day).sort((a, b) => a.time.localeCompare(b.time));
+                const dayItems = schedule.filter(item => item.day === day).sort((a, b) => a.STAY_TIME - b.STAY_TIME);
                 let lat = 37.5665;
                 let lng = 126.9780;
 
                 if (dayItems.length > 0) {
-                    lat = dayItems[0].lat;
-                    lng = dayItems[0].lng;
+                    lat = dayItems[0].LOC_LAT;
+                    lng = dayItems[0].LOC_LNG;
                 }
 
                 try {
@@ -282,42 +283,9 @@ function PlannerContent() {
     }, [dateRange, schedule, isLoading, days.length]); // days 배열 자체보다는 length 의존이 안전
 
     // [Restored] 아이템 클릭 핸들러
-    const handleItemClick = (id: number) => {
+    const handleItemClick = (id: string) => {
         setSelectedItemId(prev => prev === id ? null : id);
     };
-
-    /* 기존 개별 조회 useEffect 제거
-    // 날씨 데이터 가져오기 (selectedDay 변경 시)
-    useEffect(() => {
-        const fetchWeather = async () => {
-            setWeatherData(null); // 로딩 중 초기화
-            
-            // 1. 현재 선택된 날짜 계산
-            const targetDate = new Date(dateRange.start);
-            targetDate.setDate(targetDate.getDate() + (selectedDay - 1));
-            const dateStr = targetDate.toISOString().split('T')[0];
-
-            // 2. 해당 날짜의 첫 번째 일정 좌표 가져오기 (없으면 서울 시청 좌표 사용)
-            const dayItems = schedule.filter(item => item.day === selectedDay).sort((a, b) => a.time.localeCompare(b.time));
-            let lat = 37.5665; // 서울 기본값
-            let lng = 126.9780;
-
-            if (dayItems.length > 0) {
-                lat = dayItems[0].lat;
-                lng = dayItems[0].lng;
-            }
-
-            try {
-                const data = await getWeather(lat, lng, dateStr);
-                setWeatherData(data);
-            } catch (error) {
-                console.error("Weather fetch failed:", error);
-            }
-        };
-
-        fetchWeather();
-    }, [selectedDay, dateRange, schedule]);
-    */
 
     // 드래그 앤 드롭 종료 시 처리
     const onDragEnd = (result: DropResult) => {
@@ -325,7 +293,7 @@ function PlannerContent() {
 
         const currentDayItems = schedule
             .filter(item => item.day === selectedDay)
-            .sort((a, b) => a.time.localeCompare(b.time));
+            .sort((a, b) => a.STAY_TIME - b.STAY_TIME);
 
         const items = Array.from(currentDayItems);
         const [reorderedItem] = items.splice(result.source.index, 1);

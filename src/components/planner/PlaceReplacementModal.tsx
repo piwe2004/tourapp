@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Search, Star, MapPin, X, Check, Loader2 } from 'lucide-react';
-import { PlanItem } from '@/mockData';
+import { PlanItem } from '@/types/place';
 
 interface PlaceReplacementModalProps {
   isOpen: boolean;
@@ -12,19 +12,9 @@ interface PlaceReplacementModalProps {
   mode?: 'replace' | 'add';
 }
 
-// Mock Data for Recommendations
-const MOCK_RECOMMENDATIONS = [
-  { id: 101, name: '우진해장국', category: '맛집', rating: 4.8, distance: '0.5km', address:'주소', lat: 33.5115, lng: 126.5200, type: 'food' },
-  { id: 102, name: '동문시장 야시장', category: '맛집', rating: 4.5, distance: '1.2km', address:'주소', lat: 33.5120, lng: 126.5280, type: 'food' },
-  { id: 103, name: '스타벅스 제주서해안로DT', category: '카페', rating: 4.6, distance: '3.5km', address:'주소', lat: 33.5150, lng: 126.4800, type: 'cafe' },
-  { id: 104, name: '용두암', category: '관광지', rating: 4.3, distance: '2.0km', address:'주소', lat: 33.5160, lng: 126.5120, type: 'sightseeing' },
-  { id: 105, name: '도두동 무지개해안도로', category: '관광지', rating: 4.7, distance: '4.0km', address:'주소', lat: 33.5080, lng: 126.4700, type: 'sightseeing' },
-  { id: 106, name: '9.81파크 제주', category: '액티비티', rating: 4.9, distance: '15km', address:'주소', lat: 33.3800, lng: 126.3600, type: 'sightseeing' },
-  { id: 107, name: '금오름', category: '힐링', rating: 4.8, distance: '20km', address:'주소', lat: 33.3500, lng: 126.3000, type: 'sightseeing' },
-  { id: 108, name: '랜디스도넛 제주애월', category: '카페', rating: 4.4, distance: '18km', address:'주소', lat: 33.4600, lng: 126.3100, type: 'cafe' },
-];
+// MOCK_RECOMMENDATIONS Removed
 
-const CATEGORIES = ['전체', '맛집', '카페', '관광지', '액티비티', '힐링'];
+const CATEGORIES = ['전체', '음식점', '카페', '관광지', '숙박'];
 
 type SearchResultItem = {
     id: number | string;
@@ -54,33 +44,47 @@ interface NaverSearchItem {
 }
 
 export default function PlaceReplacementModal({ isOpen, onClose, onReplace, originalItem, mode = 'replace' }: PlaceReplacementModalProps) {
+  // State for tracking prop changes (to reset state when item changes)
+  const [prevKey, setPrevKey] = useState(originalItem?.PLACE_ID);
+
+  // Helper logic for category (can remain local or move out, simplified here)
+  const getCategoryFromItem = (item?: PlanItem | null) => {
+    if (!item) return '전체';
+    const typeToCategory: Record<string, string> = {
+        food: '맛집',
+        cafe: '카페',
+        sightseeing: '관광지',
+        activity: '액티비티', 
+        stay: '전체',
+    };
+    return typeToCategory[item.type] || '전체';
+  };
+
   const [keyword, setKeyword] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('전체');
+  // Initialize lazily
+  const [selectedCategory, setSelectedCategory] = useState(() => 
+      mode === 'replace' ? getCategoryFromItem(originalItem) : '전체'
+  );
   const [selectedPlaceId, setSelectedPlaceId] = useState<number | string | null>(null);
   
+  // Start empty
   const [displayItems, setDisplayItems] = useState<SearchResultItem[]>([]);
+  
   const [isLoading, setIsLoading] = useState(false);
   const [searchSource, setSearchSource] = useState<'internal' | 'external'>('internal');
 
-  // Initialize category based on original item
-  useEffect(() => {
-      if (mode === 'replace' && originalItem) {
-          const typeToCategory: Record<string, string> = {
-              food: '맛집',
-              cafe: '카페',
-              sightseeing: '관광지',
-              activity: '액티비티', 
-              stay: '전체',
-          };
-          setSelectedCategory(typeToCategory[originalItem.type] || '전체');
-      } else {
-           setSelectedCategory('전체');
-      }
-    setKeyword('');
-    setSelectedPlaceId(null);
-    // Reset items to mock initial
-    setDisplayItems(MOCK_RECOMMENDATIONS.map(item => ({ ...item, source: 'internal' })));
-  }, []); // Run once on mount
+  // [Fix] Adjust state during render to avoid cascading effects
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  const currentKey = originalItem?.PLACE_ID;
+  if (currentKey !== prevKey) {
+      setPrevKey(currentKey);
+      
+      // Reset all state based on new item
+      setSelectedCategory(mode === 'replace' ? getCategoryFromItem(originalItem) : '전체');
+      setKeyword('');
+      setSelectedPlaceId(null);
+      setDisplayItems([]); // Empty on reset
+  }
 
   // Search Logic
   useEffect(() => {
@@ -90,21 +94,8 @@ export default function PlaceReplacementModal({ isOpen, onClose, onReplace, orig
         
         let results: SearchResultItem[] = [];
 
-        // 1. Internal Filter
-        const internalResults = MOCK_RECOMMENDATIONS.filter(place => {
-            let matchCategory = true;
-            if (selectedCategory !== '전체') {
-                matchCategory = place.category === selectedCategory;
-            }
-            let matchKeyword = true;
-            if (keyword.trim()) {
-                matchKeyword = place.name.includes(keyword) || place.category.includes(keyword);
-            }
-            return matchCategory && matchKeyword;
-        });
-
-        // 2. Logic: If keyword exists and no internal results -> External
-        if (keyword.trim() && internalResults.length === 0) {
+        // All searches are now "External" (Naver/API) since we have no internal mocks
+        if (keyword.trim()) {
              setSearchSource('external');
              try {
                  const res = await fetch(`/api/search?query=${encodeURIComponent(keyword)}`);
@@ -129,7 +120,9 @@ export default function PlaceReplacementModal({ isOpen, onClose, onReplace, orig
                  console.error("Search API failed", error);
              }
         } else {
-            results = internalResults.map(item => ({ ...item, source: 'internal' }));
+            // No keyword -> No results (or maybe show some default popular places from API?)
+            // For now, empty.
+            results = [];
         }
 
         setDisplayItems(results);
@@ -198,17 +191,44 @@ export default function PlaceReplacementModal({ isOpen, onClose, onReplace, orig
 
       // 3. 새로운 PlanItem 객체 생성
       const newItem: PlanItem = {
-          id: Date.now(),
+          // PlaceData Fields
+          _docId: selectedPlaceId?.toString() || Date.now().toString(),
+          PLACE_ID: Date.now().toString(),
+          NAME: place.name.replace(/(<([^>]+)>)/gi, ""),
+          ADDRESS: place.address || "",
+          SUB_REGION: null, // [Added]
+          CATEGORY: {
+              main: place.category || "",
+              sub: ""
+          },
+          LOC_LAT: finalLat || 33.4996,
+          LOC_LNG: finalLng || 126.5312,
+          IMAGE_URL: null,
+          GALLERY_IMAGES: null,
+          MAP_LINK: place.link || "",
+          AFFIL_LINK: null,
+          IS_AFLT: false,
+          IS_TICKET_REQUIRED: false,
+          TIME_INFO: null,
+          PARKING_INFO: null,
+          REST_INFO: null,
+          FEE_INFO: null,
+          DETAILS: { stayTime: "60" },
+          RATING: place.rating || null,
+          HIGHTLIGHTS: null,
+          KEYWORDS: [],
+          NAME_GRAMS: [],
+          STAY_TIME: 60,
+          PRICE_GRADE: 0,
+          STATS: { bookmark_count: 0, view_count: 0, review_count: 0, rating: 0, weight: 0 },
+          TAGS: { spring: null, summer: null, autumn: null, winter: null },
+
+          // PlanItem Specific Fields
           day: 1, // 상위에서 덮어씌워짐
           time: "10:00", // 상위에서 계산됨
-          activity: place.name.replace(/(<([^>]+)>)/gi, ""), // HTML 태그 제거
-          type: mapCategoryToType(place.category || ''), // 카테고리 매핑
-          // 좌표가 없으면 기본값(제주) 사용
-          lat: finalLat || 33.4996, 
-          lng: finalLng || 126.5312,
-          memo: place.address || '',
+          type: mapCategoryToType(place.category || ''),
           isLocked: false,
-          duration: 60 // 기본 소요 시간
+          is_indoor: false // [Added] default
       };
 
       // 4. 부모 컴포넌트로 전달 및 모달 닫기

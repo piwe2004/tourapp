@@ -1,76 +1,49 @@
 import { db } from "../firebase";
 import { collection, query, where, getDocs, limit } from "firebase/firestore";
 import { FirebasePlace } from "@/types/places";
-import { PlanItem } from "@/mockData";
-
-export interface PlaceDetails {
-  _docId: string;        // Firebase 문서 ID
-  placeId: string;      // 콘텐츠 ID
-  name: string;          // 장소명
-  address: string;       // 주소
-  imageUrl: string;     // 대표 이미지 URL (없으면 빈 문자열)
-  
-  // 📍 위치 정보
-  locLat: number;
-  locLng: number;
-  
-  // 🏷️ 카테고리 (이걸로 식당/숙박/관광지 구분)
-  category: {
-    main: string;        // "식당", "숙박", "관광지" 등
-    sub: string;         // "한식", "호텔", "해수욕장" 등
-  };
-
-  // 📝 통합 정보 (n8n에서 우리가 깔끔하게 정리해준 4대장)
-  timeInfo: string | null;      // 영업시간 / 입실퇴실시간
-  parkingInfo: string | null;   // 주차 정보
-  restInfo: string | null;      // 휴무일
-  feeInfo: string | null;       // 이용요금 / 메뉴가격
-  
-  // 🎟️ 기능 플래그
-  isTicketRequired: boolean;   // 예약/예매 버튼 노출 여부
-
-  // ⭐ AI 및 통계 데이터
-  rating: number[] | null;       // 별점 (배열이거나 null)
-  highlights: string[] | null;  // 한줄 요약
-  keywords: string[];            // 검색용 키워드
-  tags: {                        // 계절별 태그
-    spring: string[] | null;
-    summer: string[] | null;
-    autumn: string[] | null;
-    winter: string[] | null;
-  };
-
-  // 🧩 2. 핵심: 변동되는 상세 정보는 'Dictionary' 타입으로 선언!
-  // "키가 뭔지 모르지만, 값은 문자열 아니면 null이다" 라는 뜻입니다.
-  details: Record<string, string | null>; 
-}
+import { PlanItem, PlaceData } from "@/types/place";
 
 /**
  * @desc Firebase 'PLACES' 컬렉션에서 장소의 상세 정보(이미지, 주소, 특징/메뉴)를 가져옵니다.
  *       'NAME' 필드를 기준으로 검색합니다.
  * @param placeName 장소 이름 (e.g., "자매국수")
- * @returns PlaceDetails 객체 (모든 필드는 null일 수 있음)
+ * @returns PlaceData 객체 (모든 필드는 null일 수 있음)
  */
-export async function fetchPlaceDetails(placeName: string): Promise<PlaceDetails> {
-    const defaultResult: PlaceDetails = {
+export async function fetchPlaceDetails(placeName: string): Promise<PlaceData> {
+    const defaultResult: PlaceData = {
         _docId: "",
-        placeId: "",
-        name: placeName,
-        address: "",
-        imageUrl: "",
-        locLat: 0,
-        locLng: 0,
-        category: { main: "", sub: "" },
-        timeInfo: null,
-        parkingInfo: null,
-        restInfo: null,
-        feeInfo: null,
-        isTicketRequired: false,
-        rating: null,
-        highlights: null,
-        keywords: [],
-        tags: { spring: null, summer: null, autumn: null, winter: null },
-        details: {}
+        PLACE_ID: "",
+        NAME: placeName,
+        ADDRESS: "",
+        SUB_REGION: null,
+        CATEGORY: { main: "", sub: "" },
+        IMAGE_URL: "",
+        GALLERY_IMAGES: null,
+        LOC_LAT: 0,
+        LOC_LNG: 0,
+        MAP_LINK: "",
+        AFFIL_LINK: null,
+        IS_AFLT: false,
+        IS_TICKET_REQUIRED: false,
+        TIME_INFO: null,
+        PARKING_INFO: null,
+        REST_INFO: null,
+        FEE_INFO: null,
+        DETAILS: {},
+        RATING: null,
+        HIGHTLIGHTS: null,
+        KEYWORDS: [],
+        NAME_GRAMS: [],
+        STAY_TIME: 0,
+        PRICE_GRADE: 0,
+        STATS: {
+            bookmark_count: 0,
+            view_count: 0,
+            review_count: 0,
+            rating: 0,
+            weight: 0
+        },
+        TAGS: { spring: null, summer: null, autumn: null, winter: null }
     };
     
     if (!placeName) return defaultResult;
@@ -86,35 +59,47 @@ export async function fetchPlaceDetails(placeName: string): Promise<PlaceDetails
 
             return {
                 _docId: doc.id,
-                placeId: data.PLACE_ID?.toString() || "",
-                name: data.NAME || placeName,
-                address: data.ADDRESS || "",
-                imageUrl: data.IMAGE_URL || "",
-                locLat: data.LOC_LAT || 0,
-                locLng: data.LOC_LNG || 0,
-                category: {
+                PLACE_ID: data.PLACE_ID?.toString() || "",
+                NAME: data.NAME || placeName,
+                ADDRESS: data.ADDRESS || "",
+                SUB_REGION: data.SUB_REGION || null,
+                CATEGORY: {
                     main: data.CATEGORY?.main || "",
                     sub: data.CATEGORY?.sub || ""
                 },
-                timeInfo: null, // 추후 데이터 필드 추가 필요
-                parkingInfo: null,
-                restInfo: null,
-                feeInfo: data.PRICE_GRADE ? `가격대: ${data.PRICE_GRADE}` : null,
-                isTicketRequired: false,
-                rating: data.RATING ? [data.RATING] : null,
-                highlights: data.HIGHLIGHTS || null,
-                keywords: data.KEYWORDS || [],
-                tags: {
+                IMAGE_URL: data.IMAGE_URL || "",
+                GALLERY_IMAGES: null, // 추후 추가
+                LOC_LAT: data.LOC_LAT || 0,
+                LOC_LNG: data.LOC_LNG || 0,
+                MAP_LINK: data.MAP_LINK || "",
+                AFFIL_LINK: null,
+                IS_AFLT: data.IS_AFLT || false,
+                IS_TICKET_REQUIRED: false, // 기본값
+                TIME_INFO: null,
+                PARKING_INFO: null,
+                REST_INFO: null,
+                FEE_INFO: data.PRICE_GRADE ? `가격대: ${data.PRICE_GRADE}` : null,
+                DETAILS: {
+                    stayTime: data.STAY_TIME ? data.STAY_TIME.toString() : null,
+                },
+                RATING: data.RATING || null,
+                HIGHTLIGHTS: data.HIGHTLIGHTS || null,
+                KEYWORDS: data.KEYWORDS || [],
+                NAME_GRAMS: [],
+                STAY_TIME: data.STAY_TIME || 0,
+                PRICE_GRADE: data.PRICE_GRADE || 0,
+                STATS: {
+                    bookmark_count: 0,
+                    view_count: 0,
+                    review_count: 0,
+                    rating: 0,
+                    weight: 0
+                },
+                TAGS: {
                     spring: data.TAGS?.spring || null,
                     summer: data.TAGS?.summer || null,
                     autumn: data.TAGS?.autumn || null,
                     winter: data.TAGS?.winter || null
-                },
-                details: {
-                    stayTime: data.STAY_TIME ? data.STAY_TIME.toString() : null,
-                    subRegion: data.SUB_REGION || null,
-                    mapLink: data.MAP_LINK || null,
-                    isAflt: data.IS_AFLT ? "true" : "false"
                 }
             };
         }
@@ -135,8 +120,6 @@ export async function getNearbyIndoorPlaces(lat: number, lng: number): Promise<P
         // (Firestore에서 위경도 범위 쿼리는 복잡하므로, 여기서는 Category/Keywords로 1차 필터 후 클라이언트 거리 계산)
         
         const placesRef = collection(db, "PLACES");
-        // '실내' 키워드나 특정 카테고리로 필터링하면 좋겠지만, 
-        // 데이터 구조상 모든 장소를 훑거나, '관광지'/'카페' 위주로 가져와서 필터링
         
         // 1. 우선 50개 정도만 가져와서 거리 계산 (Production에서는 Geofire 등 사용 권장)
         const q = query(placesRef, limit(50)); 
@@ -159,23 +142,58 @@ export async function getNearbyIndoorPlaces(lat: number, lng: number): Promise<P
             if (!isIndoor) return;
 
             // 4. PlanItem으로 변환
-            results.push({
-                id: data.PLACE_ID,
-                day: 0, // 추천용 임시
-                time: "",
-                activity: data.NAME,
-                type: mapCategoryToType(data.CATEGORY.main),
-                memo: data.HIGHLIGHTS?.[0] || "비 오는 날 추천",
-                lat: data.LOC_LAT,
-                lng: data.LOC_LNG,
-                is_indoor: true,
-                address: data.ADDRESS,
-                imageUrl: data.IMAGE_URL,
-                category: {
+            const planItem: PlanItem = {
+                // PlaceData Fields
+                _docId: doc.id,
+                PLACE_ID: data.PLACE_ID.toString(),
+                NAME: data.NAME,
+                ADDRESS: data.ADDRESS || "",
+                SUB_REGION: data.SUB_REGION || null,
+                CATEGORY: {
                     main: data.CATEGORY.main,
                     sub: data.CATEGORY.sub
-                }
-            });
+                },
+                IMAGE_URL: data.IMAGE_URL || null,
+                GALLERY_IMAGES: null,
+                LOC_LAT: data.LOC_LAT,
+                LOC_LNG: data.LOC_LNG,
+                MAP_LINK: data.MAP_LINK || "",
+                AFFIL_LINK: null,
+                IS_AFLT: data.IS_AFLT || false,
+                IS_TICKET_REQUIRED: false,
+                TIME_INFO: null,
+                PARKING_INFO: null,
+                REST_INFO: null,
+                FEE_INFO: data.PRICE_GRADE ? `가격대: ${data.PRICE_GRADE}` : null,
+                DETAILS: {},
+                RATING: data.RATING || null,
+                HIGHTLIGHTS: data.HIGHTLIGHTS || null,
+                KEYWORDS: data.KEYWORDS || [],
+                NAME_GRAMS: [],
+                STAY_TIME: data.STAY_TIME || 60,
+                PRICE_GRADE: data.PRICE_GRADE || 0,
+                STATS: {
+                    bookmark_count: 0,
+                    view_count: 0,
+                    review_count: 0,
+                    rating: 0,
+                    weight: 0
+                },
+                TAGS: {
+                    spring: data.TAGS?.spring || null,
+                    summer: data.TAGS?.summer || null,
+                    autumn: data.TAGS?.autumn || null,
+                    winter: data.TAGS?.winter || null
+                },
+
+                // PlanItem Specific Fields
+                day: 0, // 추천용 임시
+                time: "00:00",
+                type: mapCategoryToType(data.CATEGORY.main),
+                isLocked: false
+            };
+            
+            results.push(planItem);
         });
 
         return results;
@@ -206,7 +224,7 @@ function deg2rad(deg: number) {
 // 실내 여부 추론
 function checkIsIndoor(place: FirebasePlace): boolean {
     const indoorKeywords = ['박물관', '미술관', '전시', '카페', '실내', '아쿠아리움', '공방'];
-    const outdoorKeywords = ['해수욕장', '오름', '공원', '산책'];
+    const outdoorKeywords = ['해수욕장', '오름', '공원', '산책', '숲길'];
 
     // 1. 카테고리 체크
     if (place.CATEGORY.sub && indoorKeywords.some(k => place.CATEGORY.sub.includes(k))) return true;
@@ -228,4 +246,85 @@ function mapCategoryToType(mainCat: string): PlanItem['type'] {
     if (mainCat === '카페') return 'cafe';
     if (mainCat === '숙박') return 'stay';
     return 'sightseeing';
+}
+
+
+/**
+ * @desc 테마별 추천 장소를 가져옵니다.
+ *       단순화를 위해, 테마별 키워드 매핑을 사용하여 검색합니다.
+ */
+export async function getPlacesByTheme(theme: string): Promise<PlanItem[]> {
+    try {
+        const themeKeywords: Record<string, string[]> = {
+            'cafe': ['카페', '디저트', '커피'],
+            'photo': ['포토존', '사진', '인생샷', '풍경'],
+            'indoor': ['실내', '박물관', '미술관', '전시'],
+            'walk': ['산책', '숲길', '올레길', '오름'],
+            'activity': ['액티비티', '체험', '레저', '테마파크']
+        };
+
+        const keywords = themeKeywords[theme] || [];
+        if (keywords.length === 0) return [];
+
+        const placesRef = collection(db, "PLACES");
+        // Firestore 'array-contains-any' 사용 (KEYWORDS 필드 가정)
+        // 주의: KEYWORDS 필드가 배열이어야 함.
+        const q = query(
+            placesRef, 
+            where("KEYWORDS", "array-contains-any", keywords),
+            limit(10) 
+        );
+        
+        const snapshot = await getDocs(q);
+        const results: PlanItem[] = [];
+
+        snapshot.forEach(doc => {
+            const data = doc.data() as FirebasePlace;
+            
+            const planItem: PlanItem = {
+                _docId: doc.id,
+                PLACE_ID: data.PLACE_ID.toString(),
+                NAME: data.NAME,
+                ADDRESS: data.ADDRESS || "",
+                SUB_REGION: data.SUB_REGION || null,
+                CATEGORY: {
+                    main: data.CATEGORY.main,
+                    sub: data.CATEGORY.sub
+                },
+                IMAGE_URL: data.IMAGE_URL || null,
+                GALLERY_IMAGES: null,
+                LOC_LAT: data.LOC_LAT || 0,
+                LOC_LNG: data.LOC_LNG || 0,
+                MAP_LINK: data.MAP_LINK || "",
+                AFFIL_LINK: null,
+                IS_AFLT: data.IS_AFLT || false,
+                IS_TICKET_REQUIRED: false,
+                TIME_INFO: null,
+                PARKING_INFO: null,
+                REST_INFO: null,
+                FEE_INFO: null,
+                DETAILS: {},
+                RATING: data.RATING || null,
+                HIGHTLIGHTS: data.HIGHTLIGHTS || null,
+                KEYWORDS: data.KEYWORDS || [],
+                NAME_GRAMS: [],
+                STAY_TIME: data.STAY_TIME || 60,
+                PRICE_GRADE: data.PRICE_GRADE || 0,
+                STATS: { bookmark_count: 0, view_count: 0, review_count: 0, rating: 0, weight: 0 },
+                TAGS: { spring: null, summer: null, autumn: null, winter: null },
+                
+                day: 0, 
+                time: "00:00",
+                type: mapCategoryToType(data.CATEGORY.main),
+                isLocked: false
+            };
+            results.push(planItem);
+        });
+
+        return results;
+
+    } catch (error) {
+        console.error("Failed to fetch places by theme:", error);
+        return [];
+    }
 }

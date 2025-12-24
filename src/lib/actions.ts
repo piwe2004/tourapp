@@ -1,6 +1,6 @@
 'use server';
 
-import { PlanItem } from "@/mockData";
+import { PlanItem } from "@/types/place";
 import { geminiModel } from "./gemini";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, Timestamp, collection, getDocs, query, limit, where } from "firebase/firestore";
@@ -22,27 +22,57 @@ function mapPlaceToPlanItem(place: FirebasePlace, day: number = 1, time: string 
   else if (mainCat.includes('숙소') || subCat.includes('호텔') || subCat.includes('펜션')) type = 'stay';
   else if (mainCat.includes('이동')) type = 'move';
 
-  // 메모 구성: 하이라이트나 키워드 활용
-  const memo = place.HIGHLIGHTS && place.HIGHLIGHTS.length > 0 
-    ? place.HIGHLIGHTS.join(', ') 
-    : place.KEYWORDS?.slice(0, 3).join(', ') || '';
-
   return {
-    id: place.PLACE_ID || Date.now() + Math.random(), // ID가 없으면 임시 생성
+    // PlaceData Fields
+    _docId: place.PLACE_ID?.toString() || "", 
+    PLACE_ID: place.PLACE_ID?.toString() || Date.now().toString(),
+    NAME: place.NAME,
+    ADDRESS: place.ADDRESS || "",
+    SUB_REGION: place.SUB_REGION || null,
+    CATEGORY: {
+      main: place.CATEGORY?.main || "",
+      sub: place.CATEGORY?.sub || ""
+    },
+    IMAGE_URL: place.IMAGE_URL || null,
+    GALLERY_IMAGES: null,
+    LOC_LAT: place.LOC_LAT,
+    LOC_LNG: place.LOC_LNG,
+    MAP_LINK: place.MAP_LINK || "",
+    AFFIL_LINK: null,
+    IS_AFLT: place.IS_AFLT || false,
+    IS_TICKET_REQUIRED: false,
+    TIME_INFO: null,
+    PARKING_INFO: null,
+    REST_INFO: null,
+    FEE_INFO: place.PRICE_GRADE ? `가격대: ${place.PRICE_GRADE}` : null,
+    DETAILS: {
+        stayTime: place.STAY_TIME ? place.STAY_TIME.toString() : null
+    },
+    RATING: place.RATING || null,
+    HIGHTLIGHTS: place.HIGHTLIGHTS || null,
+    KEYWORDS: place.KEYWORDS || [],
+    NAME_GRAMS: [],
+    STAY_TIME: place.STAY_TIME || 60,
+    PRICE_GRADE: place.PRICE_GRADE || 0,
+    STATS: {
+        bookmark_count: 0,
+        view_count: 0,
+        review_count: 0,
+        rating: 0,
+        weight: 0
+    },
+    TAGS: {
+        spring: place.TAGS?.spring || null,
+        summer: place.TAGS?.summer || null,
+        autumn: place.TAGS?.autumn || null,
+        winter: place.TAGS?.winter || null
+    },
+
+    // PlanItem Specific Fields
     day,
     time,
-    activity: place.NAME,
     type,
-    memo,
-    lat: place.LOC_LAT,
-    lng: place.LOC_LNG,
-    duration: place.STAY_TIME || 60,
-    is_indoor: false, // 기본값
-    imageUrl: place.IMAGE_URL, // [New] 미리 가져오기
-    address: place.ADDRESS,   // [New] 미리 가져오기
-    highlights: place.HIGHLIGHTS && place.HIGHLIGHTS.length > 0 
-      ? place.HIGHLIGHTS.join(', ') 
-      : place.KEYWORDS?.slice(0, 3).join(', ') // [New] 미리 가져오기
+    isLocked: false
   };
 }
 

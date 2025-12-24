@@ -1,4 +1,4 @@
-import { PlanItem } from "@/mockData";
+import { PlanItem } from "@/types/place";
 import { getWeatherForDate } from "./service";
 import { getNearbyIndoorPlaces } from "@/lib/firebase/placeService";
 
@@ -28,9 +28,9 @@ export async function checkRainySchedule(plan: PlanItem[], date: string): Promis
     const dateStr = targetDate.toISOString().split('T')[0];
     
     // 좌표가 없으면 패스
-    if (!item.lat || !item.lng) continue;
+    if (!item.LOC_LAT || !item.LOC_LNG) continue;
 
-    const weather = await getWeatherForDate(item.lat, item.lng, dateStr);
+    const weather = await getWeatherForDate(item.LOC_LAT, item.LOC_LNG, dateStr);
 
     // 3. 비 예보 판단 (POP >= 60% OR PTY != "없음")
     const popVal = parseInt(weather.pop.replace("%", "")) || 0;
@@ -59,10 +59,10 @@ export async function checkRainySchedule(plan: PlanItem[], date: string): Promis
  * @desc 대체 장소 추천 알고리즘 (Firebase 연동)
  */
 async function recommendIndoorPlaces(target: PlanItem): Promise<PlanItem[]> {
-  if (!target.lat || !target.lng) return [];
+  if (!target.LOC_LAT || !target.LOC_LNG) return [];
 
   // Firebase에서 주변 실내 장소 조회
-  const candidates = await getNearbyIndoorPlaces(target.lat, target.lng);
+  const candidates = await getNearbyIndoorPlaces(target.LOC_LAT, target.LOC_LNG);
 
   // 카테고리 유사성 필터
   return candidates.filter(place => {

@@ -1,4 +1,4 @@
-import { PlanItem } from "@/mockData";
+import { PlanItem } from "@/types/place";
 
 export type PlannerTheme = 'cafe' | 'photo' | 'indoor' | 'walk' | 'activity';
 
@@ -109,37 +109,15 @@ function identifyGaps(dayItems: PlanItem[], day: number): Gap[] {
     return gaps;
 }
 
+import { getPlacesByTheme } from "@/lib/firebase/placeService";
+
 /**
- * @desc 테마에 맞는 장소를 검색합니다. (Mock)
- * 실제로는 NCP Search API를 호출해야 합니다.
+ * @desc 테마에 맞는 장소를 검색합니다. (Real Data)
+ * NCP Search API 대신 Firestore에서 키워드 기반으로 검색합니다.
  */
 async function searchPlacesByTheme(theme: PlannerTheme): Promise<Partial<PlanItem>[]> {
-    // 테마별 더미 데이터
-    const THEME_MOCKS: Record<PlannerTheme, Partial<PlanItem>[]> = {
-        cafe: [
-            { activity: "오션뷰 카페 루시아", type: "cafe", memo: "절벽 위에서 즐기는 커피", isLocked: false },
-            { activity: "감귤 창고 카페", type: "cafe", memo: "빈티지하고 아늑한 분위기", isLocked: false },
-            { activity: "휴일로", type: "cafe", memo: "서귀포 핫플레이스", isLocked: false },
-        ],
-        photo: [
-            { activity: "동백 포레스트", type: "sightseeing", memo: "겨울철 필수 인생샷 명소", isLocked: false },
-            { activity: "무지개 해안도로", type: "sightseeing", memo: "알록달록 경계석과 바다 배경", isLocked: false },
-        ],
-        indoor: [
-            { activity: "본태 박물관", type: "sightseeing", memo: "안도 타다오 건축과 예술", isLocked: false },
-            { activity: "항공우주박물관", type: "sightseeing", memo: "아이들과 가기 좋은 실내", isLocked: false },
-        ],
-        walk: [
-            { activity: "사려니숲길", type: "sightseeing", memo: "피톤치드 가득한 힐링 산책", isLocked: false },
-            { activity: "올레길 7코스", type: "sightseeing", memo: "외돌개와 바다 절경", isLocked: false },
-        ],
-        activity: [
-            { activity: "9.81 파크", type: "sightseeing", memo: "무동력 레이싱 테마파크", isLocked: false },
-            { activity: "제주 제트보트", type: "sightseeing", memo: "짜릿한 바다 질주", isLocked: false },
-        ]
-    };
-
-    return THEME_MOCKS[theme] || [];
+    const places = await getPlacesByTheme(theme);
+    return places;
 }
 
 /**
@@ -173,7 +151,8 @@ export async function regenerateSchedule(
     const newItems: PlanItem[] = [...lockedItems];
     
     // 2. 각 Gap 채우기
-    let candidatePool = await searchPlacesByTheme(theme);
+    // Theme에 맞는 후보 장소 리스트를 가져옵니다.
+    const candidatePool = await searchPlacesByTheme(theme);
     let poolIndex = 0;
 
     for (const gap of gaps) {
@@ -182,15 +161,44 @@ export async function regenerateSchedule(
         
         // 새 아이템 생성
         const newItem: PlanItem = {
-            id: Math.floor(Math.random() * 100000) + 1000, // 임시 ID
+            // PlaceData Fields
+            _docId: `temp-${Date.now()}-${Math.random()}`,
+            PLACE_ID: (Date.now() + Math.random()).toString(),
+            NAME: candidate.NAME || "추천 장소",
+            ADDRESS: "",
+            SUB_REGION: null,
+            CATEGORY: {
+                main: "테마 추천",
+                sub: theme
+            },
+            LOC_LAT: 33.4 + (Math.random() * 0.2), // 임시 좌표
+            LOC_LNG: 126.3 + (Math.random() * 0.4),
+            IMAGE_URL: null,
+            GALLERY_IMAGES: null,
+            MAP_LINK: "",
+            AFFIL_LINK: null,
+            IS_AFLT: false,
+            IS_TICKET_REQUIRED: false,
+            TIME_INFO: null,
+            PARKING_INFO: null,
+            REST_INFO: null,
+            FEE_INFO: null,
+            DETAILS: { stayTime: "60" },
+            RATING: 4.5,
+            HIGHTLIGHTS: [],
+            KEYWORDS: [],
+            NAME_GRAMS: [],
+            STAY_TIME: 60,
+            PRICE_GRADE: 0,
+            STATS: { bookmark_count: 0, view_count: 0, review_count: 0, rating: 0, weight: 0 },
+            TAGS: { spring: null, summer: null, autumn: null, winter: null },
+
+            // PlanItem Specific Fields
             day: day,
-            time: gap.startTime, // Gap 시작 시간 배치
-            activity: candidate.activity!,
-            type: candidate.type as any,
-            memo: `[테마 추천] ${candidate.memo}`,
-            lat: 33.4 + (Math.random() * 0.2), // 임시 좌표
-            lng: 126.3 + (Math.random() * 0.4),
-            isLocked: false
+            time: gap.startTime,
+            type: candidate.type as PlanItem['type'], // Type Assertion: Mock 데이터는 항상 type을 포함하므로 명시적 형변환
+            isLocked: false,
+            is_indoor: false
         };
         newItems.push(newItem);
     }
@@ -199,5 +207,11 @@ export async function regenerateSchedule(
     newItems.sort((a, b) => a.time.localeCompare(b.time));
 
     // 4. 전체 스케줄 병합
-    return [...otherItems, ...newItems];
+    const finalSchedule = [...otherItems, ...newItems];
+    
+    // 4. 전체 스케줄 날짜/시간 순 정렬
+    return finalSchedule.sort((a, b) => {
+        if (a.day !== b.day) return a.day - b.day;
+        return a.time.localeCompare(b.time);
+    });
 }

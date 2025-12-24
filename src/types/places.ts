@@ -8,7 +8,7 @@ export interface FirebasePlace {
   LOC_LAT: number;
   LOC_LNG: number;
   IMAGE_URL?: string;
-  HIGHLIGHTS?: string[];
+  HIGHTLIGHTS?: string[];
   KEYWORDS?: string[];
   PRICE_GRADE?: number;
   RATING?: number;

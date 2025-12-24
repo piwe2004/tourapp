@@ -19,5 +19,5 @@ export interface ScheduleItem {
     activity: string;
     type: 'stay' | 'food' | 'sightseeing' | 'cafe';
     icon: React.ReactNode;
-    memo?: string;
+    HIGHTLIGHTS?: string;
 }

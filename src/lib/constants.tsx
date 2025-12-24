@@ -24,8 +24,8 @@ export const DESTINATIONS_DB: Destination[] = [
 ];
 
 export const INITIAL_SCHEDULE: ScheduleItem[] = [
-    { id: 1, time: "11:00", activity: "제주공항 도착", type: "sightseeing", icon: <Train size={ 16} />, memo: "셔틀버스 탑승장 이동" },
-    { id: 2, time: "12:30", activity: "애월 해안도로 드라이브", type: "sightseeing", icon: <Camera size={ 16 }/>, memo: "해안가 카페 들르기" },
+    { id: 1, time: "11:00", activity: "제주공항 도착", type: "sightseeing", icon: <Train size={ 16} />, HIGHTLIGHTS: "셔틀버스 탑승장 이동" },
+    { id: 2, time: "12:30", activity: "애월 해안도로 드라이브", type: "sightseeing", icon: <Camera size={ 16 }/>, HIGHTLIGHTS: "해안가 카페 들르기" },
     { id: 3, time: "14:00", activity: "고기국수 점심 식사", type: "food", icon: <Utensils size={ 16 }/> },
-    { id: 4, time: "16:00", activity: "협재 해수욕장 산책", type: "sightseeing", icon: <Sun size={ 16 }/>, memo: "일몰 사진 포인트" },
+    { id: 4, time: "16:00", activity: "협재 해수욕장 산책", type: "sightseeing", icon: <Sun size={ 16 }/>, HIGHTLIGHTS: "일몰 사진 포인트" },
 ];

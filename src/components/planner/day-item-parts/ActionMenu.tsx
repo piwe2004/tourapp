@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from "react";
-import { PlanItem } from "@/mockData";
+import { PlanItem } from "@/types/place";
 
 interface ActionMenuProps {
     item: PlanItem;

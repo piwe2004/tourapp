@@ -1,6 +1,6 @@
 "use client"
 
-import { PlanItem } from "@/mockData";
+import { PlanItem } from "@/types/place";
 import { RainyScheduleItem } from '@/lib/weather/actions';
 import { DraggableProvidedDraggableProps, DraggableProvidedDragHandleProps } from '@hello-pangea/dnd';
 import { cn } from "@/lib/utils";
@@ -120,7 +120,7 @@ export default function DayItems({
                                         <div className="flex items-center gap-2">
                                             <i className="fa-regular fa-clock text-indigo-400"></i>
                                             <span>
-                                                소요시간 <strong className="text-gray-800">{item.duration || 60}분</strong>
+                                                소요시간 <strong className="text-gray-800">{item.STAY_TIME || 60}분</strong>
                                             </span>
                                         </div>
                                         {/* 상세보기 버튼 */}
@@ -137,10 +137,10 @@ export default function DayItems({
                                     
                                     
                                     {/* (옵션) 간단한 팁이나 추가 정보 한 줄 */}
-                                    {item.memo && (
+                                    {item.HIGHTLIGHTS && (
                                         <div className="text-xs text-gray-400 px-1 flex items-center gap-2">
                                             <i className="fa-solid fa-quote-left text-gray-300"></i>
-                                            <span className="line-clamp-1">{item.memo}</span>
+                                            <span className="line-clamp-1">{item.HIGHTLIGHTS}</span>
                                         </div>
                                     )}
 
@@ -166,7 +166,7 @@ export default function DayItems({
                                                             const inStr = checkInDate.toISOString().split('T')[0];
                                                             const outStr = checkOutDate.toISOString().split('T')[0];
 
-                                                            openBooking(platform, item.activity, inStr, outStr);
+                                                            openBooking(platform, item.NAME, inStr, outStr);
                                                         }}
                                                         className={cn(
                                                             "text-[10px] py-1.5 rounded-lg border transition-all font-bold shadow-sm",

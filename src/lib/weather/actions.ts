@@ -2,7 +2,7 @@
 
 import { getWeatherForDate, WeatherData } from "./service";
 import { checkRainySchedule, RainyScheduleItem } from "./plan-b";
-import { PlanItem } from "@/mockData";
+import { PlanItem } from "@/types/place";
 export type { RainyScheduleItem };
 
 /**
