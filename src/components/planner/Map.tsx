@@ -61,7 +61,7 @@ export default function Map({ schedule, selectedDay, selectedItemId, onItemClick
       };
       mapRef.current = new window.naver.maps.Map(mapElement.current, mapOptions);
     }
-    
+
     const map = mapRef.current;
 
     // 5. 기존 마커 및 경로 깨끗이 제거 (초기화)
@@ -81,12 +81,12 @@ export default function Map({ schedule, selectedDay, selectedItemId, onItemClick
       pathCoords.push(position);
 
       const isSelected = selectedItemId === item.PLACE_ID;
-      
+
       // 선택 여부에 따른 마커 스타일링
       // z-index: 선택된 마커가 100, hover시 50(group-hover로 처리)
-      
+
       const markerContent = `
-        <div style="position: absolute; left: 0px; top: 0px; width: 40px; height: 40px;" class="group/marker cursor-pointer">
+        <div style="position: absolute; left: 0px; top: 0px; width: 20px; height: 20px;" class="group/marker cursor-pointer">
             <!-- Tooltip -->
             <div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-white px-3 py-1.5 rounded-lg shadow-xl mb-2 text-xs font-bold text-gray-800 whitespace-nowrap transform translate-y-2 opacity-0 group-hover/marker:opacity-100 group-hover/marker:translate-y-0 transition-all pointer-events-none z-[100]">
                 ${item.NAME}
@@ -94,7 +94,7 @@ export default function Map({ schedule, selectedDay, selectedItemId, onItemClick
             </div>
             
             <!-- Map Marker Circle -->
-            <div class="w-10 h-10 rounded-full text-white bg-[#4338CA] border-4 border-white shadow-lg flex items-center justify-center font-bold text-sm transform transition-all duration-300 group-hover/marker:scale-120 group-hover/marker:z-50 ${isSelected ? 'scale-120 z-50 ring-2 ' : ''}">
+            <div class="w-8 h-8 rounded-full text-white bg-[#4338CA] border-3 border-white shadow-lg flex items-center justify-center font-bold text-sm transform transition-all duration-300 group-hover/marker:scale-120 group-hover/marker:z-50 ${isSelected ? 'scale-120 z-50 ring-2 ' : ''}">
                 ${index + 1}
             </div>
         </div>

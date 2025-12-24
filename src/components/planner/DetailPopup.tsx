@@ -1,5 +1,5 @@
 import { PlanItem } from "@/types/place";
-import { X, MapPin, Clock, Calendar, Utensils, BedDouble, Star } from "lucide-react";
+import { X, MapPin, Clock, Calendar, Utensils, BedDouble, Star, List } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { openBooking, BOOKING_PLATFORMS, BookingPlatform } from "@/lib/bookingService";
@@ -27,7 +27,7 @@ export default function DetailPopup({ item, isOpen, onClose }: DetailPopupProps)
         if (isOpen) {
             window.addEventListener('keydown', handleEsc);
             document.body.style.overflow = 'hidden';
-        } 
+        }
         return () => {
             window.removeEventListener('keydown', handleEsc);
             document.body.style.overflow = 'unset';
@@ -41,11 +41,11 @@ export default function DetailPopup({ item, isOpen, onClose }: DetailPopupProps)
         // 여기서는 Mocking을 위해 오늘 날짜 기준으로 계산하거나, 
         // 향후 dateRange를 props로 받아야 함.
         // 임시 로직: 오늘 + (item.day)일
-        
+
         const today = new Date();
         const checkInDate = new Date(today);
         checkInDate.setDate(today.getDate() + item.day); // 예: 1일차면 내일 체크인
-        
+
         const checkOutDate = new Date(checkInDate);
         checkOutDate.setDate(checkInDate.getDate() + 1); // 1박 2일
 
@@ -58,7 +58,7 @@ export default function DetailPopup({ item, isOpen, onClose }: DetailPopupProps)
     if (!isOpen) return null;
 
     return createPortal(
-        <div 
+        <div
             className="fixed inset-0 z-9999 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
             onClick={(e) => {
                 e.preventDefault();
@@ -66,35 +66,35 @@ export default function DetailPopup({ item, isOpen, onClose }: DetailPopupProps)
                 if (e.target === e.currentTarget) onClose();
             }}
         >
-            <div 
+            <div
                 className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden relative animate-scale-up"
                 onClick={(e) => e.stopPropagation()} // 내부 클릭 시 부모(배경)으로 이벤트 전파 방지
             >
-                
+
                 {/* Header Image Area */}
                 <div className="h-56 bg-indigo-50 relative flex items-center justify-center overflow-hidden">
-                     {/* Pre-fetched Image or Fallback */}
-                     {item.IMAGE_URL && !imageError ? (
-                        <img 
-                            src={item.IMAGE_URL} 
-                            alt={item.NAME} 
+                    {/* Pre-fetched Image or Fallback */}
+                    {item.IMAGE_URL && !imageError ? (
+                        <img
+                            src={item.IMAGE_URL}
+                            alt={item.NAME}
                             className="absolute inset-0 w-full h-full object-cover"
                             onError={() => setImageError(true)}
                         />
-                     ) : (
+                    ) : (
                         <span className="text-6xl text-indigo-200 opacity-50 relative z-0">
                             <i className={`fa-solid ${getIcon(item.type)}`}></i>
                         </span>
-                     )}
-                     
-                     <div className="absolute inset-0 bg-linear-to-t from-black/60 via-black/10 to-transparent z-10"></div>
-                     
-                     <div className="absolute bottom-5 left-6 z-20 text-white w-[calc(100%-48px)]">
+                    )}
+
+                    <div className="absolute inset-0 bg-linear-to-t from-black/60 via-black/10 to-transparent z-10"></div>
+
+                    <div className="absolute bottom-5 left-6 z-20 text-white w-[calc(100%-48px)]">
                         <span className="bg-white/20 backdrop-blur-md text-xs font-bold px-2 py-1 rounded mb-2 inline-block border border-white/30">
                             {getActivityTypeLabel(item.type)}
                         </span>
                         <h2 className="text-2xl md:text-3xl font-bold leading-tight drop-shadow-sm">{item.NAME}</h2>
-                        
+
                         {/* Address Display (Header) */}
                         {item.ADDRESS && (
                             <p className="text-white/90 text-sm mt-1 flex items-center gap-1 font-medium truncate">
@@ -102,9 +102,9 @@ export default function DetailPopup({ item, isOpen, onClose }: DetailPopupProps)
                                 {item.ADDRESS}
                             </p>
                         )}
-                     </div>
+                    </div>
 
-                    <button 
+                    <button
                         onClick={(e) => {
                             e.stopPropagation();
                             onClose();
@@ -117,7 +117,7 @@ export default function DetailPopup({ item, isOpen, onClose }: DetailPopupProps)
 
                 {/* Content Body */}
                 <div className="p-6 space-y-6">
-                    
+
                     {/* Key Info Grid */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="bg-gray-50 p-3.5 rounded-2xl flex items-center gap-3 border border-gray-100">
@@ -143,17 +143,14 @@ export default function DetailPopup({ item, isOpen, onClose }: DetailPopupProps)
                     </div>
 
                     {/* [New] Representative Menu / Key Point */}
-                    {item.HIGHTLIGHTS && (
+                    {(item.type === 'food' && item?.DETAILS['대표메뉴']?.length > 0) && (
                         <div className="border-t border-gray-100 pt-5">
                             <h3 className="text-sm font-bold text-gray-900 mb-2.5 flex items-center gap-2">
                                 <Utensils size={16} className="text-orange-500" />
-                                {item.type === 'food' || item.type === 'cafe' ? '추천 메뉴' : '주요 포인트'}
+                                대표메뉴
                             </h3>
                             <div className="bg-orange-50/50 p-4 rounded-2xl border border-orange-100 text-sm font-medium text-gray-700 flex items-start gap-4">
-                                <span className="bg-white text-orange-600 font-bold px-2 py-1 rounded text-xs border border-orange-200 shrink-0">
-                                    HIT
-                                </span>
-                                {item.HIGHTLIGHTS.join(', ')}
+                                {item.DETAILS['대표메뉴']}
                             </div>
                         </div>
                     )}
@@ -161,14 +158,17 @@ export default function DetailPopup({ item, isOpen, onClose }: DetailPopupProps)
                     {item.HIGHTLIGHTS && (
                         <div className="border-t border-gray-100 pt-5">
                             <h3 className="text-sm font-bold text-gray-900 mb-2.5 flex items-center gap-2">
-                                <Utensils size={16} className="text-orange-500" />
-                                {item.type === 'food' || item.type === 'cafe' ? '추천 메뉴' : '주요 포인트'}
+                                <List size={16} className="text-orange-500" />
+                                주요 포인트
                             </h3>
-                            <div className="bg-orange-50/50 p-4 rounded-2xl border border-orange-100 text-sm font-medium text-gray-700 flex items-start gap-4">
-                                <span className="bg-white text-orange-600 font-bold px-2 py-1 rounded text-xs border border-orange-200 shrink-0">
-                                    HIT
-                                </span>
-                                {item.HIGHTLIGHTS.join(', ')}
+                            <div className="bg-orange-50/50 p-4 rounded-2xl border border-orange-100 text-sm font-medium text-gray-700 flex flex-col items-start gap-2">
+                                {item.HIGHTLIGHTS.map((list, index) => {
+                                    return (
+                                        <span key={index} className="text-xs">
+                                            - {list}
+                                        </span>
+                                    )
+                                })}
                             </div>
                         </div>
                     )}
@@ -221,7 +221,7 @@ export default function DetailPopup({ item, isOpen, onClose }: DetailPopupProps)
 
                 {/* Footer Actions */}
                 <div className="p-4 border-t border-gray-100 bg-gray-50 flex gap-3">
-                    <button 
+                    <button
                         onClick={(e) => {
                             e.stopPropagation();
                             onClose();
