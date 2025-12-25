@@ -143,7 +143,7 @@ export default function DetailPopup({ item, isOpen, onClose }: DetailPopupProps)
                     </div>
 
                     {/* [New] Representative Menu / Key Point */}
-                    {(item.type === 'food' && item?.DETAILS['대표메뉴']?.length > 0) && (
+                    {item?.DETAILS['대표메뉴']?.length > 0 && (
                         <div className="border-t border-gray-100 pt-5">
                             <h3 className="text-sm font-bold text-gray-900 mb-2.5 flex items-center gap-2">
                                 <Utensils size={16} className="text-orange-500" />

@@ -1,37 +1,122 @@
-'use server';
+"use server";
 
 import { PlanItem } from "@/types/place";
 import { geminiModel } from "./gemini";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp, Timestamp, collection, getDocs, query, limit, where } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  serverTimestamp,
+  Timestamp,
+  collection,
+  getDocs,
+  query,
+  limit,
+  where,
+} from "firebase/firestore";
 import { headers } from "next/headers";
 import { FirebasePlace } from "@/types/places";
+
+// TODO: Replace with your actual deployed Cloud Function URL
+// Example: https://us-central1-your-project-id.cloudfunctions.net/generateOptimizedRoute
+const OPTIMIZE_API_URL =
+  "https://us-central1-tourapp-a8507.cloudfunctions.net/generateOptimizedRoute";
+
+/**
+ * @desc Call Cloud Function to optimize route
+ */
+async function optimizeRoute(
+  places: FirebasePlace[],
+  preferences: string
+): Promise<FirebasePlace[]> {
+  if (!OPTIMIZE_API_URL || OPTIMIZE_API_URL.includes("YOUR_PROJECT_ID")) {
+    console.warn(
+      "[Server] OPTIMIZE_API_URL is not set. Skipping optimization."
+    );
+    return places;
+  }
+
+  try {
+    console.log("[Server] Requesting route optimization...");
+    const response = await fetch(OPTIMIZE_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ places, preferences }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`API Error ${response.status}: ${errorText}`);
+    }
+
+    const data = await response.json();
+    if (data.optimized_route && Array.isArray(data.optimized_route)) {
+      console.log("[Server] Route optimized successfully.");
+      return data.optimized_route;
+    }
+
+    return places;
+  } catch (error) {
+    console.warn(
+      "[Server] Route optimization failed, using original order:",
+      error
+    );
+    return places;
+  }
+}
 
 /**
  * @desc Firebase PLACE 데이터를 앱 내부 PlanItem으로 변환
  */
-function mapPlaceToPlanItem(place: FirebasePlace, day: number = 1, time: string = "10:00"): PlanItem {
+function mapPlaceToPlanItem(
+  place: FirebasePlace,
+  day: number = 1,
+  time: string = "10:00"
+): PlanItem {
   // 카테고리 매핑 로직
-  let type: PlanItem['type'] = 'etc';
-  const mainCat = place.CATEGORY?.main || '';
-  const subCat = place.CATEGORY?.sub || '';
+  let type: PlanItem["type"] = "etc";
+  const mainCat = place.CATEGORY?.main || "";
+  const subCat = place.CATEGORY?.sub || "";
 
-  if (mainCat.includes('식당') || subCat.includes('식당') || subCat.includes('레스토랑')) type = 'food';
-  else if (mainCat.includes('카페') || subCat.includes('카페') || subCat.includes('베이커리')) type = 'cafe';
-  else if (mainCat.includes('관광') || subCat.includes('관광지') || mainCat.includes('명소')) type = 'sightseeing';
-  else if (mainCat.includes('숙소') || subCat.includes('호텔') || subCat.includes('펜션')) type = 'stay';
-  else if (mainCat.includes('이동')) type = 'move';
+  if (
+    mainCat.includes("식당") ||
+    subCat.includes("식당") ||
+    subCat.includes("레스토랑")
+  )
+    type = "food";
+  else if (
+    mainCat.includes("카페") ||
+    subCat.includes("카페") ||
+    subCat.includes("베이커리")
+  )
+    type = "cafe";
+  else if (
+    mainCat.includes("관광") ||
+    subCat.includes("관광지") ||
+    mainCat.includes("명소")
+  )
+    type = "sightseeing";
+  else if (
+    mainCat.includes("숙소") ||
+    mainCat.includes("숙박") ||
+    subCat.includes("호텔") ||
+    subCat.includes("펜션")
+  )
+    type = "stay";
+  else if (mainCat.includes("이동")) type = "move";
 
   return {
     // PlaceData Fields
-    _docId: place.PLACE_ID?.toString() || "", 
+    _docId: place.PLACE_ID?.toString() || "",
     PLACE_ID: place.PLACE_ID?.toString() || Date.now().toString(),
     NAME: place.NAME,
     ADDRESS: place.ADDRESS || "",
     SUB_REGION: place.SUB_REGION || null,
     CATEGORY: {
       main: place.CATEGORY?.main || "",
-      sub: place.CATEGORY?.sub || ""
+      sub: place.CATEGORY?.sub || "",
     },
     IMAGE_URL: place.IMAGE_URL || null,
     GALLERY_IMAGES: null,
@@ -46,7 +131,7 @@ function mapPlaceToPlanItem(place: FirebasePlace, day: number = 1, time: string 
     REST_INFO: null,
     FEE_INFO: place.PRICE_GRADE ? `가격대: ${place.PRICE_GRADE}` : null,
     DETAILS: {
-        stayTime: place.STAY_TIME ? place.STAY_TIME.toString() : null
+      stayTime: place.STAY_TIME ? place.STAY_TIME.toString() : null,
     },
     RATING: place.RATING || null,
     HIGHTLIGHTS: place.HIGHTLIGHTS || null,
@@ -55,24 +140,24 @@ function mapPlaceToPlanItem(place: FirebasePlace, day: number = 1, time: string 
     STAY_TIME: place.STAY_TIME || 60,
     PRICE_GRADE: place.PRICE_GRADE || 0,
     STATS: {
-        bookmark_count: 0,
-        view_count: 0,
-        review_count: 0,
-        rating: 0,
-        weight: 0
+      bookmark_count: 0,
+      view_count: 0,
+      review_count: 0,
+      rating: 0,
+      weight: 0,
     },
     TAGS: {
-        spring: place.TAGS?.spring || null,
-        summer: place.TAGS?.summer || null,
-        autumn: place.TAGS?.autumn || null,
-        winter: place.TAGS?.winter || null
+      spring: place.TAGS?.spring || null,
+      summer: place.TAGS?.summer || null,
+      autumn: place.TAGS?.autumn || null,
+      winter: place.TAGS?.winter || null,
     },
 
     // PlanItem Specific Fields
     day,
     time,
     type,
-    isLocked: false
+    isLocked: false,
   };
 }
 
@@ -84,7 +169,7 @@ export async function getTravelPlan(destination: string): Promise<PlanItem[]> {
     const placesRef = collection(db, "PLACES");
     // 일단 10개만 가져옵니다. 추후 destination 기반 쿼리 등 추가 가능
     // TODO: destination이 있으면 해당 지역(SUB_REGION 등)으로 필터링하는 로직 추가 필요
-    
+
     // 예: 단순 쿼리 (랜덤 또는 상위 10개)
     const q = query(placesRef, limit(10));
     const querySnapshot = await getDocs(q);
@@ -98,12 +183,28 @@ export async function getTravelPlan(destination: string): Promise<PlanItem[]> {
     let dayCounter = 1;
     let timeCounter = 9; // 9시부터 시작
 
+    const rawPlaces: FirebasePlace[] = [];
     querySnapshot.forEach((doc) => {
-      const placeData = doc.data() as FirebasePlace;
-      
+      rawPlaces.push(doc.data() as FirebasePlace);
+    });
+
+    // 2. 경로 최적화 (Cloud Function 호출)
+    // destination이 있으면 그곳을 시작점으로 고려해달라는 힌트 추가
+    const preferences = destination
+      ? `Start near ${destination}, minimize travel time`
+      : "Efficient route, minimize travel time";
+
+    const optimizedPlaces = await optimizeRoute(rawPlaces, preferences);
+
+    // 3. PlanItem 변환 및 시간 할당
+    // const items: PlanItem[] = []; // Already declared above
+    // let dayCounter = 1; // Already declared above
+    // let timeCounter = 9; // Already declared above
+
+    optimizedPlaces.forEach((placeData) => {
       // 시간/날짜 단순 분배 로직 (데모용)
-      const timeStr = `${String(timeCounter).padStart(2, '0')}:00`;
-      
+      const timeStr = `${String(timeCounter).padStart(2, "0")}:00`;
+
       items.push(mapPlaceToPlanItem(placeData, dayCounter, timeStr));
 
       timeCounter += 2;
@@ -115,7 +216,6 @@ export async function getTravelPlan(destination: string): Promise<PlanItem[]> {
 
     console.log(`[Server] ${items.length}개의 장소를 가져왔습니다.`);
     return items;
-
   } catch (error) {
     console.error("[Server] Firebase 데이터 가져오기 실패:", error);
     return []; // 에러 시 빈 배열 반환
@@ -131,7 +231,7 @@ export interface TravelContext {
   };
   dateRange: {
     start: string; // YYYY-MM-DD
-    end: string;   // YYYY-MM-DD
+    end: string; // YYYY-MM-DD
   };
 }
 
@@ -142,7 +242,7 @@ export interface TravelContext {
  */
 async function checkRateLimit(ip: string): Promise<boolean> {
   // 로컬호스트나 IP가 없는 경우 제한 없이 통과
-  if (!ip || ip === 'unknown') return true;
+  if (!ip || ip === "unknown") return true;
 
   const ref = doc(db, "rate_limits", ip);
   const snapshot = await getDoc(ref);
@@ -159,9 +259,8 @@ async function checkRateLimit(ip: string): Promise<boolean> {
   }
 
   const data = snapshot.data();
-  const lastRequestTime = data.lastRequest instanceof Timestamp 
-    ? data.lastRequest.toMillis() 
-    : now; // 타임스탬프 없으면 현재 시간 간주
+  const lastRequestTime =
+    data.lastRequest instanceof Timestamp ? data.lastRequest.toMillis() : now; // 타임스탬프 없으면 현재 시간 간주
 
   if (now - lastRequestTime > ONE_MINUTE) {
     // 1분 지남: 카운트 리셋
@@ -188,7 +287,9 @@ async function checkRateLimit(ip: string): Promise<boolean> {
  * 보안 로직: 입력값 검증 및 Rate Limiting 포함
  * @param query 사용자가 입력한 여행 관련 검색어 (예: "부산 맛집 여행")
  */
-export async function extractTravelContext(query: string): Promise<TravelContext> {
+export async function extractTravelContext(
+  query: string
+): Promise<TravelContext> {
   const headersList = await headers();
   const ip = headersList.get("x-forwarded-for")?.split(",")[0] || "unknown";
 

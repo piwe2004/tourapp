@@ -231,7 +231,7 @@ export default function PlaceReplacementModal({ isOpen, onClose, onReplace, orig
     if (selectedCat === '음식점') return itemCategory.includes('음식') || itemCategory.includes('맛집') || itemCategory.includes('식당');
     if (selectedCat === '카페') return itemCategory.includes('카페') || itemCategory.includes('커피');
     if (selectedCat === '관광지') return itemCategory.includes('관광') || itemCategory.includes('명소') || itemCategory.includes('여행');
-    if (selectedCat === '숙박') return itemCategory.includes('숙소') || itemCategory.includes('호텔') || itemCategory.includes('펜션') || itemCategory.includes('리조트');
+    if (selectedCat === '숙박') return itemCategory.includes('숙소') || itemCategory.includes('숙박') || itemCategory.includes('호텔') || itemCategory.includes('펜션') || itemCategory.includes('리조트');
     return false;
   };
 
@@ -313,7 +313,7 @@ export default function PlaceReplacementModal({ isOpen, onClose, onReplace, orig
   const mapCategoryToType = (cat: string): PlanItem['type'] => {
     if (cat.includes('음식') || cat.includes('맛집') || cat.includes('식당')) return 'food';
     if (cat.includes('카페') || cat.includes('커피')) return 'cafe';
-    if (cat.includes('숙소') || cat.includes('호텔') || cat.includes('펜션')) return 'stay';
+    if (cat.includes('숙소') || cat.includes('숙박') || cat.includes('호텔') || cat.includes('펜션')) return 'stay';
     return 'sightseeing';
   };
 
