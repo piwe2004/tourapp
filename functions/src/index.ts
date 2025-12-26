@@ -17,20 +17,20 @@ const project = process.env.GCLOUD_PROJECT;
 const location = "us-central1"; // Vertex AI region
 
 const vertex_ai = new VertexAI({
-  project: project || "YOUR_PROJECT_ID",
+  project: project || "tourapp-a8507",
   location: location,
 });
 
 // Instantiate the model
 const model = vertex_ai.getGenerativeModel({
-  model: "gemini-3.0-flash-001",
+  model: "gemini-2.5-flash",
   generationConfig: {
     responseMimeType: "application/json",
   },
 });
 
 export const generateOptimizedRoute = onRequest(
-  { cors: true },
+  { timeoutSeconds: 300, region: "us-central1", cors: true },
   async (request, response) => {
     logger.info("generateOptimizedRoute called", { body: request.body });
 

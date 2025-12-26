@@ -31,7 +31,7 @@ async function optimizeRoute(
   places: FirebasePlace[],
   preferences: string
 ): Promise<FirebasePlace[]> {
-  if (!OPTIMIZE_API_URL || OPTIMIZE_API_URL.includes("YOUR_PROJECT_ID")) {
+  if (!OPTIMIZE_API_URL) {
     console.warn(
       "[Server] OPTIMIZE_API_URL is not set. Skipping optimization."
     );
@@ -167,29 +167,48 @@ export async function getTravelPlan(destination: string): Promise<PlanItem[]> {
 
   try {
     const placesRef = collection(db, "PLACES");
-    // 일단 10개만 가져옵니다. 추후 destination 기반 쿼리 등 추가 가능
-    // TODO: destination이 있으면 해당 지역(SUB_REGION 등)으로 필터링하는 로직 추가 필요
+    const rawPlaces: FirebasePlace[] = [];
 
-    // 예: 단순 쿼리 (랜덤 또는 상위 10개)
-    const q = query(placesRef, limit(10));
+    // 1. Destination 기반 쿼리
+    // destination이 주소의 가장 앞부분(지역명)이라고 가정하고 Range Filter 사용
+    let q;
+    if (destination) {
+      q = query(
+        placesRef,
+        where("ADDRESS", ">=", destination),
+        where("ADDRESS", "<=", destination + "\uf8ff"),
+        limit(20)
+      );
+    } else {
+      q = query(placesRef, limit(20));
+    }
+
     const querySnapshot = await getDocs(q);
 
     if (querySnapshot.empty) {
-      console.warn("[Server] 데이터가 없습니다.");
+      console.warn(
+        `[Server] "${destination}" 관련 데이터가 없습니다. (Fallback: 전체 랜덤)`
+      );
+      // 데이터가 없으면 랜덤으로 일부 가져오기 (Fallback)
+      const fallbackQ = query(placesRef, limit(10));
+      const fallbackSnapshot = await getDocs(fallbackQ);
+
+      if (fallbackSnapshot.empty) return [];
+
+      fallbackSnapshot.forEach((doc) => {
+        rawPlaces.push(doc.data() as FirebasePlace);
+      });
+    } else {
+      querySnapshot.forEach((doc) => {
+        rawPlaces.push(doc.data() as FirebasePlace);
+      });
+    }
+
+    if (rawPlaces.length === 0) {
       return [];
     }
 
-    const items: PlanItem[] = [];
-    let dayCounter = 1;
-    let timeCounter = 9; // 9시부터 시작
-
-    const rawPlaces: FirebasePlace[] = [];
-    querySnapshot.forEach((doc) => {
-      rawPlaces.push(doc.data() as FirebasePlace);
-    });
-
     // 2. 경로 최적화 (Cloud Function 호출)
-    // destination이 있으면 그곳을 시작점으로 고려해달라는 힌트 추가
     const preferences = destination
       ? `Start near ${destination}, minimize travel time`
       : "Efficient route, minimize travel time";
@@ -197,9 +216,9 @@ export async function getTravelPlan(destination: string): Promise<PlanItem[]> {
     const optimizedPlaces = await optimizeRoute(rawPlaces, preferences);
 
     // 3. PlanItem 변환 및 시간 할당
-    // const items: PlanItem[] = []; // Already declared above
-    // let dayCounter = 1; // Already declared above
-    // let timeCounter = 9; // Already declared above
+    const items: PlanItem[] = [];
+    let dayCounter = 1;
+    let timeCounter = 9; // 9시부터 시작
 
     optimizedPlaces.forEach((placeData) => {
       // 시간/날짜 단순 분배 로직 (데모용)
