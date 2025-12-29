@@ -324,7 +324,6 @@ function PlannerContent() {
                 }
             } catch (aiError) {
                 console.error("[Planner] AI Generation Failed:", aiError);
-                // AI 실패 시에만 aiSchedule이 비어있게 됨
             }
 
             // 2. Final Decision
@@ -339,13 +338,20 @@ function PlannerContent() {
                     getPlanBRecommendations(aiSchedule, startDateStr).then(risks => setRainRisks(risks));
                 }
             } else {
-                // 3. Fallback (Only if AI failed completely)
-                console.warn("[Planner] No AI schedule generated. Falling back to Legacy Cloud Function...");
-                try {
-                    const fallbackData = await getTravelPlan(initialDestination);
-                    setSchedule(fallbackData);
-                } catch (fallbackError) {
-                    console.error("[Planner] Critical: Fallback failed:", fallbackError);
+                // 3. Fallback Logic
+                // Context가 명확히 있는데 일정이 안 만들어진 경우 -> Fallback 하지 말고 멈춤 (무한 로딩/중복 요청 방지)
+                if (context && context.destination) {
+                    console.warn("[Planner] AI context exists but schedule is empty. Stopping to prevent fallback loop.");
+                    // 필요 시 사용자에게 알림: alert("일정을 생성하지 못했습니다.");
+                } else {
+                    // AI가 아예 실패했거나 Context를 못 가져온 경우에만 Fallback
+                    console.warn("[Planner] No AI context. Falling back to Legacy Cloud Function...");
+                    try {
+                        const fallbackData = await getTravelPlan(initialDestination);
+                        setSchedule(fallbackData);
+                    } catch (fallbackError) {
+                        console.error("[Planner] Critical: Fallback failed:", fallbackError);
+                    }
                 }
             }
 
