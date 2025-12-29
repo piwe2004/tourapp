@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { PlanItem } from "@/types/place";
+import clsx from 'clsx';
 
 interface ActionMenuProps {
     item: PlanItem;
@@ -43,22 +44,20 @@ export function ActionMenu({
             {/* 고정(Lock) 토글 버튼 (우측 상단 노출) */}
             <button
                 onClick={(e) => { e.stopPropagation(); onLockClick?.(e); }}
-                className={`absolute top-4 right-10 w-auto h-auto rounded-full transition z-20 ${
-                    item.isLocked ? 'text-[#4338CA] opacity-100' : ''
-                }`}
+                className={clsx("day-action-lock-btn", item.isLocked && "active")}
                 title={item.isLocked ? "고정 해제" : "일정 고정"}
             >
                 {item.isLocked && <i className="fa-solid fa-lock text-[14px]"></i>}
             </button>
 
             {/* '...' 메뉴 버튼 */}
-            <div className="absolute top-3 right-3 z-30" ref={menuRef}>
+            <div className="day-action-menu-wrapper" ref={menuRef}>
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
                         setIsMenuOpen(!isMenuOpen);
                     }}
-                    className="p-1 px-2 text-gray-300 hover:text-gray-600 rounded transition-colors"
+                    className="day-action-menu-trigger"
                 >
                     <i className="fa-solid fa-ellipsis-vertical text-[16px]"></i>
                 </button>
@@ -67,9 +66,9 @@ export function ActionMenu({
                 {isMenuOpen && (
                     <div
                         onClick={(e) => e.stopPropagation()}
-                        className="absolute top-6 right-0 bg-white rounded-xl shadow-xl border border-gray-100 py-1 min-w-[140px] flex flex-col overflow-hidden animate-fade-in z-50 text-sm"
+                        className="day-action-dropdown"
                     >
-                        <div className="flex justify-between px-3 py-2 border-b border-gray-50 text-xs text-gray-400 font-bold">
+                        <div className="day-action-menu-header">
                             메뉴 
                             <button onClick={() => setIsMenuOpen(false)}>
                                 <i className="fa-solid fa-xmark text-[12px]"></i>
@@ -78,7 +77,7 @@ export function ActionMenu({
                         
                         {/* 1. 고정 토글 메뉴 */}
                         <button 
-                            className="text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-2" 
+                            className="day-action-menu-item" 
                             onClick={(e) => { onLockClick?.(e); setIsMenuOpen(false); }}
                         >
                             {item.isLocked 
@@ -91,13 +90,13 @@ export function ActionMenu({
                         {!item.isLocked && (
                             <>
                                 <button 
-                                    className="text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-2" 
+                                    className="day-action-menu-item" 
                                     onClick={(e) => { onReplaceClick?.(e); setIsMenuOpen(false); }}
                                 >
                                     <i className="fa-solid fa-wand-magic-sparkles text-[14px]"></i> 장소 교체
                                 </button>
                                 <button 
-                                    className="text-left px-4 py-3 hover:bg-red-50 text-red-500 flex items-center gap-2 border-t border-gray-50" 
+                                    className={clsx("day-action-menu-item delete-item")}
                                     onClick={(e) => { onDeleteClick?.(e); setIsMenuOpen(false); }}
                                 >
                                     <i className="fa-solid fa-trash text-[14px]"></i> 삭제

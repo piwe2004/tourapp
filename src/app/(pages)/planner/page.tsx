@@ -11,10 +11,13 @@
  * 4. 레이아웃 조립 (Layout Composition) - PlannerTimeline, PlannerMapPanel, PlannerModals 컴포넌트 조합
  */
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { getTravelPlan } from '@/lib/actions';
+import { getTravelPlan, extractTravelContext, getPlacesByNames } from '@/lib/actions';
 import { PlanItem } from '@/types/place';
+import { FirebasePlace } from "@/types/places";
+import Map from '@/components/planner/Map';
+import { mapPlaceToPlanItem } from "@/lib/mappers";
 import { RainyScheduleItem, getWeather, getPlanBRecommendations } from '@/lib/weather/actions'; // getWeather, getPlanBRecommendations 추가
 import { WeatherData } from '@/lib/weather/service'; // Type 추가
 import { regenerateSchedule, PlannerTheme } from '@/services/ReplanningService';
@@ -86,9 +89,7 @@ function PlannerContent() {
 
     const [isMobileMapOpen, setIsMobileMapOpen] = useState(false); // 모바일 전체화면 지도
 
-    // =========================================================================================
-    // Handlers (이벤트 처리 로직)
-    // =========================================================================================
+    // Handlers
 
     /**
      * @desc 일정 추가 모달 열기
@@ -210,26 +211,149 @@ function PlannerContent() {
     // =========================================================================================
 
     // 데이터 로드
+    const fetchingRef = useRef<string | null>(null);
+
     useEffect(() => {
         const fetchData = async () => {
-            setIsLoading(true);
-            try {
-                const data = await getTravelPlan(destination);
-                console.log("data : ", data);
-                setSchedule(data);
-
-                // Plan B 날씨 위험요소 체크
-                const startDateStr = dateRange.start.toISOString().split('T')[0];
-                const risks = await getPlanBRecommendations(data, startDateStr);
-                setRainRisks(risks);
-            } catch (error) {
-                console.error("Failed to fetch plan:", error);
-            } finally {
-                setIsLoading(false);
+            if (!initialDestination) return;
+            
+            // Prevent double fetch in Strict Mode
+            if (fetchingRef.current === initialDestination) {
+                console.log("[Planner] Already fetching for:", initialDestination);
+                return;
             }
+            fetchingRef.current = initialDestination;
+            
+            setIsLoading(true);
+            let aiSchedule: PlanItem[] = [];
+            let context: any = null;
+
+            // 1. [Try] AI Context & Hydration
+            try {
+                // 1-1. AI Context Extraction
+                context = await extractTravelContext(initialDestination);
+                console.log("[Planner] Extracted Context:", context);
+
+                if (context) {
+                    // Update Store
+                    if (context.destination) setDestination(context.destination);
+                    if (context.dateRange?.start && context.dateRange?.end) {
+                        setDateRange({
+                            start: new Date(context.dateRange.start),
+                            end: new Date(context.dateRange.end)
+                        });
+                    }
+                    if (context.party) {
+                        setGuests({
+                            adult: context.party.adult || 2,
+                            teen: 0, 
+                            child: context.party.child || 0
+                        });
+                    }
+
+                    // 1-2. Hydration (Itinerary -> DB)
+                    if (context.itinerary && context.itinerary.length > 0) {
+                        const placeNames = context.itinerary.flatMap((day: any) => day.places.map((p: any) => p.name));
+                        // Safe Fetch
+                        let dbPlaces: FirebasePlace[] = [];
+                        try {
+                            dbPlaces = await getPlacesByNames(placeNames);
+                        } catch (e) {
+                            console.warn("[Planner] DB Batch fetch failed, proceeding with AI-only data:", e);
+                        }
+                        
+                        const placesMap = new Map<string, FirebasePlace>();
+                        dbPlaces.forEach(p => placesMap.set(p.NAME, p));
+
+                        let timeOffset = 9;
+                        context.itinerary.forEach((dayPlan: any) => {
+                            timeOffset = 9;
+                            dayPlan.places.forEach((aiPlace: any) => {
+                                const dbPlace = placesMap.get(aiPlace.name);
+                                let planItem: PlanItem;
+                                const timeStr = `${String(timeOffset).padStart(2, '0')}:00`;
+
+                                if (dbPlace) {
+                                    planItem = mapPlaceToPlanItem(dbPlace, dayPlan.day, timeStr);
+                                } else {
+                                    // Fallback to AI Data
+                                    planItem = {
+                                        _docId: `ai-${Date.now()}-${Math.random()}`,
+                                        PLACE_ID: `ai-${Date.now()}-${Math.random()}`,
+                                        NAME: aiPlace.name,
+                                        ADDRESS: '',
+                                        SUB_REGION: null,
+                                        CATEGORY: { main: 'AI추천', sub: '' },
+                                        IMAGE_URL: null,
+                                        GALLERY_IMAGES: null,
+                                        LOC_LAT: 37.5665,
+                                        LOC_LNG: 126.9780,
+                                        MAP_LINK: '',
+                                        AFFIL_LINK: null,
+                                        IS_AFLT: false,
+                                        IS_TICKET_REQUIRED: false,
+                                        TIME_INFO: null,
+                                        PARKING_INFO: null,
+                                        REST_INFO: null,
+                                        FEE_INFO: null,
+                                        DETAILS: {},
+                                        RATING: null,
+                                        HIGHTLIGHTS: null,
+                                        KEYWORDS: [],
+                                        NAME_GRAMS: [],
+                                        STAY_TIME: 60,
+                                        PRICE_GRADE: 0,
+                                        STATS: { bookmark_count: 0, view_count: 0, review_count: 0, rating: 0, weight: 0 },
+                                        TAGS: { spring: null, summer: null, autumn: null, winter: null },
+                                        day: dayPlan.day,
+                                        time: timeStr,
+                                        type: (aiPlace.type as PlanItem['type']) || 'etc',
+                                        isLocked: false,
+                                        MEMO: aiPlace.memo
+                                    };
+                                }
+                                
+                                // Override & Add
+                                planItem.type = (aiPlace.type as PlanItem['type']) || planItem.type;
+                                planItem.MEMO = aiPlace.memo;
+                                aiSchedule.push(planItem);
+                                timeOffset += 2;
+                            });
+                        });
+                    }
+                }
+            } catch (aiError) {
+                console.error("[Planner] AI Generation Failed:", aiError);
+                // AI 실패 시에만 aiSchedule이 비어있게 됨
+            }
+
+            // 2. Final Decision
+            if (aiSchedule.length > 0) {
+                // Success path
+                console.log("[Planner] Schedule created via AI:", aiSchedule);
+                setSchedule(aiSchedule);
+                
+                // Plan B (Optional)
+                if (context) {
+                    const startDateStr = context.dateRange?.start || dateRange.start.toISOString().split('T')[0];
+                    getPlanBRecommendations(aiSchedule, startDateStr).then(risks => setRainRisks(risks));
+                }
+            } else {
+                // 3. Fallback (Only if AI failed completely)
+                console.warn("[Planner] No AI schedule generated. Falling back to Legacy Cloud Function...");
+                try {
+                    const fallbackData = await getTravelPlan(initialDestination);
+                    setSchedule(fallbackData);
+                } catch (fallbackError) {
+                    console.error("[Planner] Critical: Fallback failed:", fallbackError);
+                }
+            }
+
+            setIsLoading(false);
         };
         fetchData();
-    }, [destination]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialDestination]); // Re-run only if URL param changes
 
     // 날짜 범위에 따른 총 일수(days) 계산
     const duration = Math.ceil((dateRange.end.getTime() - dateRange.start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
@@ -240,14 +364,16 @@ function PlannerContent() {
         const fetchAllWeather = async () => {
             if (schedule.length === 0) return;
 
-            // 이미 캐시가 꽉 차있으면 스킵 (선택 사항: 리프레시 버튼 등으로 강제 갱신 가능)
-            // 여기서는 단순화를 위해 schedule이 변경될 때마다 재조회하거나, 
-            // 혹은 기존 캐시에 없는 Day만 조회하도록 최적화 가능.
-            // 이번 구현: schedule/dateRange 변경 시 전체 재조회 (날짜가 바뀌면 날씨도 바뀌므로)
+            // 이미 캐시가 존재하는 경우, 재진입 방지 (간단한 캐싱 전략)
+            // 날짜 범위나 일정이 바뀌었을 때만 실행되도록 의존성 관리
             
             const newCache: Record<number, WeatherData> = {};
+            const currentDays = Array.from({ length: duration }, (_, i) => i + 1);
             
-            const promises = days.map(async (day) => {
+            const promises = currentDays.map(async (day) => {
+                // 이미 캐시된 데이터가 있고, 날짜가 동일하다면 스킵 가능하지만
+                // 여기서는 단순화를 위해 전체 갱신 (API 호출 최적화는 추후 고도화)
+
                 // 해당 날짜 계산
                 const targetDate = new Date(dateRange.start);
                 targetDate.setDate(targetDate.getDate() + (day - 1));
@@ -280,7 +406,8 @@ function PlannerContent() {
         if (!isLoading && schedule.length > 0) {
             fetchAllWeather();
         }
-    }, [dateRange, schedule, isLoading, days.length]); // days 배열 자체보다는 length 의존이 안전
+        // days 배열은 매 렌더링마다 새로 생성되므로 의존성 배열에서 제거하고, duration과 dateRange.start 등 원시값에 의존하게 변경
+    }, [dateRange.start, dateRange.end, duration, schedule, isLoading]); 
 
     // [Restored] 아이템 클릭 핸들러
     const handleItemClick = (id: string) => {
@@ -322,79 +449,90 @@ function PlannerContent() {
     // =========================================================================================
 
     return (
-        <div className="h-[calc(100vh-224px)] min-h-[800px] w-full bg-white flex flex-col font-sans overflow-hidden">
-            {/* Main Content Area */}
-            <main className="flex flex-1 overflow-hidden relative">
-                {/* 1. 좌측 타임라인 패널 */}
-                <PlannerTimeline 
-                    days={days}
+        <div className="planner-page">
+            <div className="plannerPageContainer">
+                {/* Main Content Area */}
+                <main className="mainContent">
+                    {/* 1. 좌측 타임라인 패널 */}
+                    <PlannerTimeline 
+                        days={days}
+                        dateRange={dateRange}
+                        selectedDay={selectedDay}
+                        schedule={schedule}
+                        isLoading={isLoading}
+                        weatherData={weatherCache[selectedDay] || null} // [Mod] 캐시에서 현재 날짜 데이터 전달
+                        rainRisks={rainRisks}
+                        selectedItemId={selectedItemId}
+                        onDaySelect={setSelectedDay}
+                        onSmartMixClick={() => setIsSmartMixOpen(true)}
+                        onItemClick={handleItemClick}
+                        onDragEnd={onDragEnd}
+                        onReplaceClick={(item) => setReplaceModalState({ isOpen: true, targetItem: item, mode: 'replace' })}
+                        onLockClick={handleToggleLock}
+                        onDeleteClick={handleDeletePlace}
+                        onAddStopClick={openAddModal}
+                        onPlanBClick={() => setIsPlanBOpen(true)}
+                        onMobileMapClick={() => setIsMobileMapOpen(true)}
+                        onAddDayClick={() => setReplaceModalState({ isOpen: true, targetItem: null, mode: 'add', targetIndex: schedule.filter(i => i.day === selectedDay).length })}
+                    />
+
+                    {/* 2. 우측 지도 패널 (PCOnly) */}
+                    <PlannerMapPanel 
+                        schedule={schedule}
+                        selectedDay={selectedDay}
+                        selectedItemId={selectedItemId}
+                        onItemClick={handleItemClick} // [New] 마커 클릭 핸들러 전달
+                    />
+                </main>
+
+                {/* 3. 각종 모달 모음 */}
+                <PlannerModals 
+                    schedule={schedule}
+                    selectedDay={selectedDay}
+                    selectedItemId={selectedItemId}
                     dateRange={dateRange}
-                    selectedDay={selectedDay}
-                    schedule={schedule}
-                    isLoading={isLoading}
-                    weatherData={weatherCache[selectedDay] || null} // [Mod] 캐시에서 현재 날짜 데이터 전달
+                    destination={destination}
+                    guests={guests}
+                    days={days}
                     rainRisks={rainRisks}
-                    selectedItemId={selectedItemId}
-                    onDaySelect={setSelectedDay}
-                    onSmartMixClick={() => setIsSmartMixOpen(true)}
-                    onItemClick={handleItemClick}
-                    onDragEnd={onDragEnd}
-                    onReplaceClick={(item) => setReplaceModalState({ isOpen: true, targetItem: item, mode: 'replace' })}
-                    onLockClick={handleToggleLock}
-                    onDeleteClick={handleDeletePlace}
-                    onAddStopClick={openAddModal}
-                    onPlanBClick={() => setIsPlanBOpen(true)}
-                    onMobileMapClick={() => setIsMobileMapOpen(true)}
-                    onAddDayClick={() => setReplaceModalState({ isOpen: true, targetItem: null, mode: 'add', targetIndex: schedule.filter(i => i.day === selectedDay).length })}
+                    replaceModalState={replaceModalState}
+                    isSmartMixOpen={isSmartMixOpen}
+                    confirmState={confirmState}
+                    isPlanBOpen={isPlanBOpen}
+                    isMobileMapOpen={isMobileMapOpen}
+                    activeEditor={activeEditor}
+                    onReplaceClose={() => setReplaceModalState({ isOpen: false, targetItem: null, mode: 'replace' })}
+                    onReplaceConfirm={handleReplacePlace}
+                    onSmartMixClose={() => setIsSmartMixOpen(false)}
+                    onSmartMixConfirm={handleSmartMixConfirm}
+                    onConfirmClose={() => setConfirmState(prev => ({ ...prev, isOpen: false }))}
+                    onPlanBClose={() => setIsPlanBOpen(false)}
+                    onMobileMapClose={() => setIsMobileMapOpen(false)}
+                    onItemClick={handleItemClick} // [New]
+                    onDateSave={(start, end) => { setDateRange({ start, end }); setActiveEditor(null); }}
+                    onGuestsSave={(newGuests: { adult: number, teen: number, child: number } | number) => { 
+                        if (typeof newGuests === 'number') {
+                            setGuests({ adult: newGuests, teen: 0, child: 0 }); 
+                        } else {
+                            setGuests(newGuests);
+                        }
+                        setActiveEditor(null); 
+                    }}
+                    onDestSave={(newDest) => { setDestination(newDest); setActiveEditor(null); }}
+                    onEditorClose={() => setActiveEditor(null)}
                 />
-
-                {/* 2. 우측 지도 패널 (PCOnly) */}
-                <PlannerMapPanel 
-                    schedule={schedule}
-                    selectedDay={selectedDay}
-                    selectedItemId={selectedItemId}
-                    onItemClick={handleItemClick} // [New] 마커 클릭 핸들러 전달
-                />
-            </main>
-
-            {/* 3. 각종 모달 모음 */}
-            <PlannerModals 
-                schedule={schedule}
-                selectedDay={selectedDay}
-                selectedItemId={selectedItemId}
-                dateRange={dateRange}
-                destination={destination}
-                guests={guests}
-                days={days}
-                rainRisks={rainRisks}
-                replaceModalState={replaceModalState}
-                isSmartMixOpen={isSmartMixOpen}
-                confirmState={confirmState}
-                isPlanBOpen={isPlanBOpen}
-                isMobileMapOpen={isMobileMapOpen}
-                activeEditor={activeEditor}
-                onReplaceClose={() => setReplaceModalState({ isOpen: false, targetItem: null, mode: 'replace' })}
-                onReplaceConfirm={handleReplacePlace}
-                onSmartMixClose={() => setIsSmartMixOpen(false)}
-                onSmartMixConfirm={handleSmartMixConfirm}
-                onConfirmClose={() => setConfirmState(prev => ({ ...prev, isOpen: false }))}
-                onPlanBClose={() => setIsPlanBOpen(false)}
-                onMobileMapClose={() => setIsMobileMapOpen(false)}
-                onItemClick={handleItemClick} // [New]
-                onDateSave={(start, end) => { setDateRange({ start, end }); setActiveEditor(null); }}
-                onGuestSave={(newGuests) => { setGuests(newGuests); setActiveEditor(null); }}
-                onDestSave={(newDest) => { setDestination(newDest); setActiveEditor(null); }}
-                onEditorClose={() => setActiveEditor(null)}
-            />
+            </div>
         </div>
     );
 }
 
 function LoadingSkeleton() {
     return (
-        <div className="space-y-6 max-w-2xl mx-auto mt-10 text-center">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 mx-auto"></div>
-            <p className="text-slate-500 font-medium animate-pulse">플래니가 생각 중...</p>
+        <div className="planner-page">
+            <div className="loadingContainer">
+                <div className="spinner"></div>
+                <p className="loadingText">플래니가 생각 중...</p>
+            </div>
         </div>
     );
 }

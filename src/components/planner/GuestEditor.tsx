@@ -1,140 +1,86 @@
-'use client';
-
-import { useState } from 'react';
-import { X, Users, Minus, Plus } from 'lucide-react';
-
-interface Guests {
-    adult: number;
-    teen: number;
-    child: number;
-}
+import { useState, useEffect } from 'react';
+import { X, Minus, Plus } from 'lucide-react';
 
 interface GuestEditorProps {
-    guests: Guests;
-    onSave: (guests: Guests) => void;
+    initialGuests: number;
+    onSave: (guests: number) => void;
     onClose: () => void;
-    isInline?: boolean;
+    isModal?: boolean;
 }
 
-export default function GuestEditor({ guests, onSave, onClose, isInline = false }: GuestEditorProps) {
-    const [tempGuests, setTempGuests] = useState<Guests>({ ...guests });
+export default function GuestEditor({ initialGuests, onSave, onClose, isModal = true }: GuestEditorProps) {
+    const [count, setCount] = useState(initialGuests);
 
-    const updateCount = (type: keyof Guests, delta: number) => {
-        setTempGuests(prev => {
-            const newValue = prev[type] + delta;
-            if (newValue < 0) return prev; // 음수 방지
-            return { ...prev, [type]: newValue };
-        });
+    useEffect(() => {
+        setCount(initialGuests);
+    }, [initialGuests]);
+
+    const handleIncrement = () => {
+        if (count < 10) setCount(prev => prev + 1);
     };
 
-    const totalGuests = tempGuests.adult + tempGuests.teen + tempGuests.child;
+    const handleDecrement = () => {
+        if (count > 1) setCount(prev => prev - 1);
+    };
 
-    const content = (
-        <div className={`bg-white rounded-3xl ${isInline ? 'w-full p-6' : 'shadow-2xl w-full max-w-sm p-6 m-4'}`}>
-            <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                    <Users className="text-indigo-600" size={24} />
-                    인원 선택
-                </h3>
-                {!isInline && (
-                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors">
-                        <X size={20} />
-                    </button>
-                )}
-            </div>
-
-            <div className="space-y-6 mb-8">
-                {/* 성인 */}
-                <div className="flex justify-between items-center">
-                    <div>
-                        <p className="font-bold text-slate-900 text-lg">성인</p>
-                        <p className="text-sm text-slate-400">만 19세 이상</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => updateCount('adult', -1)}
-                            disabled={tempGuests.adult <= 0}
-                            className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                        >
-                            <Minus size={18} />
-                        </button>
-                        <span className="font-bold text-xl w-6 text-center">{tempGuests.adult}</span>
-                        <button
-                            onClick={() => updateCount('adult', 1)}
-                            className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors"
-                        >
-                            <Plus size={18} />
-                        </button>
-                    </div>
-                </div>
-
-                {/* 청소년 */}
-                <div className="flex justify-between items-center">
-                    <div>
-                        <p className="font-bold text-slate-900 text-lg">청소년</p>
-                        <p className="text-sm text-slate-400">만 13세 ~ 18세</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => updateCount('teen', -1)}
-                            disabled={tempGuests.teen <= 0}
-                            className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                        >
-                            <Minus size={18} />
-                        </button>
-                        <span className="font-bold text-xl w-6 text-center">{tempGuests.teen}</span>
-                        <button
-                            onClick={() => updateCount('teen', 1)}
-                            className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors"
-                        >
-                            <Plus size={18} />
-                        </button>
-                    </div>
-                </div>
-
-                {/* 어린이 */}
-                <div className="flex justify-between items-center">
-                    <div>
-                        <p className="font-bold text-slate-900 text-lg">어린이</p>
-                        <p className="text-sm text-slate-400">만 12세 이하</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => updateCount('child', -1)}
-                            disabled={tempGuests.child <= 0}
-                            className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                        >
-                            <Minus size={18} />
-                        </button>
-                        <span className="font-bold text-xl w-6 text-center">{tempGuests.child}</span>
-                        <button
-                            onClick={() => updateCount('child', 1)}
-                            className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors"
-                        >
-                            <Plus size={18} />
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div className="bg-indigo-50 rounded-xl p-4 mb-6 text-center">
-                <p className="text-indigo-600 font-medium">총 <span className="font-bold text-xl">{totalGuests}</span>명 선택됨</p>
-            </div>
-
-            <button
-                onClick={() => onSave(tempGuests)}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-indigo-200 active:scale-95"
-            >
-                인원 적용하기
-            </button>
-        </div>
-    );
-
-    if (isInline) return content;
+    const handleApply = () => {
+        onSave(count);
+    };
 
     return (
-        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
-            {content}
+        <div className="confirm-modal">
+            <div className="modalOverlay" onClick={onClose}>
+                <div className="modalContent" onClick={(e) => e.stopPropagation()}>
+                    <div className="modalHeader">
+                        <h3>인원 수 수정</h3>
+                        <button onClick={onClose} className="closeButton">
+                            <X size={20} />
+                        </button>
+                    </div>
+                    
+                    <div className="modalBody" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', padding: '2rem 0' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                            <button 
+                                onClick={handleDecrement}
+                                disabled={count <= 1}
+                                className="icon-btn"
+                                style={{ 
+                                    width: '40px', height: '40px', borderRadius: '50%', border: '1px solid #e5e7eb',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    color: count <= 1 ? '#d1d5db' : '#374151',
+                                    cursor: count <= 1 ? 'not-allowed' : 'pointer'
+                                }}
+                            >
+                                <Minus size={20} />
+                            </button>
+                            
+                            <span style={{ fontSize: '1.5rem', fontWeight: 'bold', minWidth: '2rem', textAlign: 'center' }}>
+                                {count}
+                            </span>
+                            
+                            <button 
+                                onClick={handleIncrement}
+                                disabled={count >= 10}
+                                className="icon-btn"
+                                style={{ 
+                                    width: '40px', height: '40px', borderRadius: '50%', border: '1px solid #e5e7eb',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    color: count >= 10 ? '#d1d5db' : '#374151',
+                                    cursor: count >= 10 ? 'not-allowed' : 'pointer'
+                                }}
+                            >
+                                <Plus size={20} />
+                            </button>
+                        </div>
+                        <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>최대 10명까지 선택 가능합니다.</p>
+                    </div>
+
+                    <div className="modalFooter">
+                        <button onClick={onClose} className="cancelButton">취소</button>
+                        <button onClick={handleApply} className="confirmButton">적용</button>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }

@@ -15,12 +15,12 @@ interface PlannerState {
     destination: string;
     dateRange: DateRange;
     guests: Guests;
-    activeEditor: 'date' | 'guest' | 'dest' | null;
+    activeEditor: 'date' | 'guest' | 'destination' | null;
     
     setDestination: (dest: string) => void;
     setDateRange: (range: DateRange) => void;
     setGuests: (guests: Guests) => void;
-    setActiveEditor: (type: 'date' | 'guest' | 'dest' | null) => void;
+    setActiveEditor: (type: 'date' | 'guest' | 'destination' | null) => void;
 }
 
 export const usePlannerStore = create<PlannerState>((set) => ({

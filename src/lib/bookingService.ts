@@ -11,13 +11,13 @@ interface PlatformConfig {
 }
 
 export const BOOKING_PLATFORMS: Record<BookingPlatform, PlatformConfig> = {
-  // 1️⃣ 아고다 (Agoda) - 다크/모던
+// 1️⃣ 아고다 (Agoda) - 다크/모던
   'agoda': {
     name: '아고다',
     m_id: 'agoda', 
     getUrl: (name, inDate, outDate) => 
       `https://www.agoda.com/partners/partnersearch.aspx?cid=-1&checkin=${inDate}&checkout=${outDate}&city=${encodeURIComponent(name)}`,
-    style: 'bg-[#333333] hover:bg-[#000000] text-white border-transparent'
+    style: 'btn-agoda'
   },
   
   // 2️⃣ 야놀자 (Yanolja) - 야놀자 핑크
@@ -26,7 +26,7 @@ export const BOOKING_PLATFORMS: Record<BookingPlatform, PlatformConfig> = {
     m_id: 'yanolja', 
     getUrl: (name, inDate, outDate) => 
       `https://www.yanolja.com/search/${encodeURIComponent(name)}?checkinDate=${inDate}&checkoutDate=${outDate}&accommodationsType=hotel`,
-    style: 'bg-[#DE2E5F] hover:bg-[#C00F43] text-white border-transparent'
+    style: 'btn-yanolja'
   },
 
   // 3️⃣ 여기어때 (Yeogi) - 여기어때 레드
@@ -35,7 +35,7 @@ export const BOOKING_PLATFORMS: Record<BookingPlatform, PlatformConfig> = {
     m_id: 'goodchoice', 
     getUrl: (name, inDate, outDate) => 
       `https://www.yeogi.com/domestic-accommodations?keyword=${encodeURIComponent(name)}&checkIn=${inDate}&checkOut=${outDate}&personal=2`,
-    style: 'bg-[#F7323F] hover:bg-[#D9001B] text-white border-transparent'
+    style: 'btn-yeogi'
   },
 
   // 4️⃣ 호텔스컴바인 (HotelsCombined) - 스카이블루
@@ -44,7 +44,7 @@ export const BOOKING_PLATFORMS: Record<BookingPlatform, PlatformConfig> = {
     m_id: 'hotelscombined', 
     getUrl: (name, inDate, outDate) => 
       `https://www.hotelscombined.co.kr/Hotels/Search?destination=${encodeURIComponent(name)}&checkin=${inDate}&checkout=${outDate}`,
-    style: 'bg-[#24C0E9] hover:bg-[#009BC4] text-white border-transparent'
+    style: 'btn-hotelscombined'
   }
 };
 

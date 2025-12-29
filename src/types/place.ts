@@ -78,4 +78,5 @@ export interface PlanItem extends PlaceData {
   isLocked?: boolean; // 고정 여부
   is_indoor?: boolean; // 실내 실외
   type: 'sightseeing' | 'food' | 'cafe' | 'stay' | 'move' | 'etc'; 
+  MEMO?: string; // Additional memo/note for plan B or recommendations
 }

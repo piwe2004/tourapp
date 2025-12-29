@@ -6,6 +6,7 @@ import { DraggableProvidedDraggableProps, DraggableProvidedDragHandleProps } fro
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import clsx from 'clsx';
 
 // Atom Components
 import { Marker } from "./day-item-parts/Marker";
@@ -64,13 +65,13 @@ export default function DayItems({
             ref={innerRef}
             {...draggableProps}
             {...dragHandleProps}
-            className={cn(
-                "min-w-[90%] relative mb-0 transition-opacity",
-                isDragging ? 'opacity-80 z-50' : 'opacity-100'
+            className={clsx(
+                "day-item-container",
+                isDragging && "day-dragging"
             )}
             onClick={onClick}
         >
-            <div className="relative flex gap-3 md:gap-5 group">
+            <div className="day-item-inner">
                 
                 {/* 1. 좌측 순서 마커 */}
                 <Marker 
@@ -80,12 +81,10 @@ export default function DayItems({
 
                 {/* 2. 메인 카드 영역 */}
                 <div
-                    className={cn(
-                        "flex-1 bg-white p-4 md:p-5 rounded-2xl shadow-sm border transition-all duration-300 relative cursor-pointer group/card overflow-hidden",
-                        selected 
-                            ? 'border-[#4338CA] ring-1 ring-[#4338CA]' 
-                            : 'border-gray-100 hover:border-indigo-300 hover:shadow-md',
-                        rainRisk && 'border-l-4 border-l-red-500'
+                    className={clsx(
+                        "day-card",
+                        selected && "day-selected",
+                        rainRisk && "day-rain-risk"
                     )}
                 >
                     {/* A. 우측 상단 메뉴 & 액션 (Lock, Menu) */}
@@ -113,14 +112,14 @@ export default function DayItems({
                                 exit={{ height: 0, opacity: 0 }}
                                 transition={{ duration: 0.3, ease: "easeInOut" }}
                             >
-                                <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 gap-3">
+                                <div className="day-extended-container">
                                     
                                     {/* 간략 정보 표시 */}
-                                    <div className="flex justify-between items-center text-sm text-gray-500 bg-gray-50 rounded-lg p-3">
-                                        <div className="flex items-center gap-2">
+                                    <div className="day-duration-box">
+                                        <div className="day-duration-info">
                                             <i className="fa-regular fa-clock text-indigo-400"></i>
                                             <span>
-                                                소요시간 <strong className="text-gray-800">{item.STAY_TIME || 60}분</strong>
+                                                소요시간 <strong className="day-duration-time">{item.STAY_TIME || 60}분</strong>
                                             </span>
                                         </div>
                                         {/* 상세보기 버튼 */}
@@ -129,7 +128,7 @@ export default function DayItems({
                                                 e.stopPropagation();
                                                 setIsDetailPopupOpen(true);
                                             }}
-                                            className="ml-auto text-xs bg-white border border-gray-200 px-3 py-1.5 rounded-full font-bold text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 transition-colors flex items-center gap-1 shadow-sm"
+                                            className="day-detail-button"
                                         >
                                             상세보기 <i className="fa-solid fa-chevron-right text-[10px]"></i>
                                         </button>
@@ -138,7 +137,7 @@ export default function DayItems({
                                     
                                     {/* (옵션) 간단한 팁이나 추가 정보 한 줄 */}
                                     {item.HIGHTLIGHTS && (
-                                        <div className="text-xs text-gray-400 px-1 flex items-center gap-2">
+                                        <div className="day-highlights">
                                             <i className="fa-solid fa-quote-left text-gray-300"></i>
                                             <span className="line-clamp-1">{item.HIGHTLIGHTS}</span>
                                         </div>
@@ -146,11 +145,11 @@ export default function DayItems({
 
                                     {/* [New] 숙소 예약 버튼 (확장 시 노출) */}
                                     {item.type === 'stay' && (
-                                        <div className="mt-2 pt-3 border-t border-gray-100">
-                                            <p className="text-xs font-bold text-gray-500 mb-2 flex items-center gap-1">
+                                        <div className="day-booking-container">
+                                            <p className="day-booking-title">
                                                 <i className="fa-solid fa-bed text-indigo-500"></i> 최저가 예약하기
                                             </p>
-                                            <div className="grid grid-cols-4 gap-1.5">
+                                            <div className="day-booking-grid">
                                                 {(Object.keys(BOOKING_PLATFORMS) as BookingPlatform[]).map((platform) => (
                                                     <button
                                                         key={platform}
@@ -169,7 +168,7 @@ export default function DayItems({
                                                             openBooking(platform, item.NAME, inStr, outStr);
                                                         }}
                                                         className={cn(
-                                                            "text-[10px] py-1.5 rounded-lg border transition-all font-bold shadow-sm",
+                                                            "day-booking-button",
                                                             BOOKING_PLATFORMS[platform].style
                                                         )}
                                                     >

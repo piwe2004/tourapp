@@ -1,0 +1,43 @@
+$primary: #ff5722;
+$primary-color: $primary; // Alias for backward compatibility
+
+$bg-color: #f8fafc;
+$background-light: #f9fafb; // slate-50
+
+$alert-bg: #ffebee;
+$alert-text: #d32f2f;
+
+$white: #ffffff;
+$black: #0a0a0a;
+
+// Text Colors
+$text-primary: #111827; // gray-900
+$text-secondary: #4b5563; // gray-600
+$text-muted: #9ca3af; // gray-400
+
+// Border Colors
+$border-color: #e5e7eb; // gray-200
+
+// Font
+$font-base: "Noto Sans KR", sans-serif;
+
+$slate-900: #0f172a;
+$indigo-100: #e0e7ff; 
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --font-noto-sans-kr: "Noto Sans KR", sans-serif; // Ensure this matches what was expected
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+$color-background: var(--background);
+$color-foreground: var(--foreground);
+
+$font-sans: var(--font-noto-sans-kr), sans-serif;

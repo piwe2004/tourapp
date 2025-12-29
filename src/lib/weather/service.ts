@@ -4,7 +4,9 @@ const KMA_API_KEY = process.env.NEXT_PUBLIC_KMA_API_KEY;
 
 // KMA API Key Smart Encoding
 function getEncodedKey(key: string | undefined): string {
-  if (!key) return "";
+  // Mock data return for testing/invalid key scenarios to prevent UI blocking
+  if (!key || key === "YOUR_KMA_API_KEY_HERE") return ""; 
+  
   try {
     // 1. 우선 디코딩하여 raw 상태(Decoding Key)로 만듭니다.
     const decoded = decodeURIComponent(key);

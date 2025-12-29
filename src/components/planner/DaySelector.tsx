@@ -1,7 +1,6 @@
-'use client';
-
 import useDraggableScroll from '@/hooks/useDraggableScroll';
 import { WeatherData } from '@/lib/weather/service'; // Type Import
+import clsx from 'clsx';
 
 interface DaySelectorProps {
     days: number[];
@@ -20,11 +19,11 @@ export default function DaySelector({ days, dateRange, selectedDay, onDaySelect,
     const { ref: scrollRef, events: scrollEvents, isDragging: isScrollDragging } = useDraggableScroll();
 
     return (
-        <div className="bg-white px-4 md:px-6 pt-4 md:pt-6 pb-2 md:pb-4 sticky top-0 z-20 border-b border-gray-100 shadow-sm">
+        <div className="day-selector-wrapper">
             <div
                 ref={scrollRef}
                 {...scrollEvents}
-                className="flex gap-2 md:gap-2.5 overflow-x-auto no-scrollbar pb-1 cursor-grab active:cursor-grabbing"
+                className="day-selector-scroll"
                 onClickCapture={(e) => {
                     if (isScrollDragging) {
                         e.preventDefault();
@@ -46,22 +45,19 @@ export default function DaySelector({ days, dateRange, selectedDay, onDaySelect,
                             onClick={() => {
                                 if (!isScrollDragging) onDaySelect(day);
                             }}
-                            className={`flex-1 min-w-[70px] md:min-w-[100px] py-2 md:py-3 rounded-xl font-bold transition-all flex flex-col items-center justify-center gap-0.5 leading-none relative overflow-hidden group border ${isActive
-                                    ? 'bg-[#4338CA] text-white shadow-lg border-[#4338CA] transform scale-[1.02]'
-                                    : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
-                                }`}
+                            className={clsx("day-selector-btn", isActive && "day-selector-btn-active")}
                         >
-                            <span className="text-xs md:text-base">{dateStr} ({weekDay})</span>
-                            <span className={`text-[10px] font-normal ${isActive ? 'opacity-70' : 'text-gray-400'}`}>Day {day}</span>
+                            <span className="day-selector-date-text">{dateStr} ({weekDay})</span>
+                            <span className={clsx("day-selector-label", isActive && "day-selector-label-active")}>Day {day}</span>
                         </button>
                     );
                 })}
             </div>
 
             {/* Weather Widget */}
-            <div className="mt-3 md:mt-5 bg-[#E0E7FF]/50 border border-indigo-100 rounded-2xl p-3 md:p-4 flex items-center justify-between">
-                <div className="flex items-center gap-2.5 md:gap-3.5">
-                    <div className="w-9 h-9 md:w-11 md:h-11 bg-white rounded-full flex items-center justify-center text-lg md:text-xl shadow-sm border border-indigo-50 text-indigo-500">
+            <div className="day-selector-weather-widget">
+                <div className="day-selector-weather-left">
+                    <div className="day-selector-weather-icon-box">
                          {/* 날씨 아이콘 동적 렌더링 */}
                          {weatherData ? (
                             weatherData.pty !== '없음' ? (
@@ -77,26 +73,26 @@ export default function DaySelector({ days, dateRange, selectedDay, onDaySelect,
                             <i className="fa-solid fa-spinner animate-spin text-indigo-300 text-[16px] md:text-[20px]"></i>
                         )}
                     </div>
-                    <div className="flex flex-col">
-                        <span className="text-[9px] md:text-[10px] font-bold text-indigo-400 tracking-wider">DAY {selectedDay} 기상정보</span>
-                        <div className="flex items-center gap-1.5 md:gap-2 h-[18px]">
+                    <div className="day-selector-weather-info">
+                        <span className="day-selector-weather-title">DAY {selectedDay} 기상정보</span>
+                        <div className="day-selector-weather-details">
                              {weatherData ? (
                                 <>
-                                    <span className="text-xs md:text-sm font-bold text-gray-800">
+                                    <span className="day-selector-weather-text">
                                         {weatherData.pty !== '없음' ? weatherData.pty : weatherData.sky}
                                     </span>
-                                    <span className="text-[10px] md:text-xs text-gray-400">|</span>
-                                    <span className="text-xs md:text-sm font-bold text-[#4338CA]">{weatherData.tmp}</span>
+                                    <span className="day-selector-weather-divider">|</span>
+                                    <span className="day-selector-weather-temp">{weatherData.tmp}</span>
                                 </>
                             ) : (
-                                <span className="text-xs text-gray-400">날씨 불러오는 중...</span>
+                                <span className="day-selector-weather-divider">날씨 불러오는 중...</span>
                             )}
                         </div>
                     </div>
                 </div>
                 <button
                     onClick={onSmartMixClick}
-                    className="px-2.5 py-1.5 md:px-3 bg-white border border-indigo-100 hover:border-[#4338CA] text-[#4338CA] text-[10px] md:text-xs font-bold rounded-lg shadow-sm transition flex items-center gap-1 md:gap-1.5 group"
+                    className="day-selector-smart-mix-btn"
                 >
 
                     <i className="fa-solid fa-wand-magic-sparkles group-hover:animate-pulse text-[10px] md:text-[12px]"></i>

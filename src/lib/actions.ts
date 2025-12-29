@@ -67,99 +67,9 @@ async function optimizeRoute(
   }
 }
 
-/**
- * @desc Firebase PLACE 데이터를 앱 내부 PlanItem으로 변환
- */
-function mapPlaceToPlanItem(
-  place: FirebasePlace,
-  day: number = 1,
-  time: string = "10:00"
-): PlanItem {
-  // 카테고리 매핑 로직
-  let type: PlanItem["type"] = "etc";
-  const mainCat = place.CATEGORY?.main || "";
-  const subCat = place.CATEGORY?.sub || "";
+import { mapPlaceToPlanItem } from "@/lib/mappers";
 
-  if (
-    mainCat.includes("식당") ||
-    subCat.includes("식당") ||
-    subCat.includes("레스토랑")
-  )
-    type = "food";
-  else if (
-    mainCat.includes("카페") ||
-    subCat.includes("카페") ||
-    subCat.includes("베이커리")
-  )
-    type = "cafe";
-  else if (
-    mainCat.includes("관광") ||
-    subCat.includes("관광지") ||
-    mainCat.includes("명소")
-  )
-    type = "sightseeing";
-  else if (
-    mainCat.includes("숙소") ||
-    mainCat.includes("숙박") ||
-    subCat.includes("호텔") ||
-    subCat.includes("펜션")
-  )
-    type = "stay";
-  else if (mainCat.includes("이동")) type = "move";
-
-  return {
-    // PlaceData Fields
-    _docId: place.PLACE_ID?.toString() || "",
-    PLACE_ID: place.PLACE_ID?.toString() || Date.now().toString(),
-    NAME: place.NAME,
-    ADDRESS: place.ADDRESS || "",
-    SUB_REGION: place.SUB_REGION || null,
-    CATEGORY: {
-      main: place.CATEGORY?.main || "",
-      sub: place.CATEGORY?.sub || "",
-    },
-    IMAGE_URL: place.IMAGE_URL || null,
-    GALLERY_IMAGES: null,
-    LOC_LAT: place.LOC_LAT,
-    LOC_LNG: place.LOC_LNG,
-    MAP_LINK: place.MAP_LINK || "",
-    AFFIL_LINK: null,
-    IS_AFLT: place.IS_AFLT || false,
-    IS_TICKET_REQUIRED: false,
-    TIME_INFO: null,
-    PARKING_INFO: null,
-    REST_INFO: null,
-    FEE_INFO: place.PRICE_GRADE ? `가격대: ${place.PRICE_GRADE}` : null,
-    DETAILS: {
-      stayTime: place.STAY_TIME ? place.STAY_TIME.toString() : null,
-    },
-    RATING: place.RATING || null,
-    HIGHTLIGHTS: place.HIGHTLIGHTS || null,
-    KEYWORDS: place.KEYWORDS || [],
-    NAME_GRAMS: [],
-    STAY_TIME: place.STAY_TIME || 60,
-    PRICE_GRADE: place.PRICE_GRADE || 0,
-    STATS: {
-      bookmark_count: 0,
-      view_count: 0,
-      review_count: 0,
-      rating: 0,
-      weight: 0,
-    },
-    TAGS: {
-      spring: place.TAGS?.spring || null,
-      summer: place.TAGS?.summer || null,
-      autumn: place.TAGS?.autumn || null,
-      winter: place.TAGS?.winter || null,
-    },
-
-    // PlanItem Specific Fields
-    day,
-    time,
-    type,
-    isLocked: false,
-  };
-}
+// (Removed internal mapPlaceToPlanItem function)
 
 // Firebase에서 실제 데이터를 가져옵니다.
 export async function getTravelPlan(destination: string): Promise<PlanItem[]> {
@@ -252,6 +162,14 @@ export interface TravelContext {
     start: string; // YYYY-MM-DD
     end: string; // YYYY-MM-DD
   };
+  itinerary?: {
+    day: number;
+    places: {
+      name: string;
+      type: "spot" | "restaurant" | "hotel";
+      memo: string;
+    }[];
+  }[];
 }
 
 /**
@@ -306,9 +224,59 @@ async function checkRateLimit(ip: string): Promise<boolean> {
  * 보안 로직: 입력값 검증 및 Rate Limiting 포함
  * @param query 사용자가 입력한 여행 관련 검색어 (예: "부산 맛집 여행")
  */
+// ... existing code ...
+
+/**
+ * @desc 주어진 장소 이름 목록에 해당하는 Firebase 데이터를 일괄 조회
+ */
+export async function getPlacesByNames(names: string[]): Promise<FirebasePlace[]> {
+  if (!names || names.length === 0) return [];
+  
+  console.log(`[Server] getPlacesByNames called with ${names.length} names:`, names.slice(0, 5));
+
+  const placesRef = collection(db, "PLACES");
+  const uniqueNames = Array.from(new Set(names)).filter(n => n.trim() !== "");
+  const chunks = [];
+  
+  // Firestore 'in' query supports max 10 items. Chunk it.
+  for (let i = 0; i < uniqueNames.length; i += 10) {
+    chunks.push(uniqueNames.slice(i, i + 10));
+  }
+
+  const results: FirebasePlace[] = [];
+
+  try {
+    const promises = chunks.map(async (chunk) => {
+      // NAME 필드 기준 정확한 매칭
+      const q = query(placesRef, where("NAME", "in", chunk));
+      const snapshot = await getDocs(q);
+      const chunkResults: FirebasePlace[] = [];
+      snapshot.forEach(doc => {
+        chunkResults.push(doc.data() as FirebasePlace);
+      });
+      console.log(`[Server] Chunk result: ${chunk.length} requested -> ${chunkResults.length} found.`);
+      return chunkResults;
+    });
+
+    const chunkedResults = await Promise.all(promises);
+    chunkedResults.forEach(r => results.push(...r));
+    
+    console.log(`[Server] Total matched places: ${results.length}`);
+    return results;
+  } catch (error) {
+    console.error("[Server] 일괄 장소 조회 실패:", error);
+    return [];
+  }
+}
+
+/**
+ * @desc 사용자의 자연어 쿼리를 분석하여 여행 조건을 추출하는 함수입니다.
+ * ...
+ */
 export async function extractTravelContext(
   query: string
 ): Promise<TravelContext> {
+  // ... (existing code for headers, ratelimit) ...
   const headersList = await headers();
   const ip = headersList.get("x-forwarded-for")?.split(",")[0] || "unknown";
 
@@ -331,38 +299,51 @@ export async function extractTravelContext(
   const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
   const prompt = `
-    You are a helpful travel assistant.
-    Analyze the following user query and extract travel context into JSON format.
+    You are a professional travel planner and route optimizer.
+    Your goal is to extract context and CREATE a logically optimized itinerary.
 
     Current Date: ${today}
-
     User Query: "${query}"
 
-    Requirements:
-    1. "destination": Extract the city or region name. If not found, return null.
-    2. "theme": Extract keywords related to travel style (e.g., "food", "healing", "activity"). Return as a string array.
-    3. "party":
-       - "adult": Default to 2 if not specified.
-       - "child": Default to 0 if not specified.
-    4. "dateRange":
-       - "start": Calculate based on terms like "tomorrow", "next weekend", or specific dates relative to Current Date. If not specified, use Current Date.
-       - "end": Calculate based on duration (e.g., "2 nights"). If not specified, default to 1 night after start date.
-       - Format dates as "YYYY-MM-DD".
+    # OPTIMIZATION RULES (CRITICAL):
+    1. CLUSTERING: Group places that are geographically close to each other for the same day to minimize travel time.
+    2. ACCOMMODATION: If a hotel/accommodation is mentioned or provided, every day's route must START and END at that location.
+    3. LOGICAL FLOW: Ensure the sequence of places follows a natural geographic path (e.g., North to South) without backtracking or crisscrossing.
+    4. VALIDATION: Check the travel distance between consecutive points. If it exceeds 30 mins by car, find a closer alternative or reorganize.
+    5. PLACE NAMES: Use the **Exact Official Korean Name** (e.g., "성산일출봉" not "성산 일출봉", "해운대해수욕장" not "해운대"). This is critical for database matching.
 
-    Response Format (JSON only):
+    # OUTPUT REQUIREMENTS:
+    1. "destination": Extract city/region (e.g., "제주", "부산").
+    2. "theme": Extract keywords as string array.
+    3. "party": adult (default 2), child (default 0).
+    4. "itinerary": 
+      - A list of days (Day 1, Day 2, etc.).
+      - Each day contains a 'places' array ordered by the optimized route.
+      - "type" MUST be one of: "spot", "restaurant", "hotel", "cafe". 
+      - Include 'memo' explaining why this place fits the flow.
+
+    # IMPORTANT JSON RULES:
+    1. Output strictly standard JSON. 
+    2. Boolean values MUST be lowercase (true, false). NEVER use Python-style (True, False).
+    3. Do not include any text outside the JSON block.
+
+    # Response Format:
     {
-      "destination": string | null,
+      "destination": string,
       "theme": string[],
-      "party": {
-        "adult": number,
-        "child": number
-      },
-      "dateRange": {
-        "start": string,
-        "end": string
-      }
+      "party": { "adult": number, "child": number },
+      "dateRange": { "start": string, "end": string },
+      "itinerary": [
+        {
+          "day": number,
+          "places": [
+            { "name": string, "type": "spot" | "restaurant" | "hotel" | "cafe", "memo": string }
+          ]
+        }
+      ]
     }
   `;
+  // ... (rest of the function)
 
   try {
     const result = await geminiModel.generateContent(prompt);

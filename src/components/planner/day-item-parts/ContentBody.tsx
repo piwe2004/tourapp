@@ -3,6 +3,7 @@
 import { PlanItem } from "@/types/place";
 import { RainyScheduleItem } from '@/lib/weather/actions';
 import { cn } from "@/lib/utils";
+import clsx from 'clsx';
 
 interface ContentBodyProps {
     item: PlanItem;
@@ -16,43 +17,40 @@ interface ContentBodyProps {
  */
 export function ContentBody({
     item,
-    selected,
     rainRisk,
     onPlanBClick
 }: ContentBodyProps) {
     const isExternal = String(item.PLACE_ID).startsWith('naver-');
 
     return (
-        <div className="flex-1">
+        <div className="day-content-body">
             {/* [Modified] 1. 강수 위험 시 뱃지 표시 (기존 Absolute 제거 후 Time 옆으로 이동) */}
             
             {/* 2. 시간 및 태그 */}
-            <div className="flex items-center gap-2 mb-3">
-                <span className={cn(
-                    "text-xs md:text-sm font-bold px-2 py-0.5 rounded text-gray-800 bg-gray-100",
-                )}>
+            <div className="day-meta-row">
+                <span className="day-time-badge">
                     {item.time}
                 </span>
                 
                 {isExternal && (
-                    <span className="flex items-center gap-1 text-[10px] font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200" title="네이버 검색 결과">
+                    <span className="day-external-badge" title="네이버 검색 결과">
                         <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> N 검색
                     </span>
                 )}
                 
                 {/* [New] Rain Risk Badge */}
                 {rainRisk && (
-                    <div className="bg-alert text-alertText px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 animate-pulse">
+                    <div className="day-rain-badge">
                          <i className="fa-solid fa-triangle-exclamation"></i> 비 예보 {rainRisk.weather.pop}
                     </div>
                 )}
             </div>
 
             {/* 3. 아이콘 및 텍스트 */}
-            <div className="flex gap-3 md:gap-4">
+            <div className="day-info-row">
                 {/* 카테고리 아이콘 */}
-                <div className={cn(
-                    "w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center text-lg md:text-xl shrink-0",
+                <div className={clsx(
+                    "day-category-icon",
                     getIconColor(item.type, item.is_indoor)
                 )}>
                     <i className={cn(
@@ -63,20 +61,20 @@ export function ContentBody({
                 </div>
                 
                 {/* 타이틀 및 메모 */}
-                <div className="flex-1 pr-6">
-                    <h3 className="text-[15px] md:text-lg font-bold text-gray-800 leading-tight mb-1 flex gap-1 items-end">
+                <div className="day-text-container">
+                    <h3 className="day-title">
                         {item.NAME}
                         {/* [New] 실내/야외 여부 표시 (User Edit Refined) */}
                         {typeof item.is_indoor !== 'undefined' && (
-                             <span className={cn(
-                                "text-xs font-normal",
-                                item.is_indoor ? "text-blue-500" : "text-green-600"
+                             <span className={clsx(
+                                "day-indoor-label",
+                                item.is_indoor ? "indoor" : "outdoor"
                             )}>
                                 {item.is_indoor ? "실내" : "야외"}
                             </span>
                         )}
                     </h3>
-                    <p className="text-xs text-gray-400 font-medium line-clamp-1">
+                    <p className="day-content-highlights">
                         {item.HIGHTLIGHTS || "상세 설명이 없습니다."}
                     </p>
                 </div>
@@ -86,9 +84,9 @@ export function ContentBody({
             {rainRisk && rainRisk.recommendations.length > 0 && (
                 <button
                     onClick={(e) => { e.stopPropagation(); onPlanBClick?.(e); }}
-                    className="w-full mt-3 md:mt-4 py-2.5 md:py-3.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-[#4338CA] text-xs md:text-sm font-bold flex items-center justify-center gap-2 transition-all border border-indigo-100 hover:shadow-md group relative overflow-hidden"
+                    className="day-plan-b-btn"
                 >
-                    <div className="absolute inset-0 bg-white/50 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div className="day-btn-overlay"></div>
                     <i className="fa-solid fa-wand-magic-sparkles text-[#4338CA] relative z-10 text-[14px] md:text-[16px]"></i>
                     <span className="relative z-10">비 오면 여기 어때요? (실내 추천)</span>
                 </button>
@@ -101,17 +99,17 @@ export function ContentBody({
 function getIconColor(type: string, is_indoor?: boolean) {
     switch (type) {
         case 'sightseeing':
-            return is_indoor ? 'bg-indigo-50 text-indigo-600' : 'bg-green-50 text-green-600';
+            return is_indoor ? "icon-sightseeing-indoor" : "icon-sightseeing-outdoor";
         case 'food':
-            return 'bg-orange-50 text-orange-600';
+            return "icon-food";
         case 'cafe':
-            return 'bg-amber-50 text-amber-600';
+            return "icon-cafe";
         case 'move':
-            return 'bg-blue-50 text-blue-600';
+            return "icon-move";
         case 'stay':
-            return 'bg-cyan-900 text-cyan-50';
+            return "icon-stay";
         default:
-            return 'bg-gray-50 text-gray-600';
+            return "icon-default";
     }
 }
 

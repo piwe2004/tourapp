@@ -1,10 +1,9 @@
-'use client';
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, Star, MapPin, X, Check, Loader2 } from 'lucide-react';
 import { PlanItem } from '@/types/place';
 import { db } from '@/lib/firebase';
 import { collection, query, orderBy, limit, startAfter, getDocs, DocumentSnapshot, where } from 'firebase/firestore';
+import clsx from 'clsx';
 
 interface PlaceReplacementModalProps {
   isOpen: boolean;
@@ -163,7 +162,7 @@ export default function PlaceReplacementModal({ isOpen, onClose, onReplace, orig
       setHasMore(true);
       fetchFirebasePlaces(true);
     }
-  }, [isOpen]); // Removed fetchFirebasePlaces from deps to avoid loop, logic handled inside
+  }, [isOpen, keyword, fetchFirebasePlaces]);
 
   // Infinite Scroll Observer
   useEffect(() => {
@@ -204,6 +203,10 @@ export default function PlaceReplacementModal({ isOpen, onClose, onReplace, orig
 
       const snapshot = await getDocs(q);
 
+      if (snapshot.empty) {
+        return searchPlacesExternal(searchTerm); // 내부 결과 없으면 외부 검색
+      }
+
       return snapshot.docs.map(doc => {
         const data = doc.data();
         return {
@@ -215,88 +218,100 @@ export default function PlaceReplacementModal({ isOpen, onClose, onReplace, orig
           lat: data.LOC_LAT,
           lng: data.LOC_LNG,
           rating: data.RATING,
-          source: 'firebase',
+          source: 'internal',
           link: data.MAP_LINK
         };
       });
+
     } catch (error) {
-      console.error("Error searching places:", error);
+      console.error("Firebase Search Error:", error);
       return [];
     }
   }, []);
 
-  // Helper to check if item matches category
-  const isCategoryMatch = (itemCategory: string, selectedCat: string) => {
-    if (selectedCat === '전체') return true;
-    if (selectedCat === '음식점') return itemCategory.includes('음식') || itemCategory.includes('맛집') || itemCategory.includes('식당');
-    if (selectedCat === '카페') return itemCategory.includes('카페') || itemCategory.includes('커피');
-    if (selectedCat === '관광지') return itemCategory.includes('관광') || itemCategory.includes('명소') || itemCategory.includes('여행');
-    if (selectedCat === '숙박') return itemCategory.includes('숙소') || itemCategory.includes('숙박') || itemCategory.includes('호텔') || itemCategory.includes('펜션') || itemCategory.includes('리조트');
-    return false;
+  /**
+   * @desc 네이버 검색 API를 사용하는 외부 검색 (Fallback)
+   */
+  const searchPlacesExternal = async (queryStr: string): Promise<SearchResultItem[]> => {
+    try {
+      const response = await fetch(`/api/search/naver?query=${encodeURIComponent(queryStr)}`);
+      if (!response.ok) return [];
+
+      const data = await response.json();
+      const items: NaverSearchItem[] = data.items || [];
+
+      return items.map((item, idx) => ({
+        id: `external-${idx}`,
+        name: item.title.replace(/<[^>]+>/g, ''),
+        category: item.category || '기타',
+        type: mapCategoryToType(item.category || ''),
+        address: item.address || item.roadAddress || '주소 정보 없음',
+        lat: 33.4996, // Default (will update on select if mapx/y exists)
+        lng: 126.5312,
+        source: 'external',
+        mapx: item.mapx, // Keep raw for later
+        mapy: item.mapy,
+        link: item.link
+      }));
+    } catch (e) {
+      console.error("External Search Error:", e);
+      return [];
+    }
   };
 
-  // Search Logic
-  useEffect(() => {
-    const performSearch = async () => {
-      setIsLoading(true);
-
-      let results: SearchResultItem[] = [];
-
-      if (keyword.trim()) {
-        // 1. Try Firebase Search First (Internal DB)
-        setSearchSource('firebase'); // or 'internal'
-        const firebaseResults = await searchPlacesByName(keyword);
-
-        if (firebaseResults.length > 0) {
-          results = firebaseResults;
-        } else {
-          // 2. Fallback to External Search (Naver)
-          setSearchSource('external');
-          try {
-            const res = await fetch(`/api/search?query=${encodeURIComponent(keyword)}`);
-            const data = await res.json();
-
-            if (data.items && data.items.length > 0) {
-              results = data.items.map((item: NaverSearchItem, idx: number) => ({
-                id: `naver-${idx}`,
-                name: item.title,
-                category: item.category || '기타',
-                type: 'etc',
-                address: item.roadAddress || item.address,
-                link: item.link,
-                mapx: item.mapx,
-                mapy: item.mapy,
-                source: 'external',
-                lat: 0,
-                lng: 0,
-              }));
-            }
-          } catch (error) {
-            console.error("Search API failed", error);
-          }
-        }
-
-        // Apply Category Filter to Search Results as well
-        if (selectedCategory !== '전체') {
-          results = results.filter(item => isCategoryMatch(item.category, selectedCategory));
-        }
-
-        setDisplayItems(results);
+  /**
+   * @desc 검색 로직 수행 (내부 + 외부 + 필터링)
+   */
+  const performSearch = useCallback(async () => {
+    if (!keyword.trim()) {
+      // 키워드 없으면 카테고리 필터링만 (Firebase Initial List에서)
+      if (selectedCategory === '전체') {
+        setDisplayItems(firebaseItems);
       } else {
-        // No keyword -> Show Firebase Items (Infinite Scroll)
-        setSearchSource('firebase');
-
-        // Apply Category Filter to Firebase Items
-        let filteredItems = firebaseItems;
-        if (selectedCategory !== '전체') {
-          filteredItems = firebaseItems.filter(item => isCategoryMatch(item.category, selectedCategory));
-        }
-
-        setDisplayItems(filteredItems);
+        setDisplayItems(firebaseItems.filter(item => {
+          if (selectedCategory === '음식점') return item.type === 'food';
+          if (selectedCategory === '카페') return item.type === 'cafe';
+          if (selectedCategory === '관광지') return item.type === 'sightseeing';
+          if (selectedCategory === '숙박') return item.type === 'stay';
+          return true;
+        }));
       }
-
+      setSearchSource('firebase');
       setIsLoading(false);
-    };
+      return;
+    }
+
+    setIsLoading(true);
+    setDisplayItems([]);
+
+    // 1. Firebase Search (Gram based)
+    let results = await searchPlacesByName(keyword);
+
+    // 2. 외부 검색 결과인지 확인
+    if (results.length > 0 && results[0].source === 'external') {
+      setSearchSource('external');
+    } else {
+      setSearchSource('internal');
+    }
+
+    // 3. 카테고리 필터링
+    if (selectedCategory !== '전체') {
+      results = results.filter(item => {
+        if (selectedCategory === '음식점') return item.type === 'food';
+        if (selectedCategory === '카페') return item.type === 'cafe';
+        if (selectedCategory === '관광지') return item.type === 'sightseeing';
+        if (selectedCategory === '숙박') return item.type === 'stay';
+        return true;
+      });
+    }
+
+    setDisplayItems(results);
+    setIsLoading(false);
+  }, [keyword, selectedCategory, firebaseItems, searchPlacesByName]);
+
+
+  // Effect: Keyword or Category Change -> Trigger Search
+  useEffect(() => {
 
     // If keyword exists, debounce search. If not, immediate update from firebaseItems
     if (keyword.trim()) {
@@ -413,38 +428,37 @@ export default function PlaceReplacementModal({ isOpen, onClose, onReplace, orig
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="place-replacement-modal-overlay">
       <div
-        className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden scale-100 animate-in zoom-in-95 duration-200"
+        className="place-replacement-modal-content"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
+        <div className="place-replacement-modal-header">
           <div>
-            <h3 className="text-xl font-bold text-slate-900">
+            <h3 className="title">
               {mode === 'replace' ? '다른 장소로 변경' : '새로운 장소 추가'}
             </h3>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="description">
               {mode === 'replace' ? '현재 일정을 대체할 장소를 선택하세요.' : '일정에 추가할 장소를 검색하세요.'}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
+            className="place-replacement-modal-close-btn"
           >
             <X size={20} />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-5 h-[calc(100vh-50vh)] flex flex-col md:h-[600px]">
+        <div className="place-replacement-modal-body">
           {/* Search Bar */}
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+          <div className="place-replacement-modal-search-bar">
+            <Search className="searchIcon" size={18} />
             <input
               type="text"
               placeholder="장소명, 카테고리 검색 (예: 우진해장국)"
-              className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all font-medium text-slate-900"
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               autoFocus
@@ -452,15 +466,15 @@ export default function PlaceReplacementModal({ isOpen, onClose, onReplace, orig
           </div>
 
           {/* Categories */}
-          <div className="flex gap-2 overflow-x-auto pb-4 no-scrollbar mb-2">
+          <div className="place-replacement-modal-categories">
             {CATEGORIES.map(category => (
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
-                className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${selectedCategory === category
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
+                className={clsx(
+                  "place-replacement-modal-category-btn",
+                  selectedCategory === category && "active"
+                )}
               >
                 {category}
               </button>
@@ -468,11 +482,11 @@ export default function PlaceReplacementModal({ isOpen, onClose, onReplace, orig
           </div>
 
           {/* Recommendations List */}
-          <div className="flex-1 overflow-y-auto pr-1 space-y-3 -mr-2">
+          <div className="place-replacement-modal-results">
             {isLoading && !displayItems.length ? (
-              <div className="flex flex-col items-center justify-center h-40 gap-3 text-slate-400">
+              <div className="flex items-center justify-center py-8 text-slate-400 gap-2">
                 <Loader2 className="animate-spin" size={24} />
-                <span className="text-sm">장소를 찾는 중...</span>
+                <span>장소를 찾는 중...</span>
               </div>
             ) : displayItems.length > 0 ? (
               <>
@@ -481,31 +495,31 @@ export default function PlaceReplacementModal({ isOpen, onClose, onReplace, orig
                     <div
                       key={place.id}
                       onClick={() => setSelectedPlaceId(place.id)}
-                      className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all group ${selectedPlaceId === place.id
-                        ? 'border-indigo-600 bg-indigo-50/50 ring-1 ring-indigo-600'
-                        : 'border-slate-100 bg-white hover:border-indigo-200 hover:shadow-md'
-                        }`}
+                      className={clsx(
+                        "place-replacement-modal-card",
+                        selectedPlaceId === place.id && "selected"
+                      )}
                     >
-                      <div className="w-16 h-16 rounded-lg bg-slate-200 flex-shrink-0 overflow-hidden relative">
+                      <div className="place-replacement-modal-card-image">
                         {/* Placeholder Image Logic based on type */}
-                        <div className="absolute inset-0 flex items-center justify-center text-slate-400 bg-slate-100">
+                        <div className="flex items-center justify-center text-xl">
                           {place.category.includes('음식') ? '🍽️' :
                             place.category.includes('카페') ? '☕' :
                               place.category.includes('숙소') ? '🏠' : '📍'}
                         </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-start">
-                          <h4 className={`font-bold text-lg truncate mb-1 ${selectedPlaceId === place.id ? 'text-indigo-700' : 'text-slate-900'}`}>
+                      <div className="place-replacement-modal-card-content">
+                        <div className="flex items-center">
+                          <h4 className={clsx(selectedPlaceId === place.id && "active")}>
                             {place.name}
                           </h4>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
-                          <span className="text-slate-700 font-medium">{place.category}</span>
+                        <div className="place-replacement-modal-card-meta">
+                          <span className="category">{place.category}</span>
                           {place.rating && (
                             <>
-                              <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                              <div className="flex items-center gap-1 text-amber-500 font-bold">
+                              <span className="dot"></span>
+                              <div className="rating">
                                 <Star size={12} fill="currentColor" />
                                 {place.rating}
                               </div>
@@ -513,18 +527,18 @@ export default function PlaceReplacementModal({ isOpen, onClose, onReplace, orig
                           )}
                           {place.distance && (
                             <>
-                              <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                              <span className="dot"></span>
                               <span>{place.distance}</span>
                             </>
                           )}
                         </div>
-                        <div className="flex items-center gap-1 text-xs text-slate-400 truncate">
+                        <div className="place-replacement-modal-address">
                           <MapPin size={12} />
                           {place.address}
                         </div>
                       </div>
                       {selectedPlaceId === place.id && (
-                        <div className="absolute top-4 right-4 text-indigo-600 bg-indigo-100 rounded-full p-1">
+                        <div className="place-replacement-modal-check-icon">
                           <Check size={14} strokeWidth={3} />
                         </div>
                       )}
@@ -540,14 +554,14 @@ export default function PlaceReplacementModal({ isOpen, onClose, onReplace, orig
                 )}
               </>
             ) : (
-              <div className="text-center py-20 text-slate-400">
+              <div className="flex items-center justify-center py-12 text-slate-400">
                 <p>검색 결과가 없습니다.</p>
               </div>
             )}
 
             {/* Search Source Indicator */}
             {searchSource === 'external' && !isLoading && displayItems.length > 0 && (
-              <div className="text-center text-xs text-slate-400 mt-2">
+              <div className="text-xs text-slate-400 text-center mt-2">
                 네이버 검색 결과를 표시하고 있습니다.
               </div>
             )}
@@ -555,20 +569,19 @@ export default function PlaceReplacementModal({ isOpen, onClose, onReplace, orig
         </div>
 
         {/* Footer */}
-        <div className="p-5 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
+        <div className="place-replacement-modal-footer">
           <button
             onClick={onClose}
-            className="px-5 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-200 transition-colors"
+            className="place-replacement-modal-btn-cancel"
           >
             취소
           </button>
           <button
             onClick={handleApply}
             disabled={!selectedPlaceId}
-            className={`px-5 py-2.5 rounded-xl font-bold text-white flex items-center gap-2 shadow-lg transition-all ${selectedPlaceId
-              ? 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-indigo-200 hover:-translate-y-0.5'
-              : 'bg-slate-300 cursor-not-allowed shadow-none'
-              }`}
+            className={clsx(
+              "place-replacement-modal-btn-confirm",
+            )}
           >
             {mode === 'replace' ? '이 장소로 변경' : '이 장소 추가하기'}
           </button>

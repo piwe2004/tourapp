@@ -86,15 +86,15 @@ export default function Map({ schedule, selectedDay, selectedItemId, onItemClick
       // z-index: 선택된 마커가 100, hover시 50(group-hover로 처리)
 
       const markerContent = `
-        <div style="position: absolute; left: 0px; top: 0px; width: 20px; height: 20px;" class="group/marker cursor-pointer">
+        <div style="position: absolute; left: 0px; top: 0px; width: 20px; height: 20px;" class="group/marker cursor-pointer planner-map-marker-container">
             <!-- Tooltip -->
-            <div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-white px-3 py-1.5 rounded-lg shadow-xl mb-2 text-xs font-bold text-gray-800 whitespace-nowrap transform translate-y-2 opacity-0 group-hover/marker:opacity-100 group-hover/marker:translate-y-0 transition-all pointer-events-none z-[100]">
+            <div class="planner-map-tooltip">
                 ${item.NAME}
-                <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rotate-45 border-b border-r border-gray-100"></div>
+                <div class="planner-map-tooltip-arrow"></div>
             </div>
             
             <!-- Map Marker Circle -->
-            <div class="w-8 h-8 rounded-full text-white bg-[#4338CA] border-3 border-white shadow-lg flex items-center justify-center font-bold text-sm transform transition-all duration-300 group-hover/marker:scale-120 group-hover/marker:z-50 ${isSelected ? 'scale-120 z-50 ring-2 ' : ''}">
+            <div class="planner-map-marker-circle ${isSelected ? 'active' : ''}">
                 ${index + 1}
             </div>
         </div>
@@ -160,12 +160,12 @@ export default function Map({ schedule, selectedDay, selectedItemId, onItemClick
   }, [schedule, selectedDay, selectedItemId, isMapLoaded, onItemClick]); // onItemClick 의존성 추가
 
   return (
-    <div className="w-full h-full relative">
-      <div ref={mapElement} className="w-full h-full bg-slate-100 rounded-2xl overflow-hidden" />
+    <div className="planner-map-inner">
+      <div ref={mapElement} className="planner-map-element" />
 
-      <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+      <div className="planner-map-overlay">
         {!process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID && (
-          <p className="bg-black/70 text-white px-4 py-2 rounded-lg text-sm backdrop-blur-md z-10">
+          <p className="planner-map-warning">
             ⚠️ Client ID 필요
           </p>
         )}

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { X, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import clsx from 'clsx';
 
 interface DateEditorProps {
     startDate: Date;
@@ -87,7 +88,7 @@ export default function DateEditor({ startDate, endDate, onSave, onClose, isInli
 
         // 빈 칸 채우기
         for (let i = 0; i < firstDay; i++) {
-            days.push(<div key={`empty-${i}`} className="h-10 w-10"></div>);
+            days.push(<div key={`empty-${i}`} className="empty-day"></div>);
         }
 
         // 날짜 채우기
@@ -98,19 +99,14 @@ export default function DateEditor({ startDate, endDate, onSave, onClose, isInli
             const isEnd = date.getTime() === tempEnd.getTime();
             const isRange = isSelected && !isStart && !isEnd;
 
-            let className = "h-10 w-10 flex items-center justify-center text-sm rounded-full transition-all cursor-pointer hover:bg-indigo-50";
-
-            if (isStart || isEnd) {
-                className += " bg-indigo-600 text-white font-bold shadow-md transform scale-105";
-            } else if (isRange) {
-                className += " bg-indigo-100 text-indigo-700 rounded-none";
-            } else {
-                className += " text-slate-700";
-            }
-
             days.push(
-                <div key={day} onClick={() => handleDateClick(day)} className="flex items-center justify-center">
-                    <button className={className}>
+                <div key={day} onClick={() => handleDateClick(day)} className="day-wrapper">
+                    <button className={clsx(
+                        "day-button",
+                        (isStart || isEnd) && "day-selected",
+                        isRange && "day-range",
+                        !isSelected && "day-normal"
+                    )}>
                         {day}
                     </button>
                 </div>
@@ -125,61 +121,61 @@ export default function DateEditor({ startDate, endDate, onSave, onClose, isInli
     };
 
     const content = (
-        <div className={`bg-white rounded-3xl w-full p-6 ${isInline ? '' : 'shadow-2xl max-w-md m-4'} overflow-hidden`}>
+        <div className={clsx("date-editor-container", !isInline && "is-modal")}>
             {!isInline && (
-                <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                        <CalendarIcon className="text-indigo-600" size={24} />
+                <div className="date-editor-header">
+                    <h3 className="date-editor-title">
+                        <CalendarIcon color="#4f46e5" size={24} />
                         일정 선택
                     </h3>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors">
+                    <button onClick={onClose} className="date-editor-close-btn">
                         <X size={20} />
                     </button>
                 </div>
             )}
 
             {/* 달력 헤더 */}
-            <div className="flex justify-between items-center mb-4 px-2">
-                <button onClick={handlePrevMonth} className="p-1 hover:bg-slate-100 rounded-full text-slate-600">
+            <div className="calendar-controls">
+                <button onClick={handlePrevMonth} className="calendar-control-btn">
                     <ChevronLeft size={20} />
                 </button>
-                <span className="text-lg font-bold text-slate-800">
+                <span className="current-month">
                     {currentMonth.getFullYear()}년 {currentMonth.getMonth() + 1}월
                 </span>
-                <button onClick={handleNextMonth} className="p-1 hover:bg-slate-100 rounded-full text-slate-600">
+                <button onClick={handleNextMonth} className="calendar-control-btn">
                     <ChevronRight size={20} />
                 </button>
             </div>
 
             {/* 요일 헤더 */}
-            <div className="grid grid-cols-7 mb-2 text-center">
+            <div className="week-days-grid">
                 {['일', '월', '화', '수', '목', '금', '토'].map(day => (
-                    <div key={day} className="text-xs font-medium text-slate-400 uppercase tracking-wider py-1">
+                    <div key={day} className="week-day-label">
                         {day}
                     </div>
                 ))}
             </div>
 
             {/* 날짜 그리드 */}
-            <div className="grid grid-cols-7 gap-y-1 mb-6">
+            <div className="days-grid">
                 {renderCalendar()}
             </div>
 
             {/* 선택된 날짜 표시 */}
-            <div className="bg-slate-50 rounded-xl p-4 mb-6 flex justify-between items-center border border-slate-100">
-                <div className="text-center w-1/2 border-r border-slate-200">
-                    <p className="text-xs text-slate-400 mb-1">시작일</p>
-                    <p className="font-bold text-indigo-600">{formatDate(tempStart)}</p>
+            <div className="selected-display">
+                <div className={clsx("date-box", "with-border")}>
+                    <p className="date-label">시작일</p>
+                    <p className="date-value">{formatDate(tempStart)}</p>
                 </div>
-                <div className="text-center w-1/2">
-                    <p className="text-xs text-slate-400 mb-1">종료일</p>
-                    <p className="font-bold text-indigo-600">{formatDate(tempEnd)}</p>
+                <div className="date-box">
+                    <p className="date-label">종료일</p>
+                    <p className="date-value">{formatDate(tempEnd)}</p>
                 </div>
             </div>
 
             <button
                 onClick={() => onSave(tempStart, tempEnd)}
-                className="w-full bg-indigo-600 cursor-pointer hover:bg-indigo-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-indigo-200 active:scale-95"
+                className="date-save-button"
             >
                 일정 적용하기
             </button>
@@ -191,7 +187,7 @@ export default function DateEditor({ startDate, endDate, onSave, onClose, isInli
     }
 
     return (
-        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
+        <div className="date-editor-overlay">
              {content}
         </div>
     );
