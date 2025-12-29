@@ -61,9 +61,9 @@ export function ContentBody({
                 </div>
                 
                 {/* 타이틀 및 메모 */}
-                <div className="day-text-container">
-                    <h3 className="day-title">
-                        {item.NAME}
+                <div className="day-info-text">
+                    <div className="day-info-title-row">
+                        <span className="day-place-name">{item.NAME}</span>
                         {/* [New] 실내/야외 여부 표시 (User Edit Refined) */}
                         {typeof item.is_indoor !== 'undefined' && (
                              <span className={clsx(

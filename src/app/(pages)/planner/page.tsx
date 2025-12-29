@@ -266,59 +266,80 @@ function PlannerContent() {
                         dbPlaces.forEach(p => placesMap.set(p.NAME, p));
 
                         let timeOffset = 9;
-                        context.itinerary.forEach((dayPlan: any) => {
-                            timeOffset = 9;
-                            dayPlan.places.forEach((aiPlace: any) => {
-                                const dbPlace = placesMap.get(aiPlace.name);
-                                let planItem: PlanItem;
-                                const timeStr = `${String(timeOffset).padStart(2, '0')}:00`;
+                            context.itinerary.forEach((dayPlan: any) => {
+                                timeOffset = 9;
+                                dayPlan.places.forEach((aiPlace: any) => {
+                                    try {
+                                        const dbPlace = placesMap.get(aiPlace.name);
+                                        let planItem: PlanItem;
+                                        
+                                        // DB 매칭 성공
+                                        if (dbPlace) {
+                                            const timeStr = `${String(timeOffset).padStart(2, '0')}:00`;
+                                            planItem = mapPlaceToPlanItem(dbPlace, dayPlan.day, timeStr);
+                                            if (aiPlace.memo) planItem.MEMO = aiPlace.memo;
+                                            if (aiPlace.tags) planItem.KEYWORDS = [...new Set([...planItem.KEYWORDS, ...aiPlace.tags])];
+                                        } else {
+                                            // DB 매칭 실패: AI JSON 기반 Fallback
+                                            const timeStr = `${String(timeOffset).padStart(2, '0')}:00`;
+                                            
+                                            let stayTime = 60;
+                                            try {
+                                                if (aiPlace.recommendedDuration) {
+                                                    const hMatch = aiPlace.recommendedDuration.match(/(\d+)시간/);
+                                                    const mMatch = aiPlace.recommendedDuration.match(/(\d+)분/);
+                                                    let minutes = 0;
+                                                    if (hMatch) minutes += parseInt(hMatch[1]) * 60;
+                                                    if (mMatch) minutes += parseInt(mMatch[1]);
+                                                    if (minutes > 0) stayTime = minutes;
+                                                }
+                                            } catch (e) { console.warn("Time parse error", e); }
 
-                                if (dbPlace) {
-                                    planItem = mapPlaceToPlanItem(dbPlace, dayPlan.day, timeStr);
-                                } else {
-                                    // Fallback to AI Data
-                                    planItem = {
-                                        _docId: `ai-${Date.now()}-${Math.random()}`,
-                                        PLACE_ID: `ai-${Date.now()}-${Math.random()}`,
-                                        NAME: aiPlace.name,
-                                        ADDRESS: '',
-                                        SUB_REGION: null,
-                                        CATEGORY: { main: 'AI추천', sub: '' },
-                                        IMAGE_URL: null,
-                                        GALLERY_IMAGES: null,
-                                        LOC_LAT: 37.5665,
-                                        LOC_LNG: 126.9780,
-                                        MAP_LINK: '',
-                                        AFFIL_LINK: null,
-                                        IS_AFLT: false,
-                                        IS_TICKET_REQUIRED: false,
-                                        TIME_INFO: null,
-                                        PARKING_INFO: null,
-                                        REST_INFO: null,
-                                        FEE_INFO: null,
-                                        DETAILS: {},
-                                        RATING: null,
-                                        HIGHTLIGHTS: null,
-                                        KEYWORDS: [],
-                                        NAME_GRAMS: [],
-                                        STAY_TIME: 60,
-                                        PRICE_GRADE: 0,
-                                        STATS: { bookmark_count: 0, view_count: 0, review_count: 0, rating: 0, weight: 0 },
-                                        TAGS: { spring: null, summer: null, autumn: null, winter: null },
-                                        day: dayPlan.day,
-                                        time: timeStr,
-                                        type: (aiPlace.type as PlanItem['type']) || 'etc',
-                                        isLocked: false,
-                                        MEMO: aiPlace.memo
-                                    };
-                                }
-                                
-                                // Override & Add
-                                planItem.type = (aiPlace.type as PlanItem['type']) || planItem.type;
-                                planItem.MEMO = aiPlace.memo;
-                                aiSchedule.push(planItem);
-                                timeOffset += 2;
-                            });
+                                            planItem = {
+                                                _docId: `ai-${Date.now()}-${Math.random()}`,
+                                                PLACE_ID: `ai-${Date.now()}-${Math.random()}`,
+                                                NAME: aiPlace.name,
+                                                ADDRESS: aiPlace.address || '주소 정보 없음',
+                                                SUB_REGION: null,
+                                                CATEGORY: { main: 'AI추천', sub: aiPlace.type || '' },
+                                                IMAGE_URL: null, 
+                                                GALLERY_IMAGES: null,
+                                                LOC_LAT: aiPlace.coordinates?.lat || 37.5665,
+                                                LOC_LNG: aiPlace.coordinates?.lng || 126.9780,
+                                                MAP_LINK: '',
+                                                AFFIL_LINK: null,
+                                                IS_AFLT: false,
+                                                IS_TICKET_REQUIRED: false,
+                                                TIME_INFO: aiPlace.recommendedDuration || null,
+                                                PARKING_INFO: null,
+                                                REST_INFO: null,
+                                                FEE_INFO: null,
+                                                DETAILS: {},
+                                                RATING: null,
+                                                HIGHTLIGHTS: null,
+                                                KEYWORDS: aiPlace.tags || [],
+                                                NAME_GRAMS: [],
+                                                STAY_TIME: stayTime, 
+                                                PRICE_GRADE: 0,
+                                                STATS: { bookmark_count: 0, view_count: 0, review_count: 0, rating: 0, weight: 0 },
+                                                TAGS: { spring: null, summer: null, autumn: null, winter: null },
+                                                
+                                                day: dayPlan.day,
+                                                time: timeStr,
+                                                type: (aiPlace.type as PlanItem['type']) || 'etc',
+                                                isLocked: false,
+                                                MEMO: aiPlace.memo
+                                            };
+                                        }
+
+                                        if (planItem) {
+                                            aiSchedule.push(planItem);
+                                            timeOffset += 2;
+                                        }
+                                    } catch (loopError) {
+                                        console.error(`[Planner] Error processing item ${aiPlace.name}:`, loopError);
+                                    }
+                                });
                         });
                     }
                 }
