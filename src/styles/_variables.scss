@@ -1,4 +1,4 @@
-$primary: #ff5722;
+$primary: #4f46e5; // indigo-600
 $primary-color: $primary; // Alias for backward compatibility
 
 $bg-color: #f8fafc;
@@ -22,7 +22,32 @@ $border-color: #e5e7eb; // gray-200
 $font-base: "Noto Sans KR", sans-serif;
 
 $slate-900: #0f172a;
+$slate-800: #1e293b;
+$slate-700: #334155;
+$slate-600: #475569;
+$slate-500: #64748b;
+$slate-400: #94a3b8;
+$slate-300: #cbd5e1;
+$slate-200: #e2e8f0;
+$slate-100: #f1f5f9;
+$slate-50:  #f8fafc;
+
+$indigo-900: #312e81;
+$indigo-800: #3730a3;
+$indigo-700: #4338ca;
+$indigo-600: #4f46e5;
+$indigo-500: #6366f1;
+$indigo-400: #818cf8;
+$indigo-300: #a5b4fc;
+$indigo-200: #c7d2fe;
 $indigo-100: #e0e7ff; 
+$indigo-50:  #eef2ff;
+
+$blue-500: #3b82f6;
+$blue-50:  #eff6ff;
+
+$orange-500: #f97316;
+$orange-50:  #fff7ed;
 
 :root {
   --background: #ffffff;

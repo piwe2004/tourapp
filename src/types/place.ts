@@ -52,7 +52,8 @@ export interface PlaceData {
   KEYWORDS: string[];            // 검색 및 해시태그용 키워드
   NAME_GRAMS: string[];          // 검색용 n-gram
 
-  STAY_TIME: number;             // 평균 체류 시간 (분 단위)
+  STAY_TIME: string | number;         // 예상 체류 시간 (예: "1시간 30분" 또는 90)
+  TRAVEL_TIME_TO_NEXT?: string;      // 다음 장소까지의 이동 시간 (예: "15분 이동")
   PRICE_GRADE: number;           // 가격대 등급 (0~3)
 
   STATS: {                       // 앱 내부 통계
@@ -68,15 +69,18 @@ export interface PlaceData {
     summer: string[] | null;
     autumn: string[] | null;
     winter: string[] | null;
+    common?: string[] | null;       // 공통/상시 태그
   };
 }
 
 export interface PlanItem extends PlaceData {
   // Planner Specific
   day: number;
-  time:string
-  isLocked?: boolean; // 고정 여부
-  is_indoor?: boolean; // 실내 실외
+  date?: string;           // 방문 날짜 (YYYY-MM-DD)
+  time?: string;
+  isLocked?: boolean;      // 고정 여부
+  is_indoor?: boolean;     // 실내 실외
   type: 'sightseeing' | 'food' | 'cafe' | 'stay' | 'move' | 'etc'; 
-  MEMO?: string; // Additional memo/note for plan B or recommendations
+  MEMO?: string;           // AI 가이드 메모
+  VISIT_ORDER?: number;    // 방문 순서
 }

@@ -13,10 +13,8 @@
 
 import { useState, useEffect, Suspense, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { getTravelPlan, extractTravelContext, getPlacesByNames } from '@/lib/actions';
+import { extractTravelContext, getTravelPlan, getPlacesByNames, FirebasePlace, TravelContext } from '@/lib/actions';
 import { PlanItem } from '@/types/place';
-import { FirebasePlace } from "@/types/places";
-import Map from '@/components/planner/Map';
 import { mapPlaceToPlanItem } from "@/lib/mappers";
 import { RainyScheduleItem, getWeather, getPlanBRecommendations } from '@/lib/weather/actions'; // getWeather, getPlanBRecommendations 추가
 import { WeatherData } from '@/lib/weather/service'; // Type 추가
@@ -58,6 +56,7 @@ function PlannerContent() {
     const [schedule, setSchedule] = useState<PlanItem[]>([]); // 전체 일정 데이터
     const [selectedDay, setSelectedDay] = useState(1);        // 현재 선택된 날짜 (Day 1, 2...)
     const [selectedItemId, setSelectedItemId] = useState<string | null>(null); // 지도/리스트에서 하이라이트된 아이템 ID
+    const [travelContext, setTravelContext] = useState<TravelContext | null>(null); // AI 생성 컨텍스트 (테마, 일자별 포커스 등)
 
     // 날씨 및 Plan B 관련 상태
     const [rainRisks, setRainRisks] = useState<RainyScheduleItem[]>([]);
@@ -119,12 +118,16 @@ function PlannerContent() {
         } else if (replaceModalState.mode === 'add') {
             // 새 아이템 추가
             const index = replaceModalState.targetIndex ?? 0;
-            const currentDayItems = schedule.filter(item => item.day === selectedDay).sort((a, b) => a.STAY_TIME - b.STAY_TIME);
+            const currentDayItems = schedule.filter(item => item.day === selectedDay).sort((a, b) => {
+                const aTime = typeof a.STAY_TIME === 'number' ? a.STAY_TIME : 60;
+                const bTime = typeof b.STAY_TIME === 'number' ? b.STAY_TIME : 60;
+                return aTime - bTime;
+            });
             let newTime = "12:00";
             
             // 시간 자동 계산 로직 (이전 아이템 시간 + 30분)
             const prevItem = currentDayItems[index - 1];
-            if (prevItem) {
+            if (prevItem && prevItem.time) {
                 const [h, m] = prevItem.time.split(':').map(Number);
                 const nextM = m + 30;
                 const nextH = h + Math.floor(nextM / 60);
@@ -225,8 +228,8 @@ function PlannerContent() {
             fetchingRef.current = initialDestination;
             
             setIsLoading(true);
-            let aiSchedule: PlanItem[] = [];
-            let context: any = null;
+            const aiSchedule: PlanItem[] = [];
+            let context: TravelContext | null = null;
 
             // 1. [Try] AI Context & Hydration
             try {
@@ -235,6 +238,8 @@ function PlannerContent() {
                 console.log("[Planner] Extracted Context:", context);
 
                 if (context) {
+                    setTravelContext(context); // Store for UI enrichment
+                    
                     // Update Store
                     if (context.destination) setDestination(context.destination);
                     if (context.dateRange?.start && context.dateRange?.end) {
@@ -253,7 +258,7 @@ function PlannerContent() {
 
                     // 1-2. Hydration (Itinerary -> DB)
                     if (context.itinerary && context.itinerary.length > 0) {
-                        const placeNames = context.itinerary.flatMap((day: any) => day.places.map((p: any) => p.name));
+                        const placeNames = context.itinerary.flatMap(day => day.places.map(p => p.NAME));
                         // Safe Fetch
                         let dbPlaces: FirebasePlace[] = [];
                         try {
@@ -266,28 +271,40 @@ function PlannerContent() {
                         dbPlaces.forEach(p => placesMap.set(p.NAME, p));
 
                         let timeOffset = 9;
-                            context.itinerary.forEach((dayPlan: any) => {
+                            context.itinerary.forEach((dayPlan) => {
                                 timeOffset = 9;
-                                dayPlan.places.forEach((aiPlace: any) => {
+                                dayPlan.places.forEach((aiPlace) => {
                                     try {
-                                        const dbPlace = placesMap.get(aiPlace.name);
+                                        const dbPlace = placesMap.get(aiPlace.NAME);
                                         let planItem: PlanItem;
                                         
+                                        // [Refine] Type Mapping
+                                        const mappedType: PlanItem['type'] = aiPlace.type;
+
+                                        // [Refine] Tag Cleaning
+                                        const cleanTags = (aiPlace.KEYWORDS || []).map((t: string) => t.startsWith('#') ? t.slice(1) : t);
+
                                         // DB 매칭 성공
                                         if (dbPlace) {
                                             const timeStr = `${String(timeOffset).padStart(2, '0')}:00`;
                                             planItem = mapPlaceToPlanItem(dbPlace, dayPlan.day, timeStr);
-                                            if (aiPlace.memo) planItem.MEMO = aiPlace.memo;
-                                            if (aiPlace.tags) planItem.KEYWORDS = [...new Set([...planItem.KEYWORDS, ...aiPlace.tags])];
+                                            if (aiPlace.MEMO) planItem.MEMO = aiPlace.MEMO;
+                                            if (aiPlace.TAGS) planItem.KEYWORDS = [...new Set([...planItem.KEYWORDS, ...(aiPlace.KEYWORDS || [])])];
+                                            planItem.type = mappedType; // AI의 타입 분류가 더 정확할 수도 있음
                                         } else {
                                             // DB 매칭 실패: AI JSON 기반 Fallback
                                             const timeStr = `${String(timeOffset).padStart(2, '0')}:00`;
                                             
+                                            // [Refine] Robust Duration Parsing
                                             let stayTime = 60;
+                                            if (mappedType === 'stay') stayTime = 720; // 12h
+                                            else if (mappedType === 'sightseeing') stayTime = 90;
+                                            
                                             try {
-                                                if (aiPlace.recommendedDuration) {
-                                                    const hMatch = aiPlace.recommendedDuration.match(/(\d+)시간/);
-                                                    const mMatch = aiPlace.recommendedDuration.match(/(\d+)분/);
+                                                const durationStr = String(aiPlace.STAY_TIME || "");
+                                                if (durationStr) {
+                                                    const hMatch = durationStr.match(/(\d+)시간/);
+                                                    const mMatch = durationStr.match(/(\d+)분/);
                                                     let minutes = 0;
                                                     if (hMatch) minutes += parseInt(hMatch[1]) * 60;
                                                     if (mMatch) minutes += parseInt(mMatch[1]);
@@ -298,26 +315,26 @@ function PlannerContent() {
                                             planItem = {
                                                 _docId: `ai-${Date.now()}-${Math.random()}`,
                                                 PLACE_ID: `ai-${Date.now()}-${Math.random()}`,
-                                                NAME: aiPlace.name,
-                                                ADDRESS: aiPlace.address || '주소 정보 없음',
+                                                NAME: aiPlace.NAME,
+                                                ADDRESS: aiPlace.ADDRESS || '주소 정보 없음',
                                                 SUB_REGION: null,
                                                 CATEGORY: { main: 'AI추천', sub: aiPlace.type || '' },
-                                                IMAGE_URL: null, 
+                                                IMAGE_URL: aiPlace.IMAGE_URL || null, 
                                                 GALLERY_IMAGES: null,
-                                                LOC_LAT: aiPlace.coordinates?.lat || 37.5665,
-                                                LOC_LNG: aiPlace.coordinates?.lng || 126.9780,
+                                                LOC_LAT: aiPlace.LOC_LAT || 37.5665,
+                                                LOC_LNG: aiPlace.LOC_LNG || 126.9780,
                                                 MAP_LINK: '',
                                                 AFFIL_LINK: null,
                                                 IS_AFLT: false,
                                                 IS_TICKET_REQUIRED: false,
-                                                TIME_INFO: aiPlace.recommendedDuration || null,
+                                                TIME_INFO: String(aiPlace.STAY_TIME || "") || null,
                                                 PARKING_INFO: null,
                                                 REST_INFO: null,
                                                 FEE_INFO: null,
                                                 DETAILS: {},
                                                 RATING: null,
-                                                HIGHTLIGHTS: null,
-                                                KEYWORDS: aiPlace.tags || [],
+                                                HIGHTLIGHTS: aiPlace.MEMO ? [aiPlace.MEMO] : null,
+                                                KEYWORDS: cleanTags,
                                                 NAME_GRAMS: [],
                                                 STAY_TIME: stayTime, 
                                                 PRICE_GRADE: 0,
@@ -326,9 +343,9 @@ function PlannerContent() {
                                                 
                                                 day: dayPlan.day,
                                                 time: timeStr,
-                                                type: (aiPlace.type as PlanItem['type']) || 'etc',
+                                                type: mappedType,
                                                 isLocked: false,
-                                                MEMO: aiPlace.memo
+                                                MEMO: aiPlace.MEMO
                                             };
                                         }
 
@@ -337,7 +354,7 @@ function PlannerContent() {
                                             timeOffset += 2;
                                         }
                                     } catch (loopError) {
-                                        console.error(`[Planner] Error processing item ${aiPlace.name}:`, loopError);
+                                        console.error(`[Planner] Error processing item ${aiPlace.NAME}:`, loopError);
                                     }
                                 });
                         });
@@ -363,7 +380,6 @@ function PlannerContent() {
                 // Context가 명확히 있는데 일정이 안 만들어진 경우 -> Fallback 하지 말고 멈춤 (무한 로딩/중복 요청 방지)
                 if (context && context.destination) {
                     console.warn("[Planner] AI context exists but schedule is empty. Stopping to prevent fallback loop.");
-                    // 필요 시 사용자에게 알림: alert("일정을 생성하지 못했습니다.");
                 } else {
                     // AI가 아예 실패했거나 Context를 못 가져온 경우에만 Fallback
                     console.warn("[Planner] No AI context. Falling back to Legacy Cloud Function...");
@@ -407,7 +423,7 @@ function PlannerContent() {
                 const dateStr = targetDate.toISOString().split('T')[0];
 
                 // 해당 날짜의 첫 번째 일정 좌표 (없으면 서울)
-                const dayItems = schedule.filter(item => item.day === day).sort((a, b) => a.STAY_TIME - b.STAY_TIME);
+                const dayItems = schedule.filter(item => item.day === day).sort((a, b) => (a.time || "").localeCompare(b.time || ""));
                 let lat = 37.5665;
                 let lng = 126.9780;
 
@@ -447,7 +463,7 @@ function PlannerContent() {
 
         const currentDayItems = schedule
             .filter(item => item.day === selectedDay)
-            .sort((a, b) => a.STAY_TIME - b.STAY_TIME);
+            .sort((a, b) => (a.time || "").localeCompare(b.time || ""));
 
         const items = Array.from(currentDayItems);
         const [reorderedItem] = items.splice(result.source.index, 1);
@@ -477,6 +493,34 @@ function PlannerContent() {
 
     return (
         <div className="planner-page">
+            {/* 0. 헤더 영역 (AI 생성 테마 및 정보 요약) */}
+            <header className="planner-header">
+                <div className="planner-header-content">
+                    <div className="header-top">
+                        <h1 className="destination-name">{destination}</h1>
+                        {travelContext?.tripSummary?.autoGeneratedTheme && (
+                            <div className="theme-tag">
+                                <i className="fa-solid fa-sparkles"></i>
+                                {travelContext.tripSummary.autoGeneratedTheme}
+                            </div>
+                        )}
+                    </div>
+                    <div className="summary-info">
+                        <div className="info-item">
+                            <i className="fa-regular fa-calendar-days text-[14px]"></i>
+                            <span>
+                                {dateRange.start.toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })} ~ {dateRange.end.toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })}
+                            </span>
+                        </div>
+                        <span className="info-divider">|</span>
+                        <div className="info-item">
+                            <i className="fa-solid fa-users text-[14px]"></i>
+                            <span>성인 {guests.adult}명{guests.child > 0 ? `, 아동 ${guests.child}명` : ''}</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
             <div className="plannerPageContainer">
                 {/* Main Content Area */}
                 <main className="mainContent">
@@ -490,6 +534,7 @@ function PlannerContent() {
                         weatherData={weatherCache[selectedDay] || null} // [Mod] 캐시에서 현재 날짜 데이터 전달
                         rainRisks={rainRisks}
                         selectedItemId={selectedItemId}
+                        travelContext={travelContext}
                         onDaySelect={setSelectedDay}
                         onSmartMixClick={() => setIsSmartMixOpen(true)}
                         onItemClick={handleItemClick}

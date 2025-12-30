@@ -3,10 +3,9 @@
 import { PlanItem } from "@/types/place";
 import { RainyScheduleItem } from '@/lib/weather/actions';
 import { DraggableProvidedDraggableProps, DraggableProvidedDragHandleProps } from '@hello-pangea/dnd';
-import { cn } from "@/lib/utils";
+import { clsx } from 'clsx';
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import clsx from 'clsx';
 
 // Atom Components
 import { Marker } from "./day-item-parts/Marker";
@@ -14,7 +13,6 @@ import { ActionMenu } from "./day-item-parts/ActionMenu";
 import { ContentBody } from "./day-item-parts/ContentBody";
 import { TravelTime } from "./day-item-parts/TravelTime";
 import DetailPopup from "./DetailPopup";
-import { openBooking, BOOKING_PLATFORMS, BookingPlatform } from "@/lib/bookingService";
 
 interface DayItemsProps {
     item: PlanItem;
@@ -116,12 +114,19 @@ export default function DayItems({
                                     
                                     {/* 간략 정보 표시 */}
                                     <div className="day-duration-box">
-                                        <div className="day-duration-info">
-                                            <i className="fa-regular fa-clock text-indigo-400"></i>
-                                            <span>
-                                                소요시간 <strong className="day-duration-time">{item.STAY_TIME || 60}분</strong>
-                                            </span>
-                                        </div>
+                                        {item.type !== 'stay' ? (
+                                            <div className="day-duration-info">
+                                                <i className="fa-regular fa-clock text-indigo-400"></i>
+                                                <span>
+                                                    소요시간 <strong className="day-duration-time">{item.STAY_TIME || 60}분</strong>
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <div className="day-duration-info">
+                                                <i className="fa-solid fa-bed text-indigo-400"></i>
+                                                <span className="text-slate-600 font-bold">체크인/숙박 장소</span>
+                                            </div>
+                                        )}
                                         {/* 상세보기 버튼 */}
                                         <button 
                                             onClick={(e) => {
@@ -136,46 +141,15 @@ export default function DayItems({
                                     
                                     
                                     {/* (옵션) 간단한 팁이나 추가 정보 한 줄 */}
-                                    {item.HIGHTLIGHTS && (
+                                    {(item.HIGHTLIGHTS || item.MEMO) && (
                                         <div className="day-highlights">
                                             <i className="fa-solid fa-quote-left text-gray-300"></i>
-                                            <span className="line-clamp-1">{item.HIGHTLIGHTS}</span>
-                                        </div>
-                                    )}
-
-                                    {/* [New] 숙소 예약 버튼 (확장 시 노출) */}
-                                    {item.type === 'stay' && (
-                                        <div className="day-booking-container">
-                                            <p className="day-booking-title">
-                                                <i className="fa-solid fa-bed text-indigo-500"></i> 최저가 예약하기
-                                            </p>
-                                            <div className="day-booking-grid">
-                                                {(Object.keys(BOOKING_PLATFORMS) as BookingPlatform[]).map((platform) => (
-                                                    <button
-                                                        key={platform}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            const today = new Date();
-                                                            const checkInDate = new Date(today);
-                                                            checkInDate.setDate(today.getDate() + item.day);
-                                                            
-                                                            const checkOutDate = new Date(checkInDate);
-                                                            checkOutDate.setDate(checkInDate.getDate() + 1);
-
-                                                            const inStr = checkInDate.toISOString().split('T')[0];
-                                                            const outStr = checkOutDate.toISOString().split('T')[0];
-
-                                                            openBooking(platform, item.NAME, inStr, outStr);
-                                                        }}
-                                                        className={cn(
-                                                            "day-booking-button",
-                                                            BOOKING_PLATFORMS[platform].style
-                                                        )}
-                                                    >
-                                                        {BOOKING_PLATFORMS[platform].name}
-                                                    </button>
-                                                ))}
-                                            </div>
+                                            <span className="line-clamp-1">
+                                                {item.HIGHTLIGHTS 
+                                                    ? (Array.isArray(item.HIGHTLIGHTS) ? item.HIGHTLIGHTS[0] : item.HIGHTLIGHTS)
+                                                    : item.MEMO
+                                                }
+                                            </span>
                                         </div>
                                     )}
 

@@ -7,19 +7,14 @@ interface TravelTimeProps {
  */
 export function TravelTime({ onAddStopClick }: TravelTimeProps) {
     return (
-        <div className="travel-time-container">
-            <div className="vertical-line-spacer">
-                {/* 수직선 효과는 상위 Page CSS에서 처리되지만, 여기 빈 공간 확보 */}
-            </div>
-            
-            <div className="travel-content-wrapper">
-                {/* 이동 시간 뱃지 */}
-                <span className="travel-time-badge">
-                    <i className="fa-solid fa-car text-indigo-400 text-[10px] md:text-[12px]"></i>
-                    <span>40분 이동</span>
-                </span>
+        <div className="travel-time-container">            
+            {/* 이동 시간 뱃지 */}
+            <span className="travel-time-badge">
+                <i className="fa-solid fa-car text-indigo-400 text-[10px] md:text-[12px]"></i>
+                <span>40분 이동</span>
+            </span>
 
-                {/* 경유지 추가(+) 버튼 */}
+            <div className="travel-line-divider">
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
@@ -28,7 +23,7 @@ export function TravelTime({ onAddStopClick }: TravelTimeProps) {
                     className="add-stop-button"
                     title="경유지 추가"
                 >
-                    <i className="fa-solid fa-plus text-[12px] md:text-[14px]"></i>
+                    <i className="fa-solid fa-plus"></i>
                 </button>
             </div>
         </div>

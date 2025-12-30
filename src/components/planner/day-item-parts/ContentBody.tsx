@@ -64,7 +64,6 @@ export function ContentBody({
                 <div className="day-info-text">
                     <div className="day-info-title-row">
                         <span className="day-place-name">{item.NAME}</span>
-                        {/* [New] 실내/야외 여부 표시 (User Edit Refined) */}
                         {typeof item.is_indoor !== 'undefined' && (
                              <span className={clsx(
                                 "day-indoor-label",
@@ -73,10 +72,34 @@ export function ContentBody({
                                 {item.is_indoor ? "실내" : "야외"}
                             </span>
                         )}
-                    </h3>
-                    <p className="day-content-highlights">
-                        {item.HIGHTLIGHTS || "상세 설명이 없습니다."}
-                    </p>
+                        {item.type !== 'stay' && item.STAY_TIME && (
+                            <span className="day-stay-time">
+                                <i className="fa-regular fa-clock"></i> {typeof item.STAY_TIME === 'number' ? formatDuration(item.STAY_TIME) : item.STAY_TIME}
+                            </span>
+                        )}
+                    </div>
+                    
+                    {/* [Modified] Address first, then Tags */}
+                    {item.ADDRESS && (
+                        <div className="day-address-row">
+                             <i className="fa-solid fa-location-dot"></i> {item.ADDRESS}
+                        </div>
+                    )}
+                    {/* [Modified] Tags from new TAGS object */}
+                    {item.TAGS && (
+                        <div className="day-tags-row">
+                            {[...(item.TAGS.common || []), ...(item.TAGS.winter || [])].slice(0, 3).map((tag, i) => (
+                                <span key={i} className="day-tag-badge">{tag}</span>
+                            ))}
+                        </div>
+                    )}
+                    {!item.TAGS && item.KEYWORDS && item.KEYWORDS.length > 0 && (
+                        <div className="day-tags-row">
+                            {item.KEYWORDS.slice(0, 3).map((tag, i) => (
+                                <span key={i} className="day-tag-badge">{tag}</span>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -93,6 +116,16 @@ export function ContentBody({
             )}
         </div>
     );
+}
+
+/**
+ * @desc 체류 시간을 읽기 쉬운 한글 텍스트로 변환합니다.
+ */
+function formatDuration(minutes: number): string {
+    if (minutes < 60) return `${minutes}분`;
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return m > 0 ? `${h}시간 ${m}분` : `${h}시간`;
 }
 
 // 아이콘 컬러 매핑 헬퍼

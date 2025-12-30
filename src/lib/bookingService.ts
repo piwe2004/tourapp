@@ -3,7 +3,7 @@
  */
 export type BookingPlatform = 'agoda' | 'yanolja' | 'yeogi' | 'hotelscombined';
 
-interface PlatformConfig {
+export interface PlatformConfig {
   m_id: string;
   getUrl: (name: string, inDate: string, outDate: string) => string;
   name: string;

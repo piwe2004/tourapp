@@ -3,7 +3,7 @@ import { X, MapPin, Clock, Utensils, BedDouble, Star, List } from "lucide-react"
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 // import { openBooking, BOOKING_PLATFORMS, BookingPlatform } from "@/lib/bookingService"; // Assuming you might use this later, kept commented or if used
-import { openBooking, BOOKING_PLATFORMS, BookingPlatform } from "@/lib/bookingService";
+import { openBooking, BOOKING_PLATFORMS, BookingPlatform, PlatformConfig } from "@/lib/bookingService";
 import clsx from 'clsx';
 import Image from "next/image";
 
@@ -134,7 +134,9 @@ export default function DetailPopup({ item, isOpen, onClose }: DetailPopupProps)
                             </div>
                             <div>
                                 <p className="detail-popup-info-label">소요 시간</p>
-                                <p className="detail-popup-info-value">{item.STAY_TIME || 60}분</p>
+                                <p className="detail-popup-info-value">
+                                    {typeof item.STAY_TIME === 'number' ? `${item.STAY_TIME}분` : item.STAY_TIME}
+                                </p>
                             </div>
                         </div>
                         <div className="detail-popup-info-card">
@@ -159,7 +161,9 @@ export default function DetailPopup({ item, isOpen, onClose }: DetailPopupProps)
                         <div className="detail-popup-text-box">
                             <i className="fa-solid fa-quote-left"></i>
                             <p>
-                                {item.HIGHTLIGHTS || (item.type === 'food' ? "대표 메뉴 정보가 없습니다." : "상세 소개가 없습니다.")}
+                                {Array.isArray(item.HIGHTLIGHTS) 
+                                    ? item.HIGHTLIGHTS.join(' ') 
+                                    : (item.HIGHTLIGHTS || (item.type === 'food' ? "대표 메뉴 정보가 없습니다." : "상세 소개가 없습니다."))}
                             </p>
                         </div>
                     </div>
@@ -176,6 +180,21 @@ export default function DetailPopup({ item, isOpen, onClose }: DetailPopupProps)
                                     <i className="fa-solid fa-check" style={{ color: iconColors.green, marginRight: 8 }}></i>
                                     {item.MEMO}
                                 </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Tags Section */}
+                    {item.TAGS && (
+                        <div className="detail-popup-section">
+                            <h3 className="detail-popup-section-title">
+                                <i className="fa-solid fa-hashtag" style={{ color: iconColors.indigo, marginRight: 8, fontSize: 16 }}></i>
+                                태그
+                            </h3>
+                            <div className="day-tags-row">
+                                {[...(item.TAGS.common || []), ...(item.TAGS.winter || [])].map((tag, i) => (
+                                    <span key={i} className="day-tag-badge">{tag}</span>
+                                ))}
                             </div>
                         </div>
                     )}
@@ -206,14 +225,14 @@ export default function DetailPopup({ item, isOpen, onClose }: DetailPopupProps)
                                 최저가 예약하기
                             </h3>
                             <div className="reserved-btn-group" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
-                                {BOOKING_PLATFORMS.map((platform) => (
+                                {(Object.entries(BOOKING_PLATFORMS) as [BookingPlatform, PlatformConfig][]).map(([key, config]) => (
                                     <button
-                                        key={platform.name}
+                                        key={key}
                                         className="detail-popup-info-card"
                                         style={{ justifyContent: 'center', cursor: 'pointer', fontWeight: 600, color: '#374151' }}
-                                        onClick={() => handleBooking(platform)}
+                                        onClick={() => handleBooking(key)}
                                     >
-                                        {platform.name}
+                                        {config.name}
                                     </button>
                                 ))}
                             </div>
@@ -222,7 +241,8 @@ export default function DetailPopup({ item, isOpen, onClose }: DetailPopupProps)
 
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
 

@@ -3,6 +3,7 @@
 import { PlanItem } from '@/types/place';
 import { RainyScheduleItem } from '@/lib/weather/actions';
 import { WeatherData } from '@/lib/weather/service'; // Type Import
+import { TravelContext } from '@/lib/actions'; // AI Context Type
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import DayItems from '@/components/planner/DayItems';
 import Map from '@/components/planner/Map'; // 모바일용 맵 렌더링에 필요
@@ -17,6 +18,7 @@ interface PlannerTimelineProps {
     weatherData: WeatherData | null; // Prop 추가
     rainRisks: RainyScheduleItem[];
     selectedItemId: string | null;
+    travelContext?: TravelContext | null; // AI 기반 추가 정보
     
     // Handlers
     onDaySelect: (day: number) => void;
@@ -50,6 +52,7 @@ export default function PlannerTimeline({
     weatherData, // Destructuring
     rainRisks,
     selectedItemId,
+    travelContext,
     onDaySelect,
     onSmartMixClick,
     onItemClick,
@@ -66,7 +69,10 @@ export default function PlannerTimeline({
     // 선택된 날짜에 해당하는 아이템만 필터링 및 시간순 정렬
     const currentDayItems = schedule
         .filter(item => item.day === selectedDay)
-        .sort((a, b) => a.time.localeCompare(b.time));
+        .sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+
+    // AI가 분석한 오늘의 핵심 테마 (dayFocus)
+    const currentDayFocus = travelContext?.itinerary?.find(d => d.day === selectedDay)?.dayFocus;
 
     // 특정 아이템의 강수 확률 정보를 가져오는 헬퍼 함수
     const getRainRisk = (itemId: string) => rainRisks.find(r => r.item.PLACE_ID === itemId);
@@ -96,7 +102,13 @@ export default function PlannerTimeline({
 
             {/* 3. 타임라인 리스트 영역 (스크롤 가능) */}
             <div className="timeline-list-area custom-scrollbar">
-                {/* 타임라인 수직 연결선 (화면 크기에 따라 위치 조정됨) */}
+                {/* 오늘의 컨셉/테마 표시 (AI 생성) */}
+                {!isLoading && currentDayFocus && (
+                    <div className="day-focus-header">
+                        <span className="focus-badge">DAY {selectedDay}</span>
+                        <h3 className="focus-text">{currentDayFocus}</h3>
+                    </div>
+                )}
 
                 {isLoading ? (
                     <LoadingSkeleton />
@@ -107,7 +119,7 @@ export default function PlannerTimeline({
                                 <div
                                     {...provided.droppableProps}
                                     ref={provided.innerRef}
-                                    className="space-y-0 relative"
+                                    className="day-items-box"
                                 >
                                     <div className="timeline-vertical-line"></div>
                                     {currentDayItems.map((item, index) => (
