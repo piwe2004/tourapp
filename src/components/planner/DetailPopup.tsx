@@ -1,8 +1,8 @@
+
 import { PlanItem } from "@/types/place";
-import { X, MapPin, Clock, Utensils, BedDouble, Star, List } from "lucide-react";
+import { X, MapPin, Clock, Utensils, BedDouble, Star, List, Share2, Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-// import { openBooking, BOOKING_PLATFORMS, BookingPlatform } from "@/lib/bookingService"; // Assuming you might use this later, kept commented or if used
 import { openBooking, BOOKING_PLATFORMS, BookingPlatform, PlatformConfig } from "@/lib/bookingService";
 import clsx from 'clsx';
 import Image from "next/image";
@@ -14,257 +14,230 @@ interface DetailPopupProps {
 }
 
 /**
- * @desc 여행 상세 정보를 보여주는 팝업 모달
- *       [Updated] 이미 가져온(pre-fetched) 상세 정보를 즉시 표시
- *       [Updated] 숙소(stay) 타입일 경우 최저가 예약 버튼 노출
+ * @desc 여행 상세 정보를 보여주는 프리미엄 사이드 패널
+ *       Glassmorphism 헤더와 깔끔한 섹션 구분
  */
 export default function DetailPopup({ item, isOpen, onClose }: DetailPopupProps) {
     const [imageError, setImageError] = useState(false);
+    const [isVisible, setIsVisible] = useState(false);
 
-    // ESC 키 핸들링
+    // Animation & ESC Control
     useEffect(() => {
-        const handleEsc = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose();
-        };
         if (isOpen) {
-            window.addEventListener('keydown', handleEsc);
+            setIsVisible(true);
             document.body.style.overflow = 'hidden';
-        }
-        return () => {
-            window.removeEventListener('keydown', handleEsc);
+            // Push history state to handle back button on mobile if needed
+        } else {
+            const timer = setTimeout(() => setIsVisible(false), 300); // Wait for animation
             document.body.style.overflow = 'unset';
-        };
-    }, [isOpen, onClose]);
-    
-    // 예약 핸들러
+            return () => clearTimeout(timer);
+        }
+    }, [isOpen]);
+
+    // Close Handler
+    const handleClose = () => {
+        setIsVisible(false); // Trigger animation close
+        setTimeout(onClose, 300); // Actual close after animation
+    };
+
+    if (!isOpen && !isVisible) return null;
+
+    // Booking Handler
     const handleBooking = (platform: BookingPlatform) => {
         const today = new Date();
         const checkInDate = new Date(today);
-        checkInDate.setDate(today.getDate() + item.day); // 예: 1일차면 내일 체크인
-
+        checkInDate.setDate(today.getDate() + item.day);
         const checkOutDate = new Date(checkInDate);
-        checkOutDate.setDate(checkInDate.getDate() + 1); // 1박 2일
-
+        checkOutDate.setDate(checkInDate.getDate() + 1);
+        
         const inStr = checkInDate.toISOString().split('T')[0];
         const outStr = checkOutDate.toISOString().split('T')[0];
-
         openBooking(platform, item.NAME, inStr, outStr);
     };
 
-    if (!isOpen) return null;
-
-    // Helper for icon colors (inline styles for simplicity in migration)
-    const iconColors = {
-        orange: '#f97316',
-        gray: '#6b7280',
-        indigo: '#6366f1',
-        green: '#22c55e',
-        white: 'rgba(255,255,255,0.8)'
-    };
-
     return createPortal(
-        <div
-            className="detail-popup-overlay"
-            onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (e.target === e.currentTarget) onClose();
-            }}
-        >
-            <div
-                className="detail-popup-container"
-                onClick={(e) => e.stopPropagation()} // 내부 클릭 시 부모(배경)으로 이벤트 전파 방지
-            >
+        <>
+            {/* Backdrop */}
+            <div 
+                className={clsx(
+                    "fixed inset-0 bg-black/40 backdrop-blur-sm z-50 transition-opacity duration-300",
+                    isOpen ? "opacity-100" : "opacity-0"
+                )}
+                onClick={handleClose}
+            />
 
-                {/* Header Image Area */}
-                <div className="detail-popup-header">
-                    {/* Pre-fetched Image or Fallback */}
+            {/* Side Panel */}
+            <div 
+                className={clsx(
+                    "fixed top-0 right-0 h-full w-full sm:w-[500px] bg-white z-50 shadow-2xl transform transition-transform duration-300 ease-out flex flex-col",
+                    isOpen ? "translate-x-0" : "translate-x-full"
+                )}
+            >
+                {/* 1. Hero Header */}
+                <div className="relative h-[300px] w-full shrink-0">
+                    {/* Image */}
                     {item.IMAGE_URL && !imageError ? (
                         <Image
                             src={item.IMAGE_URL}
                             alt={item.NAME}
                             fill
-                            sizes="(max-width: 768px) 100vw, 500px"
-                            className="detail-popup-header-image"
+                            className="object-cover"
                             onError={() => setImageError(true)}
                             priority
                         />
                     ) : (
-                        <span className="detail-popup-header-placeholder">
-                            <i className={`fa-solid ${getIcon(item.type)}`}></i>
-                        </span>
+                        <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-300">
+                             <i className={`fa-solid fa-image text-4xl`}></i>
+                        </div>
                     )}
+                    
+                    {/* Gradient Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
 
-                    <div className="detail-popup-header-gradient"></div>
-
-                    <div className="detail-popup-header-content">
-                        <span className="detail-popup-badge">
-                            {getActivityTypeLabel(item.type)}
-                        </span>
-                        <h2 className="detail-popup-title">{item.NAME}</h2>
-
-                        {/* Address Display (Header) */}
-                        {item.ADDRESS && (
-                            <p className="detail-popup-address">
-                                <MapPin size={14} color={iconColors.white} />
-                                {item.ADDRESS}
-                            </p>
-                        )}
-                    </div>
-
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onClose();
-                        }}
-                        className="detail-popup-close-btn"
+                    {/* Top Buttons */}
+                    <button 
+                        onClick={handleClose}
+                        className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/40 transition-colors z-10"
                     >
                         <X size={20} />
                     </button>
+                    
+                    {/* Title Content */}
+                    <div className="absolute bottom-0 left-0 w-full p-6 text-white">
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/90 backdrop-blur-sm text-[11px] font-bold uppercase tracking-wider shadow-sm border border-emerald-400/50">
+                                {getActivityTypeLabel(item.type)}
+                            </span>
+                            {item.RATING ? (
+                                <span className="flex items-center gap-1 text-sm font-medium text-yellow-400">
+                                    <i className="fa-solid fa-star"></i> {item.RATING}
+                                </span>
+                            ) : null}
+                        </div>
+                        <h2 className="text-3xl font-black leading-tight mb-2 drop-shadow-md">{item.NAME}</h2>
+                        <p className="flex items-center gap-1.5 text-sm text-gray-200 font-light truncate">
+                            <MapPin size={14} className="text-gray-300" />
+                            {item.ADDRESS}
+                        </p>
+                    </div>
                 </div>
 
-                {/* Content Body */}
-                <div className="detail-popup-body">
-
-                    {/* Key Info Grid */}
-                    <div className="detail-popup-info-grid">
-                        <div className="detail-popup-info-card">
-                            <div className={clsx("detail-popup-icon-box", "detail-popup-icon-blue")}>
-                                <Clock size={18} />
+                {/* 2. Scrollable Content */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+                    
+                    {/* Quick Stats Grid */}
+                    <div className="grid grid-cols-2 gap-4">
+                         <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                                <Clock size={20} />
                             </div>
                             <div>
-                                <p className="detail-popup-info-label">소요 시간</p>
-                                <p className="detail-popup-info-value">
+                                <p className="text-xs text-slate-500 font-medium mb-0.5">소요시간</p>
+                                <p className="text-sm font-bold text-slate-800">
                                     {typeof item.STAY_TIME === 'number' ? `${item.STAY_TIME}분` : item.STAY_TIME}
                                 </p>
                             </div>
                         </div>
-                        <div className="detail-popup-info-card">
-                            <div className={clsx("detail-popup-icon-box", "detail-popup-icon-yellow")}>
-                                <Star size={18} />
+                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center shrink-0">
+                                <Star size={20} />
                             </div>
                             <div>
-                                <p className="detail-popup-info-label">평점</p>
-                                <p className="detail-popup-info-value">
-                                    {item.RATING || '-'}
-                                </p>
+                                <p className="text-xs text-slate-500 font-medium mb-0.5">평점</p>
+                                <p className="text-sm font-bold text-slate-800">{item.RATING || '정보없음'}</p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Highlights (Menu) Section */}
-                    <div className="detail-popup-section">
-                        <h3 className="detail-popup-section-title">
-                            <Utensils size={18} color={iconColors.orange} />
-                            {item.type === 'food' || item.type === 'cafe' ? '추천 메뉴' : '특징 및 소개'}
+                    {/* AI Summary / Description */}
+                    <section>
+                        <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+                            <i className="fa-solid fa-sparkles text-emerald-500"></i>
+                             AI 여행 가이드
                         </h3>
-                        <div className="detail-popup-text-box">
-                            <i className="fa-solid fa-quote-left"></i>
-                            <p>
-                                {Array.isArray(item.HIGHTLIGHTS) 
-                                    ? item.HIGHTLIGHTS.join(' ') 
-                                    : (item.HIGHTLIGHTS || (item.type === 'food' ? "대표 메뉴 정보가 없습니다." : "상세 소개가 없습니다."))}
-                            </p>
-                        </div>
-                    </div>
-
-                     {/* Plan B / Recommendation Section (only if available) */}
-                     {item.MEMO && (
-                        <div className="detail-popup-section">
-                            <h3 className="detail-popup-section-title">
-                                <List size={18} color={iconColors.gray} />
-                                참고 사항 (Memo)
-                            </h3>
-                            <div className="detail-popup-text-box-list">
-                                <div className="detail-popup-list-check">
-                                    <i className="fa-solid fa-check" style={{ color: iconColors.green, marginRight: 8 }}></i>
-                                    {item.MEMO}
+                        <div className="bg-emerald-50/50 p-5 rounded-2xl border border-emerald-100/50 text-slate-700 leading-relaxed text-sm">
+                             {item.MEMO || item.HIGHTLIGHTS ? (
+                                <div className="space-y-2">
+                                    {item.MEMO && <p>{item.MEMO}</p>}
+                                    {Array.isArray(item.HIGHTLIGHTS) && (
+                                        <p className="text-slate-500 italic">"{item.HIGHTLIGHTS.join(' ')}"</p>
+                                    )}
                                 </div>
-                            </div>
+                             ) : (
+                                 <p className="text-slate-400">상세 정보가 없습니다.</p>
+                             )}
                         </div>
-                    )}
+                    </section>
 
-                    {/* Tags Section */}
+                    {/* Tags */}
                     {item.TAGS && (
-                        <div className="detail-popup-section">
-                            <h3 className="detail-popup-section-title">
-                                <i className="fa-solid fa-hashtag" style={{ color: iconColors.indigo, marginRight: 8, fontSize: 16 }}></i>
-                                태그
+                        <section>
+                            <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+                                <i className="fa-solid fa-hashtag text-slate-400 text-sm"></i> 키워드
                             </h3>
-                            <div className="day-tags-row">
-                                {[...(item.TAGS.common || []), ...(item.TAGS.winter || [])].map((tag, i) => (
-                                    <span key={i} className="day-tag-badge">{tag}</span>
+                            <div className="flex flex-wrap gap-2">
+                                 {[...(item.TAGS.common || []), ...(item.TAGS.winter || [])].map((tag, i) => (
+                                    <span key={i} className="px-3 py-1.5 bg-slate-100 text-slate-600 text-sm rounded-lg hover:bg-slate-200 transition-colors cursor-default">
+                                        #{tag}
+                                    </span>
                                 ))}
                             </div>
-                        </div>
+                        </section>
                     )}
 
-                    {/* Address Section */}
-                    {item.ADDRESS && (
-                        <div className="detail-popup-section">
-                            <h3 className="detail-popup-section-title">
-                                <MapPin size={18} color={iconColors.indigo} />
-                                위치 정보
-                            </h3>
-                            <div className="detail-popup-address-box">
-                                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '16px' }}>
-                                    {item.ADDRESS}
-                                </span>
-                                <button className="detail-popup-copy-btn" onClick={() => navigator.clipboard.writeText(item.ADDRESS)}>
-                                    <i className="fa-regular fa-copy"></i>
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                    {/* Location Copy */}
+                     <section>
+                         <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+                             <MapPin size={16} className="text-slate-400" /> 주소
+                         </h3>
+                         <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
+                             <span className="text-sm text-slate-600 truncate mr-4">{item.ADDRESS}</span>
+                             <button 
+                                onClick={() => {
+                                    navigator.clipboard.writeText(item.ADDRESS);
+                                    // Could show toast here
+                                }}
+                                className="text-xs font-bold text-blue-600 hover:text-blue-700 whitespace-nowrap"
+                            >
+                                복사
+                             </button>
+                         </div>
+                    </section>
+                </div>
 
-                    {/* Booking Section (Stay Only) */}
-                    {item.type === 'stay' && (
-                        <div className="detail-popup-section">
-                            <h3 className="detail-popup-section-title">
-                                <BedDouble size={18} color={iconColors.indigo} />
-                                최저가 예약하기
-                            </h3>
-                            <div className="reserved-btn-group" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
-                                {(Object.entries(BOOKING_PLATFORMS) as [BookingPlatform, PlatformConfig][]).map(([key, config]) => (
+                {/* 3. Footer Action (Stay Booking) */}
+                {item.type === 'stay' && (
+                    <div className="p-6 border-t border-slate-100 bg-white shrink-0 safe-area-bottom">
+                         <div className="flex flex-col gap-3">
+                             <p className="text-xs text-center text-slate-400">
+                                 AI가 찾은 최저가로 예약하세요
+                             </p>
+                             <div className="grid grid-cols-2 gap-3">
+                                  {(Object.entries(BOOKING_PLATFORMS) as [BookingPlatform, PlatformConfig][]).map(([key, config]) => (
                                     <button
                                         key={key}
-                                        className="detail-popup-info-card"
-                                        style={{ justifyContent: 'center', cursor: 'pointer', fontWeight: 600, color: '#374151' }}
                                         onClick={() => handleBooking(key)}
+                                        className="py-3.5 rounded-xl text-sm font-bold text-white shadow-lg transform active:scale-95 transition-all text-center"
+                                        style={{ backgroundColor: key === 'agoda' ? '#2563EB' : '#FF5722' }}
                                     >
-                                        {config.name}
+                                        {config.name} 예약
                                     </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                </div>
+                                  ))}
+                             </div>
+                         </div>
+                    </div>
+                )}
             </div>
-        </div>,
+        </>,
         document.body
     );
 }
 
-// Helper Functions
 function getActivityTypeLabel(type: string) {
-    switch (type) {
-        case 'sightseeing': return '관광지';
-        case 'food': return '식당';
-        case 'cafe': return '카페';
-        case 'stay': return '숙소';
-        case 'move': return '이동';
-        default: return '기타';
-    }
-}
-
-function getIcon(type: string) {
-    switch (type) {
-        case 'sightseeing': return 'fa-camera';
-        case 'food': return 'fa-utensils';
-        case 'cafe': return 'fa-coffee';
-        case 'stay': return 'fa-bed';
-        case 'move': return 'fa-car';
-        default: return 'fa-map-pin';
-    }
+    if (type === 'stay') return '숙소';
+    if (type === 'food') return '맛집';
+    if (type === 'cafe') return '카페';
+    if (type === 'sightseeing') return '관광';
+    if (type === 'move') return '이동';
+    return '기타';
 }

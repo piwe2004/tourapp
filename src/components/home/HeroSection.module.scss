@@ -1,0 +1,161 @@
+@import '../../styles/variables';
+
+.heroContainer {
+  position: relative;
+  width: 100%;
+  height: 600px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background-color: $slate-900;
+  
+  @media (max-width: 768px) {
+    height: 500px;
+  }
+}
+
+.bgImageWrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  user-select: none;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    animation: fadeIn 1.5s ease-out;
+  }
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.2), rgba(0,0,0,0.7));
+  backdrop-filter: blur(2px);
+}
+
+.content {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  padding: 0 1rem;
+  margin-bottom: 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  animation: slideUpFade 1s ease-out forwards;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #6ee7b7; // Emerald 300
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+  .dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background-color: #34d399; // Emerald 400
+    animation: pulse 2s infinite;
+  }
+}
+
+.title {
+  font-size: 3rem;
+  font-weight: 900;
+  color: white;
+  margin-bottom: 1rem;
+  line-height: 1.2;
+  text-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  letter-spacing: -0.02em;
+
+  @media (min-width: 768px) {
+    font-size: 4.5rem;
+  }
+
+  .highlight {
+    background: linear-gradient(to right, #34d399, #22d3ee); // Emerald to Cyan
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+.subtitle {
+  font-size: 1.125rem;
+  color: #e2e8f0; // Slate 200
+  font-weight: 300;
+  max-width: 36rem;
+  margin: 0 auto;
+  line-height: 1.6;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+
+  @media (min-width: 768px) {
+    font-size: 1.5rem;
+  }
+}
+
+.ctaButton {
+  margin-top: 2rem;
+  padding: 1rem 2.5rem;
+  background: linear-gradient(135deg, #10b981, #06b6d4);
+  color: white;
+  font-size: 1.125rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+// Keyframes
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}

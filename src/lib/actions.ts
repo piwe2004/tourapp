@@ -69,6 +69,7 @@ async function optimizeRoute(
 }
 
 import { mapPlaceToPlanItem } from "@/lib/mappers";
+import { getPlacesByIds } from "@/lib/actions_helper";
 
 // (Removed internal mapPlaceToPlanItem function)
 
@@ -298,59 +299,48 @@ export async function extractTravelContext(
 
     const prompt = `
     # Role
-너는 Firebase 기반 여행 서비스의 수석 데이터 엔지니어다. 생성된 JSON은 별도의 변환 없이 사장님의 Firebase DB에 저장되고 UI(image_b0f392.jpg)에 즉시 렌더링되어야 한다.
+너는 주어진 [Candidate Places] 목록 중에서 사용자의 요청("${query}")에 가장 적합한 장소들을 선택하여 순서만 나열하는 'Route Sorter'다.
 
-# 핵심 미션 (Strict Logic)
-0. **Quantity Control**: 
-   - 각 Day당 최소 6개 이상의 장소(식당, 카페 포함)를 무조건 포함하라.
-   - 1박 2일 총합 12~14개의 장소를 제안하라.
-1. **Accommodation Anchoring (숙소 고정)**: 
-   - 1박 이상의 일정에서 Day N의 마지막 장소는 반드시 'CATEGORY.main: "숙박"'이어야 한다.
-   - Day N+1의 첫 번째 장소는 이전 날(Day N)의 마지막 숙소와 동일해야 한다. (숙소에서 나오는 것부터 시작)
-2. **Field Mapping (DB 동기화)**: Firebase 콘솔(image_befff1.png)에 정의된 필드명(대소문자 포함)을 100% 준수하라.
-3. **Route Optimization**: 지리적 좌표(LOC_LAT, LOC_LNG)를 분석하여 이동 거리를 최소화하고 동선이 꼬이지 않게 하라.
-4. **TAGS에는 여행일정의 해당 분기에 맞는 계절의 태그를 들고와서 보여줘야한다. 예를 들어 1월이면 winter 태그를 추가하고, 6월이면 summer 태그를 추가한다.
-5. **No Rounding**: 좌표(LOC_LAT, LOC_LNG) 값은 데이터에 잇는 값 그대로 출력 절대 수정하지 마라.
+# Context (이 데이터를 반드시 프롬프트에 포함해야 함)
+[Candidate Places]
+- ID: 1018702 | Name: 국제시장 먹자골목 | Loc: 35.101, 129.028
+- ID: 2033911 | Name: 해운대 해수욕장 | Loc: 35.158, 129.160
+- ID: 5022133 | Name: 광안리 카페거리 | Loc: 35.153, 129.118
+... (DB에서 검색된 후보군 20~30개 주입)
 
-# Output JSON Schema (Firebase & UI 매핑)
+# 핵심 미션
+1. **Selection**: 후보군 중에서 요청에 맞는 최적의 장소(Day당 6~8개)를 'PLACE_ID'로 선택하라.
+2. **Routing**: 선택된 장소들의 'Loc' 좌표를 참고하여 동선이 꼬이지 않게(서→동, 권역별) 정렬하라.
+3. **Output**: 오직 'PLACE_ID'로 구성된 배열만 반환하라.
+   - 예시: [1018702, 2033911, 5022133, ...]
+   - 중복을 제거 해라
+4. **Accommodation Rule (숙소 앵커링)**:
+   - **Day N의 마지막 장소**: 반드시 'main: 숙박'인 ID여야 한다. (해당 지역에서 가장 동선이 좋은 숙소 선택)
+   - **Day N+1의 첫 번째 장소**: 반드시 **Day N의 마지막에 선택한 숙소 ID와 동일**해야 한다. (숙소에서 출발)
+   - *예외: 마지막 날(Last Day)의 끝은 숙소일 필요 없다.*
+
+5. **Route Sorting**:
+   - 'Loc' 좌표를 기준으로 이동 거리가 짧도록 정렬하라.
+   - 단, 숙소 규칙(1번)이 거리 규칙보다 우선한다.
+
+# Output JSON Schema (Extreme Light Version)
 {
-  "theme": "AI가 선정한 이번 여행의 고유 테마명 (예: 동부 감성 로드)",
+  "theme": "테마명(짧게)",
   "itinerary": [
     {
-      "day": number,
-      "date": "YYYY-MM-DD",
-      "places": [
-        {
-          "NAME": "장소명",
-          "CATEGORY": { "main": "관광지|식당|카페|숙박", "sub": "세부 유형" },
-          "IMAGE_URL": "장소의 특징을 보여주는 실제 같은 이미지 주소",
-          "LOC_LAT": string, 
-          "LOC_LNG": string,
-          "ADDRESS": "상세 주소 전체",
-          "STAY_TIME": "예상 체류 시간 (예: 1시간 30분)",
-          "TRAVEL_TIME_TO_NEXT": "다음 장소까지의 이동 시간 (예: 40분 이동)",
-          "IS_AFLT": false,
-          "RATING": number,
-          "TAGS": {
-            "winter": ["#따뜻한국물", "#겨울바다"],
-          },
-          "MEMO": "전문 가이드 스타일의 메모",
-          "VISIT_ORDER": number
-        }
-      ]
+      "day": 1,
+      "route_ids": []  // 오직 PLACE_ID만!
+    },
+    {
+      "day": 2,
+      "route_ids": []  // 오직 PLACE_ID만!
     }
   ]
 }
 
-# IMPORTANT RULES:
-1. **Standard JSON**: 반드시 표준 JSON 형식을 준수하라.
-2. **Lower-case Boolean**: IS_AFLT 등 모든 불리언 값은 무조건 소문자 'false' 또는 'true'로 작성하라.
-3. **No Extra Text**: JSON 데이터 외에 어떤 텍스트도 출력하지 마라.
-
-# User Request
-"${query}"
-- 오늘 날짜: ${today}
-- 위 내용을 바탕으로 1박2일(또는 입력된 기간) 일정을 JSON으로 작성하라.
+# IMPORTANT:
+- [Candidate Places]에 없는 ID는 절대 만들어내지 마라.
+- 설명, 좌표, 이름 등 불필요한 필드는 모두 제거하라.
   `;
   // ... (rest of the function)
 
@@ -407,13 +397,79 @@ interface AIResponse {
     endDate.setDate(endDate.getDate() + (maxDay - 1));
     const endDateStr = endDate.toISOString().split("T")[0];
 
-    // Map new schema to TravelContext structure with rich data
-    const mappedData: TravelContext = {
-      destination: query, // Use query as fallback destination
-      theme: parsedData.theme ? [parsedData.theme] : [],
-      party: { adult: 2, child: 0 }, 
-      dateRange: { start: today, end: endDateStr }, 
-      itinerary: parsedData.itinerary?.map((day) => ({
+    // [Modified] Check for route_ids (new schema) or places (old schema)
+    // Dynamic handling based on user request "PLACE_ID만있는 배열을 가져오는데..."
+    const hasRouteIds = parsedData.itinerary?.some(day => (day as any).route_ids && Array.isArray((day as any).route_ids));
+
+    let enrichedItinerary: any[] = [];
+
+    if (hasRouteIds) {
+        // 1. New Logic: Extract IDs -> Fetch Firebase -> Map
+        const allIds = parsedData.itinerary?.flatMap(day => (day as any).route_ids || []) || [];
+        
+        const places = await getPlacesByIds(allIds);
+        const placesMap = new Map(places.map(p => [String(p.PLACE_ID), p]));
+
+        enrichedItinerary = parsedData.itinerary?.map(day => {
+            const dayIds = (day as any).route_ids || [];
+            const dayPlaces = dayIds.map((id: string | number) => {
+                const p = placesMap.get(String(id));
+                if (!p) return null; // ID not found in DB
+                return {
+                    ...p, // Spread Firebase Data
+                     // Map to PlanItem specifics
+                    day: day.day,
+                    time: "10:00", // Default time, will be adjusted later if needed or simpler logic
+                    type: 'sightseeing', // Default, logic below will refine
+                    // ... other required PlanItem fields default
+                };
+            }).filter((p: any) => p !== null);
+
+            // Refine types and structure
+            return {
+                day: day.day,
+                date: day.date,
+                places: dayPlaces.map((place: any, idx: number) => {
+                     let internalType: PlanItem['type'] = 'etc';
+                     const mainCat = place.CATEGORY?.main || '';
+                     if (mainCat.includes('식당')) internalType = 'food';
+                     else if (mainCat.includes('카페')) internalType = 'cafe';
+                     else if (mainCat.includes('숙박')) internalType = 'stay';
+                     else if (mainCat.includes('관광지')) internalType = 'sightseeing';
+
+                     const keywords = [
+                        ...(place.TAGS?.common || []),
+                        ...(place.TAGS?.winter || [])
+                     ].map((tag: string) => tag.startsWith('#') ? tag.slice(1) : tag);
+
+                     return {
+                        ...place,
+                        _docId: place._docId || `ai_${Math.random()}`,
+                        PLACE_ID: place.PLACE_ID,
+                        NAME: place.NAME,
+                        ADDRESS: place.ADDRESS || "",
+                        CATEGORY: place.CATEGORY,
+                        LOC_LAT: place.LOC_LAT,
+                        LOC_LNG: place.LOC_LNG,
+                        IMAGE_URL: place.IMAGE_URL || null,
+                        type: internalType,
+                        day: day.day,
+                        time: `${String(9 + idx * 2).padStart(2, '0')}:00`, // Simple sequential time
+                        KEYWORDS: keywords,
+                        STAY_TIME: place.STAY_TIME || 60,
+                        STATS: { bookmark_count: 0, view_count: 0, review_count: 0, rating: place.RATING || 0, weight: 1 },
+                        TAGS: place.TAGS || {},
+                        isLocked: false,
+                        is_indoor: false,
+                        DETAILS: {}
+                     } as PlanItem;
+                })
+            };
+        }) || [];
+
+    } else {
+        // Old Schema (Full JSON from AI)
+        enrichedItinerary = parsedData.itinerary?.map((day) => ({
         day: day.day,
         date: day.date,
         places: day.places.map((place) => {
@@ -493,6 +549,15 @@ interface AIResponse {
           } as unknown as PlanItem;
         })
       })) || []
+    } // End if hasRouteIds
+
+    // Map new schema to TravelContext structure with rich data
+    const mappedData: TravelContext = {
+      destination: query, // Use query as fallback destination
+      theme: parsedData.theme ? [parsedData.theme] : [],
+      party: { adult: 2, child: 0 }, 
+      dateRange: { start: today, end: endDateStr }, 
+      itinerary: enrichedItinerary
     };
 
     return mappedData;

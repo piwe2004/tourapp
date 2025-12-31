@@ -1,0 +1,99 @@
+@import '../../../styles/variables';
+
+.container {
+    min-height: 100vh;
+    background-color: $slate-50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    padding-top: 5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.bgDecoration {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+
+    .blob1 {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 500px;
+        height: 500px;
+        background-color: #d1fae5; // emerald-100
+        border-radius: 50%;
+        filter: blur(100px);
+        opacity: 0.5;
+        transform: translate(33%, -33%);
+        animation: float 10s ease-in-out infinite;
+    }
+
+    .blob2 {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 400px;
+        height: 400px;
+        background-color: #dbeafe; // blue-100
+        border-radius: 50%;
+        filter: blur(100px);
+        opacity: 0.5;
+        transform: translate(-33%, 33%);
+        animation: floatDelayed 12s ease-in-out infinite;
+    }
+}
+
+.contentWrapper {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    max-width: 28rem; // max-w-md
+    animation: fadeIn 0.8s ease-out;
+}
+
+.header {
+    margin-bottom: 2rem;
+    text-align: center;
+
+    h1 {
+        font-size: 1.875rem; // 3xl
+        font-weight: 900;
+        color: $slate-800;
+        margin-bottom: 0.5rem;
+        letter-spacing: -0.02em;
+    }
+
+    p {
+        color: $slate-500;
+        font-size: 1rem;
+    }
+}
+
+.formContainer {
+    // Override child styles if needed, or just provide a clean container
+    // Currently TravelInputForm has its own shadows/borders, we can enhance or reset them here
+    // But since TravelInputForm is Tailwind, we just contain it cleanly.
+    
+    // Example: add a subtle lift effect on hover for the whole form area
+    transition: transform 0.3s ease;
+}
+
+@keyframes float {
+    0%, 100% { transform: translate(33%, -33%); }
+    50% { transform: translate(30%, -30%) scale(1.05); }
+}
+
+@keyframes floatDelayed {
+    0%, 100% { transform: translate(-33%, 33%); }
+    50% { transform: translate(-30%, 30%) scale(1.05); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}

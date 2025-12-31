@@ -33,8 +33,7 @@ interface DayItemsProps {
 }
 
 /**
- * @desc 여행 일정의 개별 아이템을 표시하는 컴포넌트 (Wrapper)
- *       Atomic Design 원칙에 따라 내부 요소를 서브 컴포넌트로 분리하였습니다.
+ * @desc 여행 일정 아이템 (Premium Card Style)
  */
 export default function DayItems({
     item,
@@ -54,123 +53,114 @@ export default function DayItems({
     isLastItem
 }: DayItemsProps) {
     
-    // [New] 상세보기 팝업 상태 관리
-    // DayItems 내부에 상태를 두어 독립적으로 관리합니다.
+    // 상세보기 팝업 상태
     const [isDetailPopupOpen, setIsDetailPopupOpen] = useState(false);
 
+    // 카드 클릭 핸들러: 선택 상태가 아니면 선택, 이미 선택 상태면 팝업 오픈
+    const handleCardClick = () => {
+        if (!selected) {
+            onClick?.();
+        } else {
+            setIsDetailPopupOpen(true);
+        }
+    };
+
     return (
-        <div
-            ref={innerRef}
-            {...draggableProps}
-            {...dragHandleProps}
-            className={clsx(
-                "day-item-container",
-                isDragging && "day-dragging"
-            )}
-            onClick={onClick}
-        >
-            <div className="day-item-inner">
-                
-                {/* 1. 좌측 순서 마커 */}
-                <Marker 
-                    index={index} 
-                    selected={selected} 
-                />
+        <>
+            <div
+                ref={innerRef}
+                {...draggableProps}
+                {...dragHandleProps}
+                className={clsx(
+                    "relative pl-6 pr-2 py-1 transition-all", // Timeline alignment padding
+                    isDragging && "z-50 scale-105 opacity-90"
+                )}
+            >
+                <div className="flex gap-4 items-start">
+                    
+                    {/* 1. Left Marker (Connecting Line context moved to PlannerTimeline or managed here via absolute line) */}
+                    <div className="shrink-0 pt-2 z-10 relative">
+                        <Marker index={index} selected={selected} />
+                        {/* Dot indicator if needed */}
+                    </div>
 
-                {/* 2. 메인 카드 영역 */}
-                <div
-                    className={clsx(
-                        "day-card",
-                        selected && "day-selected",
-                        rainRisk && "day-rain-risk"
-                    )}
-                >
-                    {/* A. 우측 상단 메뉴 & 액션 (Lock, Menu) */}
-                    <ActionMenu 
-                        item={item} 
-                        onLockClick={onLockClick} 
-                        onReplaceClick={onReplaceClick} 
-                        onDeleteClick={onDeleteClick} 
-                    />
-
-                    {/* B. 카드 본문 (제목, 시간, 아이콘 등) */}
-                    <ContentBody 
-                        item={item} 
-                        selected={selected} 
-                        rainRisk={rainRisk} 
-                        onPlanBClick={onPlanBClick} 
-                    />
-
-                    {/* C. [New] 확장된 간략 정보 (SlideDown Effect) */}
-                    <AnimatePresence>
-                        {selected && (
-                            <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: "auto", opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={{ duration: 0.3, ease: "easeInOut" }}
-                            >
-                                <div className="day-extended-container">
-                                    
-                                    {/* 간략 정보 표시 */}
-                                    <div className="day-duration-box">
-                                        {item.type !== 'stay' ? (
-                                            <div className="day-duration-info">
-                                                <i className="fa-regular fa-clock text-indigo-400"></i>
-                                                <span>
-                                                    소요시간 <strong className="day-duration-time">{item.STAY_TIME || 60}분</strong>
-                                                </span>
-                                            </div>
-                                        ) : (
-                                            <div className="day-duration-info">
-                                                <i className="fa-solid fa-bed text-indigo-400"></i>
-                                                <span className="text-slate-600 font-bold">체크인/숙박 장소</span>
-                                            </div>
-                                        )}
-                                        {/* 상세보기 버튼 */}
-                                        <button 
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setIsDetailPopupOpen(true);
-                                            }}
-                                            className="day-detail-button"
-                                        >
-                                            상세보기 <i className="fa-solid fa-chevron-right text-[10px]"></i>
-                                        </button>
-                                    </div>
-                                    
-                                    
-                                    {/* (옵션) 간단한 팁이나 추가 정보 한 줄 */}
-                                    {(item.HIGHTLIGHTS || item.MEMO) && (
-                                        <div className="day-highlights">
-                                            <i className="fa-solid fa-quote-left text-gray-300"></i>
-                                            <span className="line-clamp-1">
-                                                {item.HIGHTLIGHTS 
-                                                    ? (Array.isArray(item.HIGHTLIGHTS) ? item.HIGHTLIGHTS[0] : item.HIGHTLIGHTS)
-                                                    : item.MEMO
-                                                }
-                                            </span>
-                                        </div>
-                                    )}
-
-                                </div>
-                            </motion.div>
+                    {/* 2. Main Card */}
+                    <motion.div
+                        layout
+                        onClick={handleCardClick}
+                        className={clsx(
+                            "flex-1 relative bg-white rounded-2xl border transition-all duration-200 group cursor-pointer",
+                            selected 
+                                ? "border-emerald-400 shadow-md ring-1 ring-emerald-100" 
+                                : "border-slate-100 shadow-sm hover:border-slate-300 hover:shadow-md",
+                            rainRisk && "border-red-200 bg-red-50/10"
                         )}
-                    </AnimatePresence>
+                    >
+                        {/* Card Inner Padding */}
+                        <div className="p-4 flex flex-col gap-2">
+                            
+                            {/* Actions (Absolute Top Right) */}
+                            <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <ActionMenu 
+                                    item={item} 
+                                    onLockClick={onLockClick} 
+                                    onReplaceClick={onReplaceClick} 
+                                    onDeleteClick={onDeleteClick} 
+                                />
+                            </div>
+
+                            {/* Main Content */}
+                            <ContentBody 
+                                item={item} 
+                                selected={selected} 
+                                rainRisk={rainRisk} 
+                                onPlanBClick={onPlanBClick} 
+                            />
+
+                            {/* Expanded View (Optional: Quick Actions or Mini Detail) */}
+                            <AnimatePresence>
+                                {selected && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: "auto", opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        className="overflow-hidden"
+                                    >
+                                        <div className="pt-3 mt-1 border-t border-slate-50 flex items-center justify-between">
+                                            <span className="text-xs text-slate-400 font-medium">
+                                                한 번 더 클릭하면 상세정보를 볼 수 있어요
+                                            </span>
+                                            <button 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setIsDetailPopupOpen(true);
+                                                }}
+                                                className="text-xs font-bold text-emerald-600 hover:bg-emerald-50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                                            >
+                                                상세보기 <i className="fa-solid fa-arrow-right"></i>
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    </motion.div>
                 </div>
+
+                {/* 3. Travel Time Connector */}
+                {!isLastItem && (
+                    <div className="pl-[50px] pr-4 py-2">
+                        <TravelTime onAddStopClick={onAddStopClick} />
+                    </div>
+                )}
             </div>
 
-            {/* 3. 하단 이동 시간 및 경유 추가 버튼 */}
-            {!isLastItem && (
-                <TravelTime onAddStopClick={onAddStopClick} />
-            )}
-
-            {/* [New] 상세 정보 팝업 (Portal로 렌더링됨) */}
+            {/* Detail Popup (Portal) */}
             <DetailPopup 
                 item={item}
                 isOpen={isDetailPopupOpen}
                 onClose={() => setIsDetailPopupOpen(false)}
             />
-        </div>
+        </>
     );
 }
