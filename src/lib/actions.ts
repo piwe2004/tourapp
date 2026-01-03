@@ -280,19 +280,19 @@ export async function getPlacesByNames(
  * ...
  */
 export async function extractTravelContext(
-  query: string
+  userQuery: string
 ): Promise<TravelContext> {
   // ... (existing code for headers, ratelimit) ...
   const headersList = await headers();
   const ip = headersList.get("x-forwarded-for")?.split(",")[0] || "unknown";
 
   // 1. 입력값 검증: 길이 제한 (50자)
-  if (query.length > 50) {
+  if (userQuery.length > 50) {
     throw new Error("검색어는 50자 이내여야 합니다.");
   }
 
   // 2. 입력값 검증: 스크립트 태그 방지 (간이 XSS 방어)
-  if (/<script/i.test(query)) {
+  if (/<script/i.test(userQuery)) {
     throw new Error("허용되지 않는 입력이 포함되어 있습니다.");
   }
 
@@ -305,21 +305,21 @@ export async function extractTravelContext(
   const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
   // [New] 4. Fetch Candidate Places from Firebase
-  const destinationKeyword = query.split(" ")[0]; // Simple heuristic: First word is destination
+  const destinationKeyword = userQuery.split(" ")[0]; // Simple heuristic: First word is destination
   let candidatePlacesStr = "";
 
   try {
-    console.log(`[Server] Fetching candidates for "${destinationKeyword}"...`);
+    console.log(`[Server] Fetching candidates for "${destinationKeyword}"`);
     const placesRef = collection(db, "PLACES");
     const q = query(
       placesRef,
       where("ADDRESS", ">=", destinationKeyword),
       where("ADDRESS", "<=", destinationKeyword + "\uf8ff"),
-      limit(50) // Limit to 50 candidates to fit in context window
+      limit(100) // Limit to 100 candidates
     );
 
     const snapshot = await getDocs(q);
-    const candidates: string[] = [];
+    const rawCandidates: FirebasePlace[] = [];
 
     if (snapshot.empty) {
       console.warn(`[Server] No places found for "${destinationKeyword}".`);
@@ -327,8 +327,18 @@ export async function extractTravelContext(
         "No specific database candidates found. Please suggest popular places based on your knowledge, but use placeholder IDs (e.g., 999001).";
     } else {
       snapshot.forEach((doc) => {
-        const data = doc.data() as FirebasePlace;
-        // Format: - ID: 123 | Name: 장소명 | Loc: 35.1, 129.2 | Cat: 메인>서브 | Tags: #태그1 #태그2
+        rawCandidates.push(doc.data() as FirebasePlace);
+      });
+
+      // [New] Sort by RATING descending to provide "optimal" candidates
+      rawCandidates.sort((a, b) => (b.RATING || 0) - (a.RATING || 0));
+
+      // Ensure we don't exceed 100 (though query limit handles this, it's safe)
+      const topCandidates = rawCandidates.slice(0, 100);
+
+      const candidates: string[] = [];
+      topCandidates.forEach((data) => {
+        // Format: - ID: 123 | Name: 장소명 | Loc: 35.1, 129.2 | Cat: 메인>서브 | Tags: #태그1 #태그2 | Rating: 4.5
         // Flatten tags for prompt
         let tagStr = "";
         if (data.TAGS) {
@@ -338,11 +348,17 @@ export async function extractTravelContext(
 
         const cat = `${data.CATEGORY?.main || ""}>${data.CATEGORY?.sub || ""}`;
         candidates.push(
-          `- ID: ${data.PLACE_ID} | Name: ${data.NAME} | Loc: ${data.LOC_LAT}, ${data.LOC_LNG} | Cat: ${cat} | Tags: ${tagStr}`
+          `- ID: ${data.PLACE_ID} | Name: ${data.NAME} | Loc: ${
+            data.LOC_LAT
+          }, ${data.LOC_LNG} | Cat: ${cat} | Tags: ${tagStr} | Rating: ${
+            data.RATING || 0
+          }`
         );
       });
       candidatePlacesStr = candidates.join("\n");
-      console.log(`[Server] Fetched ${candidates.length} candidates.`);
+      console.log(
+        `[Server] Fetched and sorted ${candidates.length} candidates.`
+      );
     }
   } catch (error) {
     console.error("[Server] Error fetching candidates:", error);
@@ -352,7 +368,7 @@ export async function extractTravelContext(
 
   const prompt = `
     # Role
-너는 주어진 [Candidate Places] 목록 중에서 사용자의 요청("${query}")에 가장 적합한 장소들을 선택하여 순서만 나열하는 'Route Sorter'다.
+너는 주어진 [Candidate Places] 목록 중에서 사용자의 요청("${userQuery}")에 가장 적합한 장소들을 선택하여 순서만 나열하는 'Route Sorter'다.
 
 # Context (이 데이터를 반드시 프롬프트에 포함해야 함)
 [Candidate Places]
@@ -364,6 +380,7 @@ ${candidatePlacesStr}
 3. **Output**: 오직 'PLACE_ID'로 구성된 배열만 반환하라.
    - 예시: [1018702, 2033911, 5022133, ...]
    - 중복을 제거 해라
+   - 다른날과의 중복을 제거 해라
 4. **Accommodation Rule (숙소 앵커링)**:
    - **Day N의 마지막 장소**: 반드시 'main: 숙박'인 ID여야 한다. (해당 지역에서 가장 동선이 좋은 숙소 선택)
    - **Day N+1의 첫 번째 장소**: 반드시 **Day N의 마지막에 선택한 숙소 ID와 동일**해야 한다. (숙소에서 출발)
@@ -431,7 +448,34 @@ ${candidatePlacesStr}
   }
 
   try {
-    const result = await geminiModel.generateContent(prompt);
+    let result;
+    let retryCount = 0;
+    const maxRetries = 3;
+
+    while (true) {
+      try {
+        result = await geminiModel.generateContent(prompt);
+        break;
+      } catch (error: any) {
+        if (
+          (error.message?.includes("503") ||
+            error.message?.includes("Overloaded") ||
+            error.status === 503) &&
+          retryCount < maxRetries
+        ) {
+          retryCount++;
+          console.warn(
+            `[Gemini] Model Overloaded (503). Retrying (${retryCount}/${maxRetries}) in ${retryCount}s...`
+          );
+          await new Promise((resolve) =>
+            setTimeout(resolve, 1000 * retryCount)
+          );
+        } else {
+          throw error;
+        }
+      }
+    }
+
     const response = await result.response;
     const text = response.text();
 
@@ -643,7 +687,7 @@ ${candidatePlacesStr}
 
     // Map new schema to TravelContext structure with rich data
     const mappedData: TravelContext = {
-      destination: query, // Use query as fallback destination
+      destination: userQuery, // Use query as fallback destination
       theme: parsedData.theme ? [parsedData.theme] : [],
       party: { adult: 2, child: 0 },
       dateRange: { start: today, end: endDateStr },
