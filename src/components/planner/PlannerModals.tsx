@@ -15,19 +15,19 @@ interface PlannerModalsProps {
     isPlanBOpen: boolean;
     onPlanBClose: () => void;
     rainRisks: RainyScheduleItem[];
-    
+
     activeEditor: 'date' | 'destination' | 'guest' | null;
     onEditorClose: () => void;
-    
+
     dateRange: { start: Date, end: Date };
     onDateSave: (start: Date, end: Date) => void;
-    
+
     destination: string;
     onDestSave: (dest: string) => void;
-    
+
     guests: { adult: number, teen: number, child: number };
     onGuestsSave: (guests: { adult: number, teen: number, child: number }) => void;
-    
+
     replaceModalState: {
         isOpen: boolean;
         targetItem: PlanItem | null;
@@ -35,21 +35,21 @@ interface PlannerModalsProps {
     };
     onReplaceClose: () => void;
     onReplaceConfirm: (newItem: PlanItem) => void;
-    
+
     isSmartMixOpen: boolean;
     onSmartMixClose: () => void;
     onSmartMixConfirm: (scope: number | 'all', theme: PlannerTheme) => void;
-    
+
     schedule: PlanItem[];
     days: number[];
-    
+
     isMobileMapOpen: boolean;
     onMobileMapClose: () => void;
-    
+
     selectedDay: number;
     selectedItemId: string | null;
     onItemClick: (id: string) => void;
-    
+
     confirmState: {
         isOpen: boolean;
         message: string;
@@ -152,12 +152,12 @@ export default function PlannerModals({
                 selectedItemId={selectedItemId}
                 onItemClick={onItemClick}
             />
-            
+
             {/* 8. Confirm Modal */}
             {confirmState.isOpen && (
                 <div className="confirm-modal">
                     <div className="modalOverlay" onClick={onConfirmClose}>
-                         <div className="modalContent" onClick={(e) => e.stopPropagation()}>
+                        <div className="modalContent" onClick={(e) => e.stopPropagation()}>
                             <div className="modalHeader">
                                 <h3>알림</h3>
                                 <button onClick={onConfirmClose} className="closeButton">
@@ -168,8 +168,8 @@ export default function PlannerModals({
                                 <p>{confirmState.message}</p>
                             </div>
                             <div className="modalFooter">
-                                <button onClick={onConfirmClose} className="cancelButton">취소</button>
-                                <button onClick={() => { confirmState.onConfirm(); onConfirmClose(); }} className="confirmButton">확인</button>
+                                <button onClick={onConfirmClose} className="buttonItem-cancel">취소</button>
+                                <button onClick={() => { confirmState.onConfirm(); onConfirmClose(); }} className="buttonItem-confirm">확인</button>
                             </div>
                         </div>
                     </div>
@@ -204,7 +204,7 @@ function PlanBModal({
                     </h3>
                     <p>비 소식이 있는 일정의 대체 장소를 추천해드려요.</p>
                 </div>
-                
+
                 <button onClick={onClose} className="plan-b-modal-close-btn">
                     <X size={24} />
                 </button>

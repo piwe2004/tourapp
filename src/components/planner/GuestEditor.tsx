@@ -37,14 +37,14 @@ export default function GuestEditor({ initialGuests, onSave, onClose, isModal = 
                             <X size={20} />
                         </button>
                     </div>
-                    
+
                     <div className="modalBody" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', padding: '2rem 0' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                            <button 
+                            <button
                                 onClick={handleDecrement}
                                 disabled={count <= 1}
                                 className="icon-btn"
-                                style={{ 
+                                style={{
                                     width: '40px', height: '40px', borderRadius: '50%', border: '1px solid #e5e7eb',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     color: count <= 1 ? '#d1d5db' : '#374151',
@@ -53,16 +53,16 @@ export default function GuestEditor({ initialGuests, onSave, onClose, isModal = 
                             >
                                 <Minus size={20} />
                             </button>
-                            
+
                             <span style={{ fontSize: '1.5rem', fontWeight: 'bold', minWidth: '2rem', textAlign: 'center' }}>
                                 {count}
                             </span>
-                            
-                            <button 
+
+                            <button
                                 onClick={handleIncrement}
                                 disabled={count >= 10}
                                 className="icon-btn"
-                                style={{ 
+                                style={{
                                     width: '40px', height: '40px', borderRadius: '50%', border: '1px solid #e5e7eb',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     color: count >= 10 ? '#d1d5db' : '#374151',
@@ -76,8 +76,8 @@ export default function GuestEditor({ initialGuests, onSave, onClose, isModal = 
                     </div>
 
                     <div className="modalFooter">
-                        <button onClick={onClose} className="cancelButton">취소</button>
-                        <button onClick={handleApply} className="confirmButton">적용</button>
+                        <button onClick={onClose} className="buttonItem-cancel">취소</button>
+                        <button onClick={handleApply} className="buttonItem-confirm">적용</button>
                     </div>
                 </div>
             </div>

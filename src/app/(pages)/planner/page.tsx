@@ -3,21 +3,14 @@
 /**
  * @file PlannerView (page.tsx)
  * @desc 여행 플래너의 메인 페이지 컨테이너입니다.
- * 
- * 주요 역할:
- * 1. 상태 관리 (State Management) - usePlannerStore 및 로컬 useState 사용
- * 2. 데이터 가져오기 (Data Fetching) - 여행 계획, 날씨, 추천 장소 등
- * 3. 핸들러 정의 (Event Handlers) - 사용자 입력에 따른 상태 변경 로직
- * 4. 레이아웃 조립 (Layout Composition) - PlannerTimeline, PlannerMapPanel, PlannerModals 컴포넌트 조합
  */
 
 import { useState, useEffect, Suspense, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { extractTravelContext, getTravelPlan, getPlacesByNames, FirebasePlace, TravelContext } from '@/lib/actions';
+import { extractTravelContext, getTravelPlan, TravelContext } from '@/lib/actions';
 import { PlanItem } from '@/types/place';
-import { mapPlaceToPlanItem } from "@/lib/mappers";
-import { RainyScheduleItem, getWeather, getPlanBRecommendations } from '@/lib/weather/actions'; // getWeather, getPlanBRecommendations 추가
-import { WeatherData } from '@/lib/weather/service'; // Type 추가
+import { RainyScheduleItem, getWeather, getPlanBRecommendations } from '@/lib/weather/actions';
+import { WeatherData } from '@/lib/weather/service';
 import { regenerateSchedule, PlannerTheme } from '@/services/ReplanningService';
 import { DropResult } from '@hello-pangea/dnd';
 import { usePlannerStore } from '@/store/plannerStore';
@@ -38,12 +31,12 @@ export default function PlannerView() {
 function PlannerContent() {
     // URL 쿼리 파라미터에서 여행지 정보 가져오기
     const searchParams = useSearchParams();
-    const initialDestination = searchParams.get('destination') || '서울'; // 기본값 서울로 변경
+    const initialDestination = searchParams.get('destination') || '서울';
 
     // 1. 전역 상태 (Global Store)
-    const { 
+    const {
         destination, dateRange, guests, activeEditor,
-        setDestination, setDateRange, setGuests, setActiveEditor 
+        setDestination, setDateRange, setGuests, setActiveEditor
     } = usePlannerStore();
 
     // 초기화: URL 파라미터로 받은 여행지를 스토어에 설정
@@ -56,15 +49,14 @@ function PlannerContent() {
     const [schedule, setSchedule] = useState<PlanItem[]>([]); // 전체 일정 데이터
     const [selectedDay, setSelectedDay] = useState(1);        // 현재 선택된 날짜 (Day 1, 2...)
     const [selectedItemId, setSelectedItemId] = useState<string | null>(null); // 지도/리스트에서 하이라이트된 아이템 ID
-    const [travelContext, setTravelContext] = useState<TravelContext | null>(null); // AI 생성 컨텍스트 (테마, 일자별 포커스 등)
+    const [travelContext, setTravelContext] = useState<TravelContext | null>(null); // AI 생성 컨텍스트
 
     // 날씨 및 Plan B 관련 상태
     const [rainRisks, setRainRisks] = useState<RainyScheduleItem[]>([]);
     const [isPlanBOpen, setIsPlanBOpen] = useState(false);
 
     // [Mod] 날씨 캐시 상태 추가 (Day 번호 -> 날씨 데이터)
-    const [weatherCache, setWeatherCache] = useState<Record<number, WeatherData>>({}); 
-    // const [weatherData, setWeatherData] = useState<WeatherData | null>(null); // 기존 단일 상태 제거
+    const [weatherCache, setWeatherCache] = useState<Record<number, WeatherData>>({});
 
     // 모달 제어 상태
     const [replaceModalState, setReplaceModalState] = useState<{
@@ -79,7 +71,7 @@ function PlannerContent() {
     });
 
     const [isSmartMixOpen, setIsSmartMixOpen] = useState(false); // 스마트 일정 재구성 모달
-    
+
     const [confirmState, setConfirmState] = useState<{
         isOpen: boolean;
         message: string;
@@ -92,7 +84,6 @@ function PlannerContent() {
 
     /**
      * @desc 일정 추가 모달 열기
-     * @param index 추가할 위치 (순서 인덱스)
      */
     const openAddModal = (index: number) => {
         setReplaceModalState({
@@ -105,7 +96,6 @@ function PlannerContent() {
 
     /**
      * @desc 장소 교체 또는 추가 완료 시 실행
-     * @param newItem 새로 선택된 장소 데이터
      */
     const handleReplacePlace = (newItem: PlanItem) => {
         if (replaceModalState.mode === 'replace') {
@@ -124,8 +114,8 @@ function PlannerContent() {
                 return aTime - bTime;
             });
             let newTime = "12:00";
-            
-            // 시간 자동 계산 로직 (이전 아이템 시간 + 30분)
+
+            // 시간 자동 계산 로직
             const prevItem = currentDayItems[index - 1];
             if (prevItem && prevItem.time) {
                 const [h, m] = prevItem.time.split(':').map(Number);
@@ -147,7 +137,7 @@ function PlannerContent() {
     };
 
     /**
-     * @desc 아이템 삭제 (Confirm 확인 후 진행)
+     * @desc 아이템 삭제
      */
     const handleDeletePlace = (id: string) => {
         setConfirmState({
@@ -161,7 +151,7 @@ function PlannerContent() {
     };
 
     /**
-     * @desc 아이템 잠금 토글 (Lock/Unlock)
+     * @desc 아이템 잠금 토글
      */
     const handleToggleLock = (id: string) => {
         setSchedule(prev => prev.map(item =>
@@ -170,9 +160,7 @@ function PlannerContent() {
     };
 
     /**
-     * @desc 스마트 믹스(자동 재구성) 실행
-     * @param scope 적용 범위 (단일 날짜 or 전체 'all')
-     * @param theme 선택한 테마 (키즈, 힐링 등)
+     * @desc 스마트 믹스 실행
      */
     const handleSmartMixConfirm = async (scope: number | 'all', theme: PlannerTheme) => {
         const runReplanning = async () => {
@@ -197,7 +185,6 @@ function PlannerContent() {
             ? schedule.some(item => item.isLocked)
             : schedule.some(item => item.day === scope && item.isLocked);
 
-        // 잠긴 아이템이 있으면 경고 표시 후 진행
         if (hasLockedItems) {
             setConfirmState({
                 isOpen: true,
@@ -219,14 +206,14 @@ function PlannerContent() {
     useEffect(() => {
         const fetchData = async () => {
             if (!initialDestination) return;
-            
+
             // Prevent double fetch in Strict Mode
             if (fetchingRef.current === initialDestination) {
                 console.log("[Planner] Already fetching for:", initialDestination);
                 return;
             }
             fetchingRef.current = initialDestination;
-            
+
             setIsLoading(true);
             const aiSchedule: PlanItem[] = [];
             let context: TravelContext | null = null;
@@ -239,7 +226,7 @@ function PlannerContent() {
 
                 if (context) {
                     setTravelContext(context); // Store for UI enrichment
-                    
+
                     // Update Store
                     if (context.destination) setDestination(context.destination);
                     if (context.dateRange?.start && context.dateRange?.end) {
@@ -251,112 +238,19 @@ function PlannerContent() {
                     if (context.party) {
                         setGuests({
                             adult: context.party.adult || 2,
-                            teen: 0, 
+                            teen: 0,
                             child: context.party.child || 0
                         });
                     }
 
                     // 1-2. Hydration (Itinerary -> DB)
+                    // [Modified] Server Action now returns fully hydrated PlanItems.
                     if (context.itinerary && context.itinerary.length > 0) {
-                        const placeNames = context.itinerary.flatMap(day => day.places.map(p => p.NAME));
-                        // Safe Fetch
-                        let dbPlaces: FirebasePlace[] = [];
-                        try {
-                            dbPlaces = await getPlacesByNames(placeNames);
-                        } catch (e) {
-                            console.warn("[Planner] DB Batch fetch failed, proceeding with AI-only data:", e);
-                        }
-                        
-                        const placesMap = new Map<string, FirebasePlace>();
-                        dbPlaces.forEach(p => placesMap.set(p.NAME, p));
-
-                        let timeOffset = 9;
-                            context.itinerary.forEach((dayPlan) => {
-                                timeOffset = 9;
-                                dayPlan.places.forEach((aiPlace) => {
-                                    try {
-                                        const dbPlace = placesMap.get(aiPlace.NAME);
-                                        let planItem: PlanItem;
-                                        
-                                        // [Refine] Type Mapping
-                                        const mappedType: PlanItem['type'] = aiPlace.type;
-
-                                        // [Refine] Tag Cleaning
-                                        const cleanTags = (aiPlace.KEYWORDS || []).map((t: string) => t.startsWith('#') ? t.slice(1) : t);
-
-                                        // DB 매칭 성공
-                                        if (dbPlace) {
-                                            const timeStr = `${String(timeOffset).padStart(2, '0')}:00`;
-                                            planItem = mapPlaceToPlanItem(dbPlace, dayPlan.day, timeStr);
-                                            if (aiPlace.MEMO) planItem.MEMO = aiPlace.MEMO;
-                                            if (aiPlace.TAGS) planItem.KEYWORDS = [...new Set([...planItem.KEYWORDS, ...(aiPlace.KEYWORDS || [])])];
-                                            planItem.type = mappedType; // AI의 타입 분류가 더 정확할 수도 있음
-                                        } else {
-                                            // DB 매칭 실패: AI JSON 기반 Fallback
-                                            const timeStr = `${String(timeOffset).padStart(2, '0')}:00`;
-                                            
-                                            // [Refine] Robust Duration Parsing
-                                            let stayTime = 60;
-                                            if (mappedType === 'stay') stayTime = 720; // 12h
-                                            else if (mappedType === 'sightseeing') stayTime = 90;
-                                            
-                                            try {
-                                                const durationStr = String(aiPlace.STAY_TIME || "");
-                                                if (durationStr) {
-                                                    const hMatch = durationStr.match(/(\d+)시간/);
-                                                    const mMatch = durationStr.match(/(\d+)분/);
-                                                    let minutes = 0;
-                                                    if (hMatch) minutes += parseInt(hMatch[1]) * 60;
-                                                    if (mMatch) minutes += parseInt(mMatch[1]);
-                                                    if (minutes > 0) stayTime = minutes;
-                                                }
-                                            } catch (e) { console.warn("Time parse error", e); }
-
-                                            planItem = {
-                                                _docId: `ai-${Date.now()}-${Math.random()}`,
-                                                PLACE_ID: `ai-${Date.now()}-${Math.random()}`,
-                                                NAME: aiPlace.NAME,
-                                                ADDRESS: aiPlace.ADDRESS || '주소 정보 없음',
-                                                SUB_REGION: null,
-                                                CATEGORY: { main: 'AI추천', sub: aiPlace.type || '' },
-                                                IMAGE_URL: aiPlace.IMAGE_URL || null, 
-                                                GALLERY_IMAGES: null,
-                                                LOC_LAT: aiPlace.LOC_LAT || 37.5665,
-                                                LOC_LNG: aiPlace.LOC_LNG || 126.9780,
-                                                MAP_LINK: '',
-                                                AFFIL_LINK: null,
-                                                IS_AFLT: false,
-                                                IS_TICKET_REQUIRED: false,
-                                                TIME_INFO: String(aiPlace.STAY_TIME || "") || null,
-                                                PARKING_INFO: null,
-                                                REST_INFO: null,
-                                                FEE_INFO: null,
-                                                DETAILS: {},
-                                                RATING: null,
-                                                HIGHTLIGHTS: aiPlace.MEMO ? [aiPlace.MEMO] : null,
-                                                KEYWORDS: cleanTags,
-                                                NAME_GRAMS: [],
-                                                STAY_TIME: stayTime, 
-                                                PRICE_GRADE: 0,
-                                                STATS: { bookmark_count: 0, view_count: 0, review_count: 0, rating: 0, weight: 0 },
-                                                TAGS: { spring: null, summer: null, autumn: null, winter: null },
-                                                
-                                                day: dayPlan.day,
-                                                time: timeStr,
-                                                type: mappedType,
-                                                isLocked: false,
-                                                MEMO: aiPlace.MEMO
-                                            };
-                                        }
-
-                                        if (planItem) {
-                                            aiSchedule.push(planItem);
-                                            timeOffset += 2;
-                                        }
-                                    } catch (loopError) {
-                                        console.error(`[Planner] Error processing item ${aiPlace.NAME}:`, loopError);
-                                    }
-                                });
+                        console.log("[Planner] Using pre-hydrated itinerary from Server.");
+                        context.itinerary.forEach(dayPlan => {
+                            if (dayPlan.places && Array.isArray(dayPlan.places)) {
+                                aiSchedule.push(...dayPlan.places);
+                            }
                         });
                     }
                 }
@@ -369,7 +263,7 @@ function PlannerContent() {
                 // Success path
                 console.log("[Planner] Schedule created via AI:", aiSchedule);
                 setSchedule(aiSchedule);
-                
+
                 // Plan B (Optional)
                 if (context) {
                     const startDateStr = context.dateRange?.start || dateRange.start.toISOString().split('T')[0];
@@ -377,11 +271,9 @@ function PlannerContent() {
                 }
             } else {
                 // 3. Fallback Logic
-                // Context가 명확히 있는데 일정이 안 만들어진 경우 -> Fallback 하지 말고 멈춤 (무한 로딩/중복 요청 방지)
                 if (context && context.destination) {
                     console.warn("[Planner] AI context exists but schedule is empty. Stopping to prevent fallback loop.");
                 } else {
-                    // AI가 아예 실패했거나 Context를 못 가져온 경우에만 Fallback
                     console.warn("[Planner] No AI context. Falling back to Legacy Cloud Function...");
                     try {
                         const fallbackData = await getTravelPlan(initialDestination);
@@ -396,7 +288,7 @@ function PlannerContent() {
         };
         fetchData();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [initialDestination]); // Re-run only if URL param changes
+    }, [initialDestination]);
 
     // 날짜 범위에 따른 총 일수(days) 계산
     const duration = Math.ceil((dateRange.end.getTime() - dateRange.start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
@@ -407,22 +299,14 @@ function PlannerContent() {
         const fetchAllWeather = async () => {
             if (schedule.length === 0) return;
 
-            // 이미 캐시가 존재하는 경우, 재진입 방지 (간단한 캐싱 전략)
-            // 날짜 범위나 일정이 바뀌었을 때만 실행되도록 의존성 관리
-            
             const newCache: Record<number, WeatherData> = {};
             const currentDays = Array.from({ length: duration }, (_, i) => i + 1);
-            
-            const promises = currentDays.map(async (day) => {
-                // 이미 캐시된 데이터가 있고, 날짜가 동일하다면 스킵 가능하지만
-                // 여기서는 단순화를 위해 전체 갱신 (API 호출 최적화는 추후 고도화)
 
-                // 해당 날짜 계산
+            const promises = currentDays.map(async (day) => {
                 const targetDate = new Date(dateRange.start);
                 targetDate.setDate(targetDate.getDate() + (day - 1));
                 const dateStr = targetDate.toISOString().split('T')[0];
 
-                // 해당 날짜의 첫 번째 일정 좌표 (없으면 서울)
                 const dayItems = schedule.filter(item => item.day === day).sort((a, b) => (a.time || "").localeCompare(b.time || ""));
                 let lat = 37.5665;
                 let lng = 126.9780;
@@ -444,13 +328,10 @@ function PlannerContent() {
             setWeatherCache(newCache);
         };
 
-        // 디바운싱 혹은 일정 로딩 완료 후 실행
-        // schedule이 로드된 후 실행되어야 정확한 좌표를 쓸 수 있음
         if (!isLoading && schedule.length > 0) {
             fetchAllWeather();
         }
-        // days 배열은 매 렌더링마다 새로 생성되므로 의존성 배열에서 제거하고, duration과 dateRange.start 등 원시값에 의존하게 변경
-    }, [dateRange.start, dateRange.end, duration, schedule, isLoading]); 
+    }, [dateRange.start, dateRange.end, duration, schedule, isLoading]);
 
     // [Restored] 아이템 클릭 핸들러
     const handleItemClick = (id: string) => {
@@ -471,17 +352,14 @@ function PlannerContent() {
 
         const otherItems = schedule.filter(item => item.day !== selectedDay);
 
-        // 재정렬 후 병합
-        // 재정렬 후 병합
         const newSchedule = [...otherItems, ...items].sort((a, b) => {
             if (a.day !== b.day) return a.day - b.day;
             const indexA = items.indexOf(a);
             const indexB = items.indexOf(b);
-            // items.indexOf returns -1 if not found, enabling stable sort relative to 'items' order
             if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-            if (indexA !== -1) return -1; // a is in items, b is not (should not happen in this logic)
+            if (indexA !== -1) return -1;
             if (indexB !== -1) return 1;
-            return 0; // neither in items (should not happen)
+            return 0;
         });
 
         setSchedule(newSchedule);
@@ -525,13 +403,13 @@ function PlannerContent() {
                 {/* Main Content Area */}
                 <main className="mainContent">
                     {/* 1. 좌측 타임라인 패널 */}
-                    <PlannerTimeline 
+                    <PlannerTimeline
                         days={days}
                         dateRange={dateRange}
                         selectedDay={selectedDay}
                         schedule={schedule}
                         isLoading={isLoading}
-                        weatherData={weatherCache[selectedDay] || null} // [Mod] 캐시에서 현재 날짜 데이터 전달
+                        weatherData={weatherCache[selectedDay] || null}
                         rainRisks={rainRisks}
                         selectedItemId={selectedItemId}
                         travelContext={travelContext}
@@ -549,16 +427,16 @@ function PlannerContent() {
                     />
 
                     {/* 2. 우측 지도 패널 (PCOnly) */}
-                    <PlannerMapPanel 
+                    <PlannerMapPanel
                         schedule={schedule}
                         selectedDay={selectedDay}
                         selectedItemId={selectedItemId}
-                        onItemClick={handleItemClick} // [New] 마커 클릭 핸들러 전달
+                        onItemClick={handleItemClick}
                     />
                 </main>
 
                 {/* 3. 각종 모달 모음 */}
-                <PlannerModals 
+                <PlannerModals
                     schedule={schedule}
                     selectedDay={selectedDay}
                     selectedItemId={selectedItemId}
@@ -580,15 +458,15 @@ function PlannerContent() {
                     onConfirmClose={() => setConfirmState(prev => ({ ...prev, isOpen: false }))}
                     onPlanBClose={() => setIsPlanBOpen(false)}
                     onMobileMapClose={() => setIsMobileMapOpen(false)}
-                    onItemClick={handleItemClick} // [New]
+                    onItemClick={handleItemClick}
                     onDateSave={(start, end) => { setDateRange({ start, end }); setActiveEditor(null); }}
-                    onGuestsSave={(newGuests: { adult: number, teen: number, child: number } | number) => { 
+                    onGuestsSave={(newGuests: { adult: number, teen: number, child: number } | number) => {
                         if (typeof newGuests === 'number') {
-                            setGuests({ adult: newGuests, teen: 0, child: 0 }); 
+                            setGuests({ adult: newGuests, teen: 0, child: 0 });
                         } else {
                             setGuests(newGuests);
                         }
-                        setActiveEditor(null); 
+                        setActiveEditor(null);
                     }}
                     onDestSave={(newDest) => { setDestination(newDest); setActiveEditor(null); }}
                     onEditorClose={() => setActiveEditor(null)}

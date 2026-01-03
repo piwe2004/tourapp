@@ -1,27 +1,35 @@
 @use 'variables' as *;
 
-@mixin flex-center {
+@mixin flex($items: null, $justify: null, $other: ()) {
   display: flex;
-  justify-content: center;
-  align-items: center;
+
+  @if $items !=null {
+    align-items: $items;
+  }
+
+  @if $justify !=null {
+    justify-content: $justify;
+  }
+
+  @each $key, $value in $other {
+    #{$key}: $value;
+  }
 }
 
-@mixin flex-between {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
+@mixin position($type, $top: null, $left: null, $other: ()) {
+  position: $type;
 
-@mixin flex-col {
-  display: flex;
-  flex-direction: column;
-}
+  @if $top !=null {
+    top: $top;
+  }
 
-@mixin absolute-center {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+  @if $left !=null {
+    left: $left;
+  }
+
+  @each $key, $value in $other {
+    #{$key}: $value;
+  }
 }
 
 @mixin mobile {
@@ -43,28 +51,30 @@
 }
 
 @mixin no-scrollbar {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-    
-    &::-webkit-scrollbar {
-        display: none;
-    }
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @mixin icon-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px;
-    border-radius: 50%;
-    transition: all 0.2s;
-    color: $text-secondary;
-    cursor: pointer;
-    
-    &:hover {
-        background-color: rgba(0, 0, 0, 0.05);
-        color: $text-primary;
-    }
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.2s;
+  color: $text-secondary;
+  cursor: pointer;
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: $text-primary;
+  }
 }
 
 @mixin text-line-clamp($lines: 1) {
@@ -73,4 +83,111 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+// =================================================================================================
+// New Mixins (Refactoring)
+// =================================================================================================
+
+@mixin modal-overlay {
+  @include position(fixed, 0, 0, (bottom: 0, right: 0));
+  z-index: $z-modal-backdrop;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: $color-modal-overlay;
+  backdrop-filter: blur(4px);
+  padding: 1rem;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@mixin modal-content($width: 24rem) {
+  background-color: $color-modal-bg;
+  border-radius: $radius-xl;
+  box-shadow: $shadow-2xl;
+  width: 100%;
+  max-width: $width;
+  overflow: hidden;
+  animation: scaleIn 0.2s ease-out;
+  position: relative;
+  z-index: $z-modal;
+}
+
+@mixin card-base($padding: 1rem, $radius: $radius-xl) {
+  background-color: $white;
+  border-radius: $radius;
+  border: 1px solid $slate-100;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: $slate-200;
+    box-shadow: $shadow-md;
+  }
+}
+
+@mixin button-base($padding: 0.75rem 1.5rem, $radius: $radius-lg, $font-weight: 700) {
+  padding: $padding;
+  border-radius: $radius;
+  font-weight: $font-weight;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
+@mixin button-variant($bg-color, $text-color, $hover-bg: null, $shadow-color: null) {
+  background-color: $bg-color;
+  color: $text-color;
+
+  @if $shadow-color {
+    box-shadow: 0 4px 6px -1px rgba($shadow-color, 0.5);
+  }
+
+  &:hover:not(:disabled) {
+    @if $hover-bg {
+      background-color: $hover-bg;
+    }
+
+    @else {
+      filter: brightness(0.95);
+    }
+
+    @if $shadow-color {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 8px -1px rgba($shadow-color, 0.6);
+    }
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+}
+
+@mixin input-base {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background-color: $slate-50;
+  border: 1px solid $slate-200;
+  border-radius: $radius-lg;
+  color: $slate-900;
+  font-weight: 500;
+  transition: all 0.2s ease;
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px $indigo-500;
+    background-color: $white;
+    border-color: transparent;
+  }
+
+  &::placeholder {
+    color: $slate-400;
+  }
 }

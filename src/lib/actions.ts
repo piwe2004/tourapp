@@ -98,9 +98,7 @@ export async function getTravelPlan(destination: string): Promise<PlanItem[]> {
     const querySnapshot = await getDocs(q);
 
     if (querySnapshot.empty) {
-      console.warn(
-        `[Server] "${destination}" 관련 데이터가 없습니다.`
-      );
+      console.warn(`[Server] "${destination}" 관련 데이터가 없습니다.`);
       return [];
     } else {
       querySnapshot.forEach((doc) => {
@@ -113,7 +111,7 @@ export async function getTravelPlan(destination: string): Promise<PlanItem[]> {
     }
 
     // 2. 경로 최적화 (Cloud Function 호출) - [Disabled as per user request]
-    const optimizedPlaces = rawPlaces; 
+    const optimizedPlaces = rawPlaces;
 
     // 3. PlanItem 변환 및 시간 할당
     const items: PlanItem[] = [];
@@ -222,21 +220,28 @@ async function checkRateLimit(ip: string): Promise<boolean> {
 /**
  * @desc 주어진 장소 이름 목록에 해당하는 Firebase 데이터를 일괄 조회
  */
-export async function getPlacesByNames(names: string[]): Promise<FirebasePlace[]> {
+export async function getPlacesByNames(
+  names: string[]
+): Promise<FirebasePlace[]> {
   if (!names || names.length === 0) return [];
-  
-  console.log(`[Server] getPlacesByNames called with ${names.length} names:`, names.slice(0, 5));
+
+  console.log(
+    `[Server] getPlacesByNames called with ${names.length} names:`,
+    names.slice(0, 5)
+  );
 
   const placesRef = collection(db, "PLACES");
-  const uniqueNames = Array.from(new Set(names)).filter(n => n.trim() !== "");
+  const uniqueNames = Array.from(new Set(names)).filter((n) => n.trim() !== "");
   // [Modified] Prevent excessive query error as requested by user
   if (uniqueNames.length > 30) {
-      console.warn(`[Server] Too many places to fetch (${uniqueNames.length}). Skipping DB fetch to prevent error.`);
-      return [];
+    console.warn(
+      `[Server] Too many places to fetch (${uniqueNames.length}). Skipping DB fetch to prevent error.`
+    );
+    return [];
   }
 
   const chunks = [];
-  
+
   // Firestore 'in' query supports max 10 items. Chunk it.
   for (let i = 0; i < uniqueNames.length; i += 10) {
     chunks.push(uniqueNames.slice(i, i + 10));
@@ -250,16 +255,18 @@ export async function getPlacesByNames(names: string[]): Promise<FirebasePlace[]
       const q = query(placesRef, where("NAME", "in", chunk));
       const snapshot = await getDocs(q);
       const chunkResults: FirebasePlace[] = [];
-      snapshot.forEach(doc => {
+      snapshot.forEach((doc) => {
         chunkResults.push(doc.data() as FirebasePlace);
       });
-      console.log(`[Server] Chunk result: ${chunk.length} requested -> ${chunkResults.length} found.`);
+      console.log(
+        `[Server] Chunk result: ${chunk.length} requested -> ${chunkResults.length} found.`
+      );
       return chunkResults;
     });
 
     const chunkedResults = await Promise.all(promises);
-    chunkedResults.forEach(r => results.push(...r));
-    
+    chunkedResults.forEach((r) => results.push(...r));
+
     console.log(`[Server] Total matched places: ${results.length}`);
     return results;
   } catch (error) {
@@ -297,16 +304,59 @@ export async function extractTravelContext(
 
   const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
-    const prompt = `
+  // [New] 4. Fetch Candidate Places from Firebase
+  const destinationKeyword = query.split(" ")[0]; // Simple heuristic: First word is destination
+  let candidatePlacesStr = "";
+
+  try {
+    console.log(`[Server] Fetching candidates for "${destinationKeyword}"...`);
+    const placesRef = collection(db, "PLACES");
+    const q = query(
+      placesRef,
+      where("ADDRESS", ">=", destinationKeyword),
+      where("ADDRESS", "<=", destinationKeyword + "\uf8ff"),
+      limit(50) // Limit to 50 candidates to fit in context window
+    );
+
+    const snapshot = await getDocs(q);
+    const candidates: string[] = [];
+
+    if (snapshot.empty) {
+      console.warn(`[Server] No places found for "${destinationKeyword}".`);
+      candidatePlacesStr =
+        "No specific database candidates found. Please suggest popular places based on your knowledge, but use placeholder IDs (e.g., 999001).";
+    } else {
+      snapshot.forEach((doc) => {
+        const data = doc.data() as FirebasePlace;
+        // Format: - ID: 123 | Name: 장소명 | Loc: 35.1, 129.2 | Cat: 메인>서브 | Tags: #태그1 #태그2
+        // Flatten tags for prompt
+        let tagStr = "";
+        if (data.TAGS) {
+          const allTags = Object.values(data.TAGS).flat();
+          tagStr = allTags.slice(0, 5).join(" "); // Top 5 tags
+        }
+
+        const cat = `${data.CATEGORY?.main || ""}>${data.CATEGORY?.sub || ""}`;
+        candidates.push(
+          `- ID: ${data.PLACE_ID} | Name: ${data.NAME} | Loc: ${data.LOC_LAT}, ${data.LOC_LNG} | Cat: ${cat} | Tags: ${tagStr}`
+        );
+      });
+      candidatePlacesStr = candidates.join("\n");
+      console.log(`[Server] Fetched ${candidates.length} candidates.`);
+    }
+  } catch (error) {
+    console.error("[Server] Error fetching candidates:", error);
+    candidatePlacesStr =
+      "Error fetching candidates. Please suggest popular places based on your knowledge.";
+  }
+
+  const prompt = `
     # Role
 너는 주어진 [Candidate Places] 목록 중에서 사용자의 요청("${query}")에 가장 적합한 장소들을 선택하여 순서만 나열하는 'Route Sorter'다.
 
 # Context (이 데이터를 반드시 프롬프트에 포함해야 함)
 [Candidate Places]
-- ID: 1018702 | Name: 국제시장 먹자골목 | Loc: 35.101, 129.028
-- ID: 2033911 | Name: 해운대 해수욕장 | Loc: 35.158, 129.160
-- ID: 5022133 | Name: 광안리 카페거리 | Loc: 35.153, 129.118
-... (DB에서 검색된 후보군 20~30개 주입)
+${candidatePlacesStr}
 
 # 핵심 미션
 1. **Selection**: 후보군 중에서 요청에 맞는 최적의 장소(Day당 6~8개)를 'PLACE_ID'로 선택하라.
@@ -344,41 +394,41 @@ export async function extractTravelContext(
   `;
   // ... (rest of the function)
 
-interface AIResponse {
-  theme: string;
-  itinerary: {
-    day: number;
-    date: string;
-    places: {
-      NAME: string;
-      name?: string; // Fallback
-      CATEGORY: { main: string; sub: string };
-      IMAGE_URL: string;
-      image_url?: string; // Fallback
-      LOC_LAT: number;
-      loc_lat?: number; // Fallback
-      coordinates?: { lat: number; lng: number }; // Fallback
-      LOC_LNG: number;
-      loc_lng?: number; // Fallback
-      ADDRESS: string;
-      address?: string; // Fallback
-      STAY_TIME: string;
-      stay_time?: string; // Fallback
-      recommendedDuration?: string; // Fallback
-      TRAVEL_TIME_TO_NEXT: string;
-      IS_AFLT: boolean;
-      RATING: number;
-      TAGS: {
-        winter?: string[];
-        common?: string[];
-        [key: string]: string[] | undefined;
-      };
-      MEMO: string;
-      memo?: string; // Fallback
-      VISIT_ORDER: number;
+  interface AIResponse {
+    theme: string;
+    itinerary: {
+      day: number;
+      date: string;
+      places: {
+        NAME: string;
+        name?: string; // Fallback
+        CATEGORY: { main: string; sub: string };
+        IMAGE_URL: string;
+        image_url?: string; // Fallback
+        LOC_LAT: number;
+        loc_lat?: number; // Fallback
+        coordinates?: { lat: number; lng: number }; // Fallback
+        LOC_LNG: number;
+        loc_lng?: number; // Fallback
+        ADDRESS: string;
+        address?: string; // Fallback
+        STAY_TIME: string;
+        stay_time?: string; // Fallback
+        recommendedDuration?: string; // Fallback
+        TRAVEL_TIME_TO_NEXT: string;
+        IS_AFLT: boolean;
+        RATING: number;
+        TAGS: {
+          winter?: string[];
+          common?: string[];
+          [key: string]: string[] | undefined;
+        };
+        MEMO: string;
+        memo?: string; // Fallback
+        VISIT_ORDER: number;
+      }[];
     }[];
-  }[];
-}
+  }
 
   try {
     const result = await geminiModel.generateContent(prompt);
@@ -392,172 +442,212 @@ interface AIResponse {
     const parsedData = JSON.parse(jsonStr) as AIResponse;
 
     // Calculate end date based on actual itinerary days
-    const maxDay = parsedData.itinerary?.reduce((max, day) => Math.max(max, day.day), 1) || 1;
+    const maxDay =
+      parsedData.itinerary?.reduce((max, day) => Math.max(max, day.day), 1) ||
+      1;
     const endDate = new Date(today);
     endDate.setDate(endDate.getDate() + (maxDay - 1));
     const endDateStr = endDate.toISOString().split("T")[0];
 
     // [Modified] Check for route_ids (new schema) or places (old schema)
     // Dynamic handling based on user request "PLACE_ID만있는 배열을 가져오는데..."
-    const hasRouteIds = parsedData.itinerary?.some(day => (day as any).route_ids && Array.isArray((day as any).route_ids));
+    const hasRouteIds = parsedData.itinerary?.some(
+      (day) => (day as any).route_ids && Array.isArray((day as any).route_ids)
+    );
 
     let enrichedItinerary: any[] = [];
 
     if (hasRouteIds) {
-        // 1. New Logic: Extract IDs -> Fetch Firebase -> Map
-        const allIds = parsedData.itinerary?.flatMap(day => (day as any).route_ids || []) || [];
-        
-        const places = await getPlacesByIds(allIds);
-        const placesMap = new Map(places.map(p => [String(p.PLACE_ID), p]));
+      // 1. New Logic: Extract IDs -> Fetch Firebase -> Map
+      const allIds =
+        parsedData.itinerary?.flatMap((day) => (day as any).route_ids || []) ||
+        [];
 
-        enrichedItinerary = parsedData.itinerary?.map(day => {
-            const dayIds = (day as any).route_ids || [];
-            const dayPlaces = dayIds.map((id: string | number) => {
-                const p = placesMap.get(String(id));
-                if (!p) return null; // ID not found in DB
-                return {
-                    ...p, // Spread Firebase Data
-                     // Map to PlanItem specifics
-                    day: day.day,
-                    time: "10:00", // Default time, will be adjusted later if needed or simpler logic
-                    type: 'sightseeing', // Default, logic below will refine
-                    // ... other required PlanItem fields default
-                };
-            }).filter((p: any) => p !== null);
+      const places = await getPlacesByIds(allIds);
+      const placesMap = new Map(places.map((p) => [String(p.PLACE_ID), p]));
 
-            // Refine types and structure
-            return {
+      enrichedItinerary =
+        parsedData.itinerary?.map((day) => {
+          const dayIds = (day as any).route_ids || [];
+          const dayPlaces = dayIds
+            .map((id: string | number) => {
+              const p = placesMap.get(String(id));
+              if (!p) return null; // ID not found in DB
+              return {
+                ...p, // Spread Firebase Data
+                // Map to PlanItem specifics
                 day: day.day,
-                date: day.date,
-                places: dayPlaces.map((place: any, idx: number) => {
-                     let internalType: PlanItem['type'] = 'etc';
-                     const mainCat = place.CATEGORY?.main || '';
-                     if (mainCat.includes('식당')) internalType = 'food';
-                     else if (mainCat.includes('카페')) internalType = 'cafe';
-                     else if (mainCat.includes('숙박')) internalType = 'stay';
-                     else if (mainCat.includes('관광지')) internalType = 'sightseeing';
+                time: "10:00", // Default time, will be adjusted later if needed or simpler logic
+                type: "sightseeing", // Default, logic below will refine
+                // ... other required PlanItem fields default
+              };
+            })
+            .filter((p: any) => p !== null);
 
-                     const keywords = [
-                        ...(place.TAGS?.common || []),
-                        ...(place.TAGS?.winter || [])
-                     ].map((tag: string) => tag.startsWith('#') ? tag.slice(1) : tag);
-
-                     return {
-                        ...place,
-                        _docId: place._docId || `ai_${Math.random()}`,
-                        PLACE_ID: place.PLACE_ID,
-                        NAME: place.NAME,
-                        ADDRESS: place.ADDRESS || "",
-                        CATEGORY: place.CATEGORY,
-                        LOC_LAT: place.LOC_LAT,
-                        LOC_LNG: place.LOC_LNG,
-                        IMAGE_URL: place.IMAGE_URL || null,
-                        type: internalType,
-                        day: day.day,
-                        time: `${String(9 + idx * 2).padStart(2, '0')}:00`, // Simple sequential time
-                        KEYWORDS: keywords,
-                        STAY_TIME: place.STAY_TIME || 60,
-                        STATS: { bookmark_count: 0, view_count: 0, review_count: 0, rating: place.RATING || 0, weight: 1 },
-                        TAGS: place.TAGS || {},
-                        isLocked: false,
-                        is_indoor: false,
-                        DETAILS: {}
-                     } as PlanItem;
-                })
-            };
-        }) || [];
-
-    } else {
-        // Old Schema (Full JSON from AI)
-        enrichedItinerary = parsedData.itinerary?.map((day) => ({
-        day: day.day,
-        date: day.date,
-        places: day.places.map((place) => {
-          // Map Korean CATEGORY.main to internal 'type'
-          let internalType: PlanItem['type'] = 'etc';
-          const mainCat = place.CATEGORY?.main || '';
-          if (mainCat.includes('식당')) internalType = 'food';
-          else if (mainCat.includes('카페')) internalType = 'cafe';
-          else if (mainCat.includes('숙박')) internalType = 'stay';
-          else if (mainCat.includes('관광지')) internalType = 'sightseeing';
-
-          // Flatten TAGS object into KEYWORDS array for backward compatibility
-          // [Modified] Pick the first available tag array (e.g. winter, summer, common) as requested by user
-          let extractedTags: string[] = [];
-          if (place.TAGS) {
-            const firstTagKey = Object.keys(place.TAGS)[0];
-            if (firstTagKey && Array.isArray(place.TAGS[firstTagKey])) {
-                extractedTags = place.TAGS[firstTagKey]!;
-            }
-          }
-          
-          const keywords = extractedTags.map(tag => tag.startsWith('#') ? tag.slice(1) : tag);
-
-          // [Robustness] Normalize keys (AI might return lowercase)
-          const aiName = place.NAME || place.name;
-          const aiLat = place.LOC_LAT || place.loc_lat || place.coordinates?.lat || 37.5665; // Default Seoul if missing
-          const aiLng = place.LOC_LNG || place.loc_lng || place.coordinates?.lng || 126.9780;
-          const aiAddress = place.ADDRESS || place.address || "";
-          const aiImage = place.IMAGE_URL || place.image_url || null;
-          const aiMemo = place.MEMO || place.memo || "";
-          
-          // Stay Time parsing
-          let stayTimeVal: string | number | undefined = place.STAY_TIME || place.stay_time || place.recommendedDuration;
-          if (!stayTimeVal) {
-             if (internalType === 'stay') stayTimeVal = 720;
-             else if (internalType === 'sightseeing') stayTimeVal = 90;
-             else stayTimeVal = 60;
-          }
-
+          // Refine types and structure
+          console.log(`Days ${day}`);
           return {
-            _docId: `ai_${Math.random().toString(36).substr(2, 9)}`,
-            PLACE_ID: `ai_${Math.random().toString(36).substr(2, 9)}`,
-            NAME: aiName,
-            ADDRESS: aiAddress,
-            CATEGORY: {
-               main: place.CATEGORY?.main || "AI추천",
-               sub: place.CATEGORY?.sub || internalType
-            },
-            LOC_LAT: aiLat,
-            LOC_LNG: aiLng,
-            IMAGE_URL: aiImage,
-            GALLERY_IMAGES: null,
-            MAP_LINK: "",
-            AFFIL_LINK: null,
-            IS_AFLT: false,
-            IS_TICKET_REQUIRED: false,
-            TIME_INFO: null,
-            PARKING_INFO: null,
-            REST_INFO: null,
-            FEE_INFO: null,
-            DETAILS: {},
-            RATING: place.RATING || 0,
-            HIGHTLIGHTS: aiMemo ? [aiMemo] : [], // Use MEMO as highlight
-            MEMO: aiMemo,
-            KEYWORDS: keywords,
-            NAME_GRAMS: [],
-            
             day: day.day,
-            time: `${String(8 + place.VISIT_ORDER * 2).padStart(2, '0')}:00`,
-            type: internalType,
-            STAY_TIME: stayTimeVal,
-            PRICE_GRADE: 0,
-            STATS: { bookmark_count: 0, view_count: 0, review_count: 0, rating: place.RATING || 0, weight: 1 },
-            TAGS: place.TAGS || { spring: null, summer: null, autumn: null, winter: null },
-            isLocked: false,
-            is_indoor: false
-          } as unknown as PlanItem;
-        })
-      })) || []
+            date: day.date,
+            places: dayPlaces.map((place: any, idx: number) => {
+              let internalType: PlanItem["type"] = "etc";
+              const mainCat = place.CATEGORY?.main || "";
+              if (mainCat.includes("식당")) internalType = "food";
+              else if (mainCat.includes("카페")) internalType = "cafe";
+              else if (mainCat.includes("숙박")) internalType = "stay";
+              else if (mainCat.includes("관광지")) internalType = "sightseeing";
+
+              const keywords = [
+                ...(place.TAGS?.common || []),
+                ...(place.TAGS?.winter || []),
+              ].map((tag: string) =>
+                tag.startsWith("#") ? tag.slice(1) : tag
+              );
+
+              return {
+                ...place,
+                _docId: place._docId || `ai_${Math.random()}`,
+                PLACE_ID: String(place.PLACE_ID),
+                NAME: place.NAME,
+                ADDRESS: place.ADDRESS || "",
+                CATEGORY: place.CATEGORY,
+                LOC_LAT: place.LOC_LAT,
+                LOC_LNG: place.LOC_LNG,
+                IMAGE_URL: place.IMAGE_URL || null,
+                type: internalType,
+                day: day.day,
+                time: `${String(9 + idx * 2).padStart(2, "0")}:00`, // Simple sequential time
+                KEYWORDS: keywords,
+                STAY_TIME: place.STAY_TIME || 60,
+                STATS: {
+                  bookmark_count: 0,
+                  view_count: 0,
+                  review_count: 0,
+                  rating: place.RATING || 0,
+                  weight: 1,
+                },
+                TAGS: place.TAGS || {},
+                isLocked: false,
+                is_indoor: false,
+                DETAILS: {},
+              } as PlanItem;
+            }),
+          };
+        }) || [];
+    } else {
+      // Old Schema (Full JSON from AI)
+      enrichedItinerary =
+        parsedData.itinerary?.map((day) => ({
+          day: day.day,
+          date: day.date,
+          places: day.places.map((place) => {
+            // Map Korean CATEGORY.main to internal 'type'
+            let internalType: PlanItem["type"] = "etc";
+            const mainCat = place.CATEGORY?.main || "";
+            if (mainCat.includes("식당")) internalType = "food";
+            else if (mainCat.includes("카페")) internalType = "cafe";
+            else if (mainCat.includes("숙박")) internalType = "stay";
+            else if (mainCat.includes("관광지")) internalType = "sightseeing";
+
+            // Flatten TAGS object into KEYWORDS array for backward compatibility
+            // [Modified] Pick the first available tag array (e.g. winter, summer, common) as requested by user
+            let extractedTags: string[] = [];
+            if (place.TAGS) {
+              const firstTagKey = Object.keys(place.TAGS)[0];
+              if (firstTagKey && Array.isArray(place.TAGS[firstTagKey])) {
+                extractedTags = place.TAGS[firstTagKey]!;
+              }
+            }
+
+            const keywords = extractedTags.map((tag) =>
+              tag.startsWith("#") ? tag.slice(1) : tag
+            );
+
+            // [Robustness] Normalize keys (AI might return lowercase)
+            const aiName = place.NAME || place.name;
+            const aiLat =
+              place.LOC_LAT ||
+              place.loc_lat ||
+              place.coordinates?.lat ||
+              37.5665; // Default Seoul if missing
+            const aiLng =
+              place.LOC_LNG ||
+              place.loc_lng ||
+              place.coordinates?.lng ||
+              126.978;
+            const aiAddress = place.ADDRESS || place.address || "";
+            const aiImage = place.IMAGE_URL || place.image_url || null;
+            const aiMemo = place.MEMO || place.memo || "";
+
+            // Stay Time parsing
+            let stayTimeVal: string | number | undefined =
+              place.STAY_TIME || place.stay_time || place.recommendedDuration;
+            if (!stayTimeVal) {
+              if (internalType === "stay") stayTimeVal = 720;
+              else if (internalType === "sightseeing") stayTimeVal = 90;
+              else stayTimeVal = 60;
+            }
+
+            return {
+              _docId: `ai_${Math.random().toString(36).substr(2, 9)}`,
+              PLACE_ID: `ai_${Math.random().toString(36).substr(2, 9)}`,
+              NAME: aiName,
+              ADDRESS: aiAddress,
+              CATEGORY: {
+                main: place.CATEGORY?.main || "AI추천",
+                sub: place.CATEGORY?.sub || internalType,
+              },
+              LOC_LAT: aiLat,
+              LOC_LNG: aiLng,
+              IMAGE_URL: aiImage,
+              GALLERY_IMAGES: null,
+              MAP_LINK: "",
+              AFFIL_LINK: null,
+              IS_AFLT: false,
+              IS_TICKET_REQUIRED: false,
+              TIME_INFO: null,
+              PARKING_INFO: null,
+              REST_INFO: null,
+              FEE_INFO: null,
+              DETAILS: {},
+              RATING: place.RATING || 0,
+              HIGHTLIGHTS: aiMemo ? [aiMemo] : [], // Use MEMO as highlight
+              MEMO: aiMemo,
+              KEYWORDS: keywords,
+              NAME_GRAMS: [],
+
+              day: day.day,
+              time: `${String(8 + place.VISIT_ORDER * 2).padStart(2, "0")}:00`,
+              type: internalType,
+              STAY_TIME: stayTimeVal,
+              PRICE_GRADE: 0,
+              STATS: {
+                bookmark_count: 0,
+                view_count: 0,
+                review_count: 0,
+                rating: place.RATING || 0,
+                weight: 1,
+              },
+              TAGS: place.TAGS || {
+                spring: null,
+                summer: null,
+                autumn: null,
+                winter: null,
+              },
+              isLocked: false,
+              is_indoor: false,
+            } as unknown as PlanItem;
+          }),
+        })) || [];
     } // End if hasRouteIds
 
     // Map new schema to TravelContext structure with rich data
     const mappedData: TravelContext = {
       destination: query, // Use query as fallback destination
       theme: parsedData.theme ? [parsedData.theme] : [],
-      party: { adult: 2, child: 0 }, 
-      dateRange: { start: today, end: endDateStr }, 
-      itinerary: enrichedItinerary
+      party: { adult: 2, child: 0 },
+      dateRange: { start: today, end: endDateStr },
+      itinerary: enrichedItinerary,
     };
 
     return mappedData;

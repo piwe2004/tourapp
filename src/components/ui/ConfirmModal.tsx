@@ -32,7 +32,7 @@ export default function ConfirmModal({
                         <div className="buttonGroup">
                             <button
                                 onClick={onClose}
-                                className="cancelButton"
+                                className="buttonItem-cancel"
                             >
                                 취소
                             </button>
@@ -41,7 +41,7 @@ export default function ConfirmModal({
                                     onConfirm();
                                     onClose();
                                 }}
-                                className="confirmButton"
+                                className="buttonItem-confirm"
                             >
                                 확인
                             </button>

@@ -52,7 +52,7 @@ export default function DayItems({
     rainRisk,
     isLastItem
 }: DayItemsProps) {
-    
+
     // 상세보기 팝업 상태
     const [isDetailPopupOpen, setIsDetailPopupOpen] = useState(false);
 
@@ -72,16 +72,15 @@ export default function DayItems({
                 {...draggableProps}
                 {...dragHandleProps}
                 className={clsx(
-                    "relative pl-6 pr-2 py-1 transition-all", // Timeline alignment padding
-                    isDragging && "z-50 scale-105 opacity-90"
+                    "day-item-wrapper",
+                    isDragging && "is-dragging"
                 )}
             >
-                <div className="flex gap-4 items-start">
-                    
-                    {/* 1. Left Marker (Connecting Line context moved to PlannerTimeline or managed here via absolute line) */}
-                    <div className="shrink-0 pt-2 z-10 relative">
+                <div className="day-item-inner">
+
+                    {/* 1. Left Marker */}
+                    <div className="marker-wrapper">
                         <Marker index={index} selected={selected} />
-                        {/* Dot indicator if needed */}
                     </div>
 
                     {/* 2. Main Card */}
@@ -89,32 +88,30 @@ export default function DayItems({
                         layout
                         onClick={handleCardClick}
                         className={clsx(
-                            "flex-1 relative bg-white rounded-2xl border transition-all duration-200 group cursor-pointer",
-                            selected 
-                                ? "border-emerald-400 shadow-md ring-1 ring-emerald-100" 
-                                : "border-slate-100 shadow-sm hover:border-slate-300 hover:shadow-md",
-                            rainRisk && "border-red-200 bg-red-50/10"
+                            "day-card",
+                            selected && "selected",
+                            rainRisk && "rain-risk"
                         )}
                     >
                         {/* Card Inner Padding */}
-                        <div className="p-4 flex flex-col gap-2">
-                            
+                        <div className="card-content">
+
                             {/* Actions (Absolute Top Right) */}
-                            <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <ActionMenu 
-                                    item={item} 
-                                    onLockClick={onLockClick} 
-                                    onReplaceClick={onReplaceClick} 
-                                    onDeleteClick={onDeleteClick} 
+                            <div className="actions-wrapper">
+                                <ActionMenu
+                                    item={item}
+                                    onLockClick={onLockClick}
+                                    onReplaceClick={onReplaceClick}
+                                    onDeleteClick={onDeleteClick}
                                 />
                             </div>
 
                             {/* Main Content */}
-                            <ContentBody 
-                                item={item} 
-                                selected={selected} 
-                                rainRisk={rainRisk} 
-                                onPlanBClick={onPlanBClick} 
+                            <ContentBody
+                                item={item}
+                                selected={selected}
+                                rainRisk={rainRisk}
+                                onPlanBClick={onPlanBClick}
                             />
 
                             {/* Expanded View (Optional: Quick Actions or Mini Detail) */}
@@ -124,18 +121,18 @@ export default function DayItems({
                                         initial={{ height: 0, opacity: 0 }}
                                         animate={{ height: "auto", opacity: 1 }}
                                         exit={{ height: 0, opacity: 0 }}
-                                        className="overflow-hidden"
+                                        className="expanded-view"
                                     >
-                                        <div className="pt-3 mt-1 border-t border-slate-50 flex items-center justify-between">
-                                            <span className="text-xs text-slate-400 font-medium">
+                                        <div className="expanded-content">
+                                            <span className="hint-text">
                                                 한 번 더 클릭하면 상세정보를 볼 수 있어요
                                             </span>
-                                            <button 
+                                            <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     setIsDetailPopupOpen(true);
                                                 }}
-                                                className="text-xs font-bold text-emerald-600 hover:bg-emerald-50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                                                className="detail-button"
                                             >
                                                 상세보기 <i className="fa-solid fa-arrow-right"></i>
                                             </button>
@@ -149,14 +146,14 @@ export default function DayItems({
 
                 {/* 3. Travel Time Connector */}
                 {!isLastItem && (
-                    <div className="pl-[50px] pr-4 py-2">
+                    <div className="travel-time-connector">
                         <TravelTime onAddStopClick={onAddStopClick} />
                     </div>
                 )}
             </div>
 
             {/* Detail Popup (Portal) */}
-            <DetailPopup 
+            <DetailPopup
                 item={item}
                 isOpen={isDetailPopupOpen}
                 onClose={() => setIsDetailPopupOpen(false)}
