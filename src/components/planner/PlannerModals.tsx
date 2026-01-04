@@ -1,5 +1,18 @@
 'use client';
 
+/**
+ * -------------------------------------------------------------------------
+ * @file        : src/components/planner/PlannerModals.tsx
+ * @description : 플래너 페이지의 모든 모달을 관리하는 컨테이너 컴포넌트
+ * @author      : MIN
+ * @date        : 2026-01-04
+ * -------------------------------------------------------------------------
+ * @history
+ * - 2026-01-04 MIN : 최초 작성
+ * -------------------------------------------------------------------------
+ */
+
+
 import { X, Map as MapIcon, CloudRain, Check } from 'lucide-react';
 import { PlanItem } from '@/types/place';
 import Map from '@/components/planner/Map';

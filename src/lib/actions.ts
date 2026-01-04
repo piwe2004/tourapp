@@ -1,5 +1,17 @@
 "use server";
 
+/**
+ * -------------------------------------------------------------------------
+ * @file        : src/lib/actions.ts
+ * @description : 여행 일정 생성 및 관리를 위한 핵심 Server Actions (AI 호출, DB 조회)
+ * @author      : MIN
+ * @date        : 2026-01-04
+ * -------------------------------------------------------------------------
+ * @history
+ * - 2026-01-04 MIN : 최초 작성
+ * -------------------------------------------------------------------------
+ */
+
 import { PlanItem } from "@/types/place";
 import { geminiModel } from "./gemini";
 import { db } from "@/lib/firebase";

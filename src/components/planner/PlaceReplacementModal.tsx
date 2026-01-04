@@ -1,3 +1,15 @@
+/**
+ * -------------------------------------------------------------------------
+ * @file        : src/components/planner/PlaceReplacementModal.tsx
+ * @description : 장소 검색 및 대체/추가를 위한 모달 컴포넌트 (Firebase/Naver 검색)
+ * @author      : MIN
+ * @date        : 2026-01-04
+ * -------------------------------------------------------------------------
+ * @history
+ * - 2026-01-04 MIN : 최초 작성
+ * -------------------------------------------------------------------------
+ */
+
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, Star, MapPin, X, Check, Loader2 } from 'lucide-react';
 import { PlanItem } from '@/types/place';

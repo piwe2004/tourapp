@@ -1,5 +1,18 @@
 'use client';
 
+/**
+ * -------------------------------------------------------------------------
+ * @file        : src/components/planner/PlannerTimeline.tsx
+ * @description : 여행 일정의 타임라인 뷰 컴포넌트 (Drag & Drop 지원)
+ * @author      : MIN
+ * @date        : 2026-01-04
+ * -------------------------------------------------------------------------
+ * @history
+ * - 2026-01-04 MIN : 최초 작성
+ * -------------------------------------------------------------------------
+ */
+
+
 import { PlanItem } from '@/types/place';
 import { RainyScheduleItem } from '@/lib/weather/actions';
 import { WeatherData } from '@/lib/weather/service';
@@ -19,7 +32,7 @@ interface PlannerTimelineProps {
     rainRisks: RainyScheduleItem[];
     selectedItemId: string | null;
     travelContext?: TravelContext | null;
-    
+
     onDaySelect: (day: number) => void;
     onSmartMixClick: () => void;
     onItemClick: (id: string) => void;
@@ -60,7 +73,7 @@ export default function PlannerTimeline({
     onMobileMapClick,
     onAddDayClick
 }: PlannerTimelineProps) {
-    
+
     // Sort items by time
     const currentDayItems = schedule
         .filter(item => item.day === selectedDay)
@@ -73,20 +86,20 @@ export default function PlannerTimeline({
         <section className="relative w-full h-full flex flex-col bg-slate-50 overflow-hidden">
             {/* 1. Header Area: Date & Weather */}
             <div className="shrink-0 bg-white border-b border-slate-200 z-10 shadow-sm">
-                <DaySelector 
+                <DaySelector
                     days={days}
                     dateRange={dateRange}
                     selectedDay={selectedDay}
                     onDaySelect={onDaySelect}
                     onSmartMixClick={onSmartMixClick}
-                    weatherData={weatherData} 
+                    weatherData={weatherData}
                 />
             </div>
 
             {/* 2. Mobile Map Preview */}
             <div className="lg:hidden relative h-32 w-full shrink-0 border-b border-slate-200 bg-slate-100">
                 <Map schedule={schedule} selectedDay={selectedDay} selectedItemId={selectedItemId} onItemClick={onItemClick} />
-                <button 
+                <button
                     className="absolute bottom-2 right-2 px-3 py-1.5 bg-white/90 backdrop-blur-sm shadow-md rounded-lg text-xs font-bold text-slate-700 hover:bg-white transition-colors z-10 border border-slate-200"
                     onClick={onMobileMapClick}
                 >
@@ -96,7 +109,7 @@ export default function PlannerTimeline({
 
             {/* 3. Timeline List */}
             <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 pb-20">
-                
+
                 {/* Day Focus Header */}
                 {!isLoading && currentDayFocus && (
                     <div className="mb-8 p-6 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl text-white shadow-lg relative overflow-hidden group">
@@ -119,8 +132,8 @@ export default function PlannerTimeline({
                                 <div
                                     {...provided.droppableProps}
                                     ref={provided.innerRef}
-                                    className="relative flex flex-col gap-0 min-h-[300px]" 
-                                    // Gap is handled by individual items padding to ensure continuous line connection
+                                    className="relative flex flex-col gap-0 min-h-[300px]"
+                                // Gap is handled by individual items padding to ensure continuous line connection
                                 >
                                     {/* The continuous vertical line is drawn inside individual items or by a global absolute line. 
                                         Here, we can use a global absolute line if spacing is uniform, but with varying card heights, 
@@ -133,7 +146,7 @@ export default function PlannerTimeline({
                                     {currentDayItems.map((item, index) => (
                                         <Draggable draggableId={item.PLACE_ID.toString()} index={index} key={item.PLACE_ID}>
                                             {(provided, snapshot) => (
-                                                <div className="relative mb-4"> 
+                                                <div className="relative mb-4">
                                                     {/* Wrapper for margin control */}
                                                     <DayItems
                                                         item={item}
@@ -164,7 +177,7 @@ export default function PlannerTimeline({
                 )}
 
                 {/* Add Item Button */}
-                <button 
+                <button
                     onClick={onAddDayClick}
                     className="w-full mt-4 py-4 border-2 border-dashed border-slate-300 rounded-2xl text-slate-400 font-bold hover:border-emerald-400 hover:text-emerald-500 hover:bg-emerald-50/50 transition-all flex items-center justify-center gap-2"
                 >

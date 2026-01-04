@@ -1,3 +1,15 @@
+/**
+ * -------------------------------------------------------------------------
+ * @file        : src/lib/firebase.ts
+ * @description : Firebase 서비스 초기화 및 설정 (Firestore, Analytics)
+ * @author      : MIN
+ * @date        : 2026-01-04
+ * -------------------------------------------------------------------------
+ * @history
+ * - 2026-01-04 MIN : 최초 작성
+ * -------------------------------------------------------------------------
+ */
+
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAnalytics } from "firebase/analytics";

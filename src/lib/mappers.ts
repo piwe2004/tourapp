@@ -1,3 +1,15 @@
+/**
+ * -------------------------------------------------------------------------
+ * @file        : src/lib/mappers.ts
+ * @description : 데이터 모델 간 변환 유틸리티 (FirebasePlace -> PlanItem)
+ * @author      : MIN
+ * @date        : 2026-01-04
+ * -------------------------------------------------------------------------
+ * @history
+ * - 2026-01-04 MIN : 최초 작성
+ * -------------------------------------------------------------------------
+ */
+
 import { PlanItem } from "@/types/place";
 import { FirebasePlace } from "@/types/places";
 
@@ -43,7 +55,7 @@ export function mapPlaceToPlanItem(
 
   // Type casting explicitly for optional fields that might be missing in FirebasePlace but required/optional in PlanItem
   // Safe defaults are used.
-  
+
   return {
     // PlaceData Fields
     _docId: place.PLACE_ID?.toString() || "",
@@ -68,8 +80,8 @@ export function mapPlaceToPlanItem(
     REST_INFO: null,
     FEE_INFO: place.PRICE_GRADE ? `가격대: ${place.PRICE_GRADE}` : null,
     DETAILS: {
-    //   stayTime: place.STAY_TIME ? place.STAY_TIME.toString() : null,
-        // Assuming strict type, but let's just use empty or minimal
+      //   stayTime: place.STAY_TIME ? place.STAY_TIME.toString() : null,
+      // Assuming strict type, but let's just use empty or minimal
     },
     RATING: place.RATING || null,
     HIGHTLIGHTS: place.HIGHTLIGHTS || null,
@@ -85,10 +97,10 @@ export function mapPlaceToPlanItem(
       weight: 0,
     },
     TAGS: {
-        spring: place.TAGS?.spring || null,
-        summer: place.TAGS?.summer || null,
-        autumn: place.TAGS?.autumn || null,
-        winter: place.TAGS?.winter || null,
+      spring: place.TAGS?.spring || null,
+      summer: place.TAGS?.summer || null,
+      autumn: place.TAGS?.autumn || null,
+      winter: place.TAGS?.winter || null,
     } as any, // Type mismatch workaround if TAGS structure is different
 
     // PlanItem Specific Fields
@@ -96,6 +108,6 @@ export function mapPlaceToPlanItem(
     time,
     type,
     isLocked: false,
-    MEMO: undefined // Default undefined
+    MEMO: undefined, // Default undefined
   };
 }

@@ -1,5 +1,18 @@
 "use client"
 
+/**
+ * -------------------------------------------------------------------------
+ * @file        : src/components/planner/DayItems.tsx
+ * @description : 여행 일정의 개별 아이템(카드) 컴포넌트
+ * @author      : MIN
+ * @date        : 2026-01-04
+ * -------------------------------------------------------------------------
+ * @history
+ * - 2026-01-04 MIN : 최초 작성
+ * -------------------------------------------------------------------------
+ */
+
+
 import { PlanItem } from "@/types/place";
 import { RainyScheduleItem } from '@/lib/weather/actions';
 import { DraggableProvidedDraggableProps, DraggableProvidedDragHandleProps } from '@hello-pangea/dnd';
