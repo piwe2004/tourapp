@@ -1244,142 +1244,148 @@
 // =================================================================================================
 // Home - Popular Destinations (Global)
 // =================================================================================================
-.popular-destinations-section {
-  padding: 3rem 1.25rem; // py-12 px-5
-  background-color: $white;
-  width: 100%;
+.popular {
+  &-destinations-section {
+    padding: 3rem 1.25rem; // py-12 px-5
+    background-color: $white;
+    width: 100%;
 
-  @include tablet {
-    padding-left: 0;
-    padding-right: 0;
-  }
-}
-
-.popular-container {
-  max-width: 80rem; // 7xl
-  margin: 0 auto;
-}
-
-.popular-header {
-  margin-bottom: 1.25rem;
-}
-
-.popular-title {
-  font-size: 1.25rem; // xl
-  font-weight: 900;
-  color: $slate-900;
-  margin-bottom: 2.5rem; // mb-10
-
-  @include tablet {
-    font-size: 1.5rem; // 2xl
-  }
-}
-
-.popular-grid {
-  display: grid;
-  grid-template-columns: repeat(1, minmax(0, 1fr));
-  gap: 2rem;
-
-  @include tablet {
-    // sm but tailwind sm is 640px, tablet mixin also 768px.
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    @include tablet {
+      padding-left: 0;
+      padding-right: 0;
+    }
   }
 
-  @include desktop {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+  &-container {
+    max-width: 80rem; // 7xl
+    margin: 0 auto;
   }
-}
 
-.popular-card {
-  background-color: $white;
-  border-radius: 2rem;
-  overflow: hidden;
-  border: 2px solid #f1f5f9; // slate-100
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); // shadow-sm
-  transition: all 0.3s;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
+  &-header {
+    margin-bottom: 1.25rem;
+  }
 
-  &:hover {
-    border-color: #e0e7ff; // indigo-100
-    box-shadow: 0 20px 40px -10px rgba(79, 70, 229, 0.15);
-    transform: translateY(-0.5rem);
+  &-title {
+    font-size: 1.25rem; // xl
+    font-weight: 900;
+    color: $slate-900;
+    margin-bottom: 2.5rem; // mb-10
 
-    .popular-image {
-      transform: scale(1.1);
+    @include tablet {
+      font-size: 1.5rem; // 2xl
+    }
+  }
+
+  &-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 2rem;
+
+    @include tablet {
+      // sm but tailwind sm is 640px, tablet mixin also 768px.
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .popular-tag {
+    @include desktop {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  &-card {
+    background-color: $white;
+    border-radius: 2rem;
+    overflow: hidden;
+    border: 2px solid #f1f5f9; // slate-100
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); // shadow-sm
+    transition: all 0.3s;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+
+    &:hover {
       border-color: #e0e7ff; // indigo-100
-      color: #4f46e5; // indigo-600
-      background-color: #eef2ff; // indigo-50
+      box-shadow: 0 20px 40px -10px rgba(79, 70, 229, 0.15);
+      transform: translateY(-0.5rem);
+
+      .popular-image {
+        transform: scale(1.1);
+      }
+
+      .popular-tag {
+        border-color: #e0e7ff; // indigo-100
+        color: #4f46e5; // indigo-600
+        background-color: #eef2ff; // indigo-50
+      }
+    }
+  }
+
+  &-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.7s;
+
+    &-wrapper {
+      position: relative;
+      aspect-ratio: 4/3;
+      overflow: hidden;
+      background-color: #f1f5f9; // slate-100
+    }
+  }
+
+  &-gradient {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top,
+        rgba(0, 0, 0, 0.5),
+        transparent,
+        transparent);
+    opacity: 0.6;
+  }
+
+  &-content {
+    padding: 1.5rem; // p-6
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
+  &-card {
+    &-title {
+      font-size: 1.5rem; // 2xl
+      font-weight: 900;
+      color: $slate-900;
+      line-height: 1;
+      margin-bottom: 0.5rem;
+    }
+
+    &-desc {
+      font-size: 0.875rem; // sm
+      color: #64748b; // slate-500
+      font-weight: 500;
+      margin-bottom: 1.5rem;
+      line-height: 1.625;
+
+      // line-clamp-2
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+  }
+
+  &-tag {
+    &-container {
+      margin-top: auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
     }
   }
 }
 
-.popular-image-wrapper {
-  position: relative;
-  aspect-ratio: 4/3;
-  overflow: hidden;
-  background-color: #f1f5f9; // slate-100
-}
 
-.popular-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.7s;
-}
-
-.popular-gradient {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to top,
-      rgba(0, 0, 0, 0.5),
-      transparent,
-      transparent);
-  opacity: 0.6;
-}
-
-.popular-content {
-  padding: 1.5rem; // p-6
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-}
-
-.popular-card-title {
-  font-size: 1.5rem; // 2xl
-  font-weight: 900;
-  color: $slate-900;
-  line-height: 1;
-  margin-bottom: 0.5rem;
-}
-
-.popular-card-desc {
-  font-size: 0.875rem; // sm
-  color: #64748b; // slate-500
-  font-weight: 500;
-  margin-bottom: 1.5rem;
-  line-height: 1.625;
-
-  // line-clamp-2
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.popular-tag-container {
-  margin-top: auto;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-// =================================================================================================
 // Home - Travel Categories (Global)
 // =================================================================================================
 .travel-categories-section {

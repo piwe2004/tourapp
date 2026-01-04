@@ -32,13 +32,16 @@ import { headers } from "next/headers";
 import { FirebasePlace } from "@/types/places";
 export type { FirebasePlace };
 
-// TODO: Replace with your actual deployed Cloud Function URL
-// Example: https://us-central1-your-project-id.cloudfunctions.net/generateOptimizedRoute
+// TODO: 실제 배포된 Cloud Function URL로 교체하세요
+// 예시: https://us-central1-your-project-id.cloudfunctions.net/generateOptimizedRoute
 const OPTIMIZE_API_URL =
   "https://us-central1-tourapp-a8507.cloudfunctions.net/generateOptimizedRoute";
 
 /**
- * @desc Call Cloud Function to optimize route
+ * @desc Cloud Function을 호출하여 여행 경로를 최적화합니다.
+ * @param places 최적화할 장소 목록 (FirebasePlace[])
+ * @param preferences 사용자 선호도 (문자열)
+ * @returns 최적화된 장소 목록 (FirebasePlace[])
  */
 async function optimizeRoute(
   places: FirebasePlace[],
@@ -46,13 +49,13 @@ async function optimizeRoute(
 ): Promise<FirebasePlace[]> {
   if (!OPTIMIZE_API_URL) {
     console.warn(
-      "[Server] OPTIMIZE_API_URL is not set. Skipping optimization."
+      "[Server] OPTIMIZE_API_URL이 설정되지 않았습니다. 최적화를 건너뜁니다."
     );
     return places;
   }
 
   try {
-    console.log("[Server] Requesting route optimization...");
+    console.log("[Server] 경로 최적화 요청 중...");
     const response = await fetch(OPTIMIZE_API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -61,21 +64,18 @@ async function optimizeRoute(
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`API Error ${response.status}: ${errorText}`);
+      throw new Error(`API 오류 ${response.status}: ${errorText}`);
     }
 
     const data = await response.json();
     if (data.optimized_route && Array.isArray(data.optimized_route)) {
-      console.log("[Server] Route optimized successfully.");
+      console.log("[Server] 경로 최적화 성공.");
       return data.optimized_route;
     }
 
     return places;
   } catch (error) {
-    console.warn(
-      "[Server] Route optimization failed, using original order:",
-      error
-    );
+    console.warn("[Server] 경로 최적화 실패, 원본 순서를 사용합니다:", error);
     return places;
   }
 }
@@ -83,9 +83,14 @@ async function optimizeRoute(
 import { mapPlaceToPlanItem } from "@/lib/mappers";
 import { getPlacesByIds } from "@/lib/actions_helper";
 
-// (Removed internal mapPlaceToPlanItem function)
+// (내부 mapPlaceToPlanItem 함수 제거됨)
 
-// Firebase에서 실제 데이터를 가져옵니다.
+/**
+ * @desc 목적지(destination)를 기반으로 여행 계획을 생성합니다. (Legacy Fallback)
+ * AI 컨텍스트 추출 실패 시 단순 DB 조회로 대체할 때 사용됩니다.
+ * @param destination 여행지 지역명 (예: "제주", "부산")
+ * @returns 변환된 PlanItem 배열
+ */
 export async function getTravelPlan(destination: string): Promise<PlanItem[]> {
   console.log(`[Server] "${destination}" 데이터 요청 (Firebase)`);
 
@@ -176,7 +181,8 @@ export interface TravelContext {
 }
 
 /**
- * @desc IP 기반 속도 제한 (1분에 5회)
+ * @desc IP 기반 속도 제한 (1분에 5회)을 확인합니다.
+ * 과도한 API 호출을 방지하기 위해 Firestore에 요청 기록을 저장하고 제한합니다.
  * @param ip 사용자 IP 주소
  * @returns 통과 여부 (true: 통과, false: 차단)
  */
@@ -230,7 +236,10 @@ async function checkRateLimit(ip: string): Promise<boolean> {
 // ... existing code ...
 
 /**
- * @desc 주어진 장소 이름 목록에 해당하는 Firebase 데이터를 일괄 조회
+ * @desc 주어진 장소 이름 목록에 해당하는 Firebase 데이터를 일괄 조회합니다.
+ * AI가 생성한 장소 이름들을 실제 DB 데이터와 매핑하기 위해 사용됩니다.
+ * @param names 조회할 장소 이름 배열
+ * @returns 조회된 FirebasePlace 배열
  */
 export async function getPlacesByNames(
   names: string[]
@@ -238,16 +247,16 @@ export async function getPlacesByNames(
   if (!names || names.length === 0) return [];
 
   console.log(
-    `[Server] getPlacesByNames called with ${names.length} names:`,
+    `[Server] getPlacesByNames 호출됨. 요청된 이름 수: ${names.length}`,
     names.slice(0, 5)
   );
 
   const placesRef = collection(db, "PLACES");
   const uniqueNames = Array.from(new Set(names)).filter((n) => n.trim() !== "");
-  // [Modified] Prevent excessive query error as requested by user
+  // [Modified] 사용자 요청에 따라 과도한 쿼리 방지
   if (uniqueNames.length > 30) {
     console.warn(
-      `[Server] Too many places to fetch (${uniqueNames.length}). Skipping DB fetch to prevent error.`
+      `[Server] 조회할 장소가 너무 많습니다 (${uniqueNames.length}). 오류 방지를 위해 DB 조회를 건너뜁니다.`
     );
     return [];
   }
@@ -271,7 +280,7 @@ export async function getPlacesByNames(
         chunkResults.push(doc.data() as FirebasePlace);
       });
       console.log(
-        `[Server] Chunk result: ${chunk.length} requested -> ${chunkResults.length} found.`
+        `[Server] 청크 결과: ${chunk.length}개 요청 -> ${chunkResults.length}개 발견.`
       );
       return chunkResults;
     });
@@ -279,7 +288,7 @@ export async function getPlacesByNames(
     const chunkedResults = await Promise.all(promises);
     chunkedResults.forEach((r) => results.push(...r));
 
-    console.log(`[Server] Total matched places: ${results.length}`);
+    console.log(`[Server] 총 매칭된 장소 수: ${results.length}`);
     return results;
   } catch (error) {
     console.error("[Server] 일괄 장소 조회 실패:", error);
@@ -288,8 +297,10 @@ export async function getPlacesByNames(
 }
 
 /**
- * @desc 사용자의 자연어 쿼리를 분석하여 여행 조건을 추출하는 함수입니다.
- * ...
+ * @desc 사용자의 자연어 쿼리를 분석하여 여행 컨텍스트(목적지, 테마, 일정 등)를 추출합니다.
+ * Gemini AI를 활용하여 사용자 의도를 파악하고, 최적의 여행 경로를 제안합니다.
+ * @param userQuery 사용자가 입력한 여행 관련 검색어 (예: "부산 맛집 여행")
+ * @returns 여행 컨텍스트 객체 (TravelContext)
  */
 export async function extractTravelContext(
   userQuery: string
@@ -316,25 +327,27 @@ export async function extractTravelContext(
 
   const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
-  // [New] 4. Fetch Candidate Places from Firebase
-  const destinationKeyword = userQuery.split(" ")[0]; // Simple heuristic: First word is destination
+  // [New] 4. Firebase에서 후보 장소 조회
+  const destinationKeyword = userQuery.split(" ")[0]; // 단순 휴리스틱: 첫 단어를 목적지로 가정
   let candidatePlacesStr = "";
 
   try {
-    console.log(`[Server] Fetching candidates for "${destinationKeyword}"`);
+    console.log(`[Server] "${destinationKeyword}"에 대한 후보 장소 조회 중`);
     const placesRef = collection(db, "PLACES");
     const q = query(
       placesRef,
       where("ADDRESS", ">=", destinationKeyword),
       where("ADDRESS", "<=", destinationKeyword + "\uf8ff"),
-      limit(100) // Limit to 100 candidates
+      limit(100) // 후보군 100개로 제한
     );
 
     const snapshot = await getDocs(q);
     const rawCandidates: FirebasePlace[] = [];
 
     if (snapshot.empty) {
-      console.warn(`[Server] No places found for "${destinationKeyword}".`);
+      console.warn(
+        `[Server] "${destinationKeyword}"에 대한 장소를 찾을 수 없습니다.`
+      );
       candidatePlacesStr =
         "No specific database candidates found. Please suggest popular places based on your knowledge, but use placeholder IDs (e.g., 999001).";
     } else {
@@ -342,20 +355,20 @@ export async function extractTravelContext(
         rawCandidates.push(doc.data() as FirebasePlace);
       });
 
-      // [New] Sort by RATING descending to provide "optimal" candidates
+      // [New] 평점(RATING) 내림차순 정렬로 최적의 후보 제공
       rawCandidates.sort((a, b) => (b.RATING || 0) - (a.RATING || 0));
 
-      // Ensure we don't exceed 100 (though query limit handles this, it's safe)
+      // 100개를 초과하지 않도록 제한 (쿼리 제한이 있지만 안전장치)
       const topCandidates = rawCandidates.slice(0, 100);
 
       const candidates: string[] = [];
       topCandidates.forEach((data) => {
-        // Format: - ID: 123 | Name: 장소명 | Loc: 35.1, 129.2 | Cat: 메인>서브 | Tags: #태그1 #태그2 | Rating: 4.5
-        // Flatten tags for prompt
+        // 형식: - ID: 123 | Name: 장소명 | Loc: 35.1, 129.2 | Cat: 메인>서브 | Tags: #태그1 #태그2 | Rating: 4.5
+        // 프롬프트를 위해 태그 평탄화
         let tagStr = "";
         if (data.TAGS) {
           const allTags = Object.values(data.TAGS).flat();
-          tagStr = allTags.slice(0, 5).join(" "); // Top 5 tags
+          tagStr = allTags.slice(0, 5).join(" "); // 상위 5개 태그
         }
 
         const cat = `${data.CATEGORY?.main || ""}>${data.CATEGORY?.sub || ""}`;
@@ -369,13 +382,13 @@ export async function extractTravelContext(
       });
       candidatePlacesStr = candidates.join("\n");
       console.log(
-        `[Server] Fetched and sorted ${candidates.length} candidates.`
+        `[Server] ${candidates.length}개의 후보 장소를 조회 및 정렬했습니다.`
       );
     }
   } catch (error) {
-    console.error("[Server] Error fetching candidates:", error);
+    console.error("[Server] 후보 장소 조회 중 오류 발생:", error);
     candidatePlacesStr =
-      "Error fetching candidates. Please suggest popular places based on your knowledge.";
+      "No specific database candidates found. Please suggest popular places based on your knowledge, but use placeholder IDs (e.g., 999001).";
   }
 
   const prompt = `
@@ -477,7 +490,7 @@ ${candidatePlacesStr}
         ) {
           retryCount++;
           console.warn(
-            `[Gemini] Model Overloaded (503). Retrying (${retryCount}/${maxRetries}) in ${retryCount}s...`
+            `[Gemini] 모델 과부하 (503). ${retryCount}초 후 재시도합니다 (${retryCount}/${maxRetries})...`
           );
           await new Promise((resolve) =>
             setTimeout(resolve, 1000 * retryCount)
@@ -491,13 +504,13 @@ ${candidatePlacesStr}
     const response = await result.response;
     const text = response.text();
 
-    console.log("[Gemini] Raw response:", text);
+    console.log("[Gemini] 원본 응답:", text);
 
-    // Extract JSON from markdown code block if present
+    // 마크다운 코드 블록에서 JSON 추출
     const jsonStr = text.replace(/```json|```/g, "").trim();
     const parsedData = JSON.parse(jsonStr) as AIResponse;
 
-    // Calculate end date based on actual itinerary days
+    // 실제 일정 일수를 기반으로 종료일 계산
     const maxDay =
       parsedData.itinerary?.reduce((max, day) => Math.max(max, day.day), 1) ||
       1;
@@ -505,8 +518,8 @@ ${candidatePlacesStr}
     endDate.setDate(endDate.getDate() + (maxDay - 1));
     const endDateStr = endDate.toISOString().split("T")[0];
 
-    // [Modified] Check for route_ids (new schema) or places (old schema)
-    // Dynamic handling based on user request "PLACE_ID만있는 배열을 가져오는데..."
+    // [Modified] route_ids(새 스키마) 또는 places(구 스키마) 확인
+    // "PLACE_ID만 있는 배열" 요청에 대한 동적 처리
     const hasRouteIds = parsedData.itinerary?.some(
       (day) => (day as any).route_ids && Array.isArray((day as any).route_ids)
     );
@@ -514,7 +527,7 @@ ${candidatePlacesStr}
     let enrichedItinerary: any[] = [];
 
     if (hasRouteIds) {
-      // 1. New Logic: Extract IDs -> Fetch Firebase -> Map
+      // 1. 새로운 로직: ID 추출 -> Firebase 조회 -> 매핑
       const allIds =
         parsedData.itinerary?.flatMap((day) => (day as any).route_ids || []) ||
         [];
@@ -531,16 +544,16 @@ ${candidatePlacesStr}
               if (!p) return null; // ID not found in DB
               return {
                 ...p, // Spread Firebase Data
-                // Map to PlanItem specifics
+                // PlanItem 상세 필드 매핑
                 day: day.day,
-                time: "10:00", // Default time, will be adjusted later if needed or simpler logic
-                type: "sightseeing", // Default, logic below will refine
-                // ... other required PlanItem fields default
+                time: "10:00", // 기본 시간, 필요 시 추후 조정
+                type: "sightseeing", // 기본값, 아래 로직에서 구체화
+                // ... 기타 필수 PlanItem 필드는 기본값 사용
               };
             })
             .filter((p: any) => p !== null);
 
-          // Refine types and structure
+          // 타입 및 구조 구체화
           console.log(`Days ${day}`);
           return {
             day: day.day,
@@ -591,13 +604,13 @@ ${candidatePlacesStr}
           };
         }) || [];
     } else {
-      // Old Schema (Full JSON from AI)
+      // 구 스키마 (AI가 전체 JSON 반환)
       enrichedItinerary =
         parsedData.itinerary?.map((day) => ({
           day: day.day,
           date: day.date,
           places: day.places.map((place) => {
-            // Map Korean CATEGORY.main to internal 'type'
+            // 한글 카테고리를 내부 'type'으로 매핑
             let internalType: PlanItem["type"] = "etc";
             const mainCat = place.CATEGORY?.main || "";
             if (mainCat.includes("식당")) internalType = "food";
@@ -605,8 +618,8 @@ ${candidatePlacesStr}
             else if (mainCat.includes("숙박")) internalType = "stay";
             else if (mainCat.includes("관광지")) internalType = "sightseeing";
 
-            // Flatten TAGS object into KEYWORDS array for backward compatibility
-            // [Modified] Pick the first available tag array (e.g. winter, summer, common) as requested by user
+            // 하위 호환성을 위해 TAGS 객체를 KEYWORDS 배열로 평탄화
+            // [Modified] 첫 번째 사용 가능한 태그 배열(예: winter, summer, common) 선택
             let extractedTags: string[] = [];
             if (place.TAGS) {
               const firstTagKey = Object.keys(place.TAGS)[0];
@@ -619,13 +632,13 @@ ${candidatePlacesStr}
               tag.startsWith("#") ? tag.slice(1) : tag
             );
 
-            // [Robustness] Normalize keys (AI might return lowercase)
+            // [Robustness] 키 정규화 (AI가 소문자로 반환할 경우 대비)
             const aiName = place.NAME || place.name;
             const aiLat =
               place.LOC_LAT ||
               place.loc_lat ||
               place.coordinates?.lat ||
-              37.5665; // Default Seoul if missing
+              37.5665; // 누락 시 서울 기본값
             const aiLng =
               place.LOC_LNG ||
               place.loc_lng ||
@@ -635,7 +648,7 @@ ${candidatePlacesStr}
             const aiImage = place.IMAGE_URL || place.image_url || null;
             const aiMemo = place.MEMO || place.memo || "";
 
-            // Stay Time parsing
+            // 체류 시간 파싱
             let stayTimeVal: string | number | undefined =
               place.STAY_TIME || place.stay_time || place.recommendedDuration;
             if (!stayTimeVal) {
@@ -667,7 +680,7 @@ ${candidatePlacesStr}
               FEE_INFO: null,
               DETAILS: {},
               RATING: place.RATING || 0,
-              HIGHTLIGHTS: aiMemo ? [aiMemo] : [], // Use MEMO as highlight
+              HIGHTLIGHTS: aiMemo ? [aiMemo] : [], // MEMO를 하이라이트로 사용
               MEMO: aiMemo,
               KEYWORDS: keywords,
               NAME_GRAMS: [],
@@ -697,9 +710,9 @@ ${candidatePlacesStr}
         })) || [];
     } // End if hasRouteIds
 
-    // Map new schema to TravelContext structure with rich data
+    // 새 스키마를 TravelContext 구조로 매핑 (풍부한 데이터 포함)
     const mappedData: TravelContext = {
-      destination: userQuery, // Use query as fallback destination
+      destination: userQuery, // 쿼리를 목적지로 대체 사용
       theme: parsedData.theme ? [parsedData.theme] : [],
       party: { adult: 2, child: 0 },
       dateRange: { start: today, end: endDateStr },
@@ -708,8 +721,8 @@ ${candidatePlacesStr}
 
     return mappedData;
   } catch (error) {
-    console.error("[Gemini] Error extracting context:", error);
-    // Fallback in case of error
+    console.error("[Gemini] 컨텍스트 추출 중 오류 발생:", error);
+    // 오류 발생 시 Fallback 반환
     return {
       destination: null,
       theme: [],
