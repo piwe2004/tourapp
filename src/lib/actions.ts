@@ -55,7 +55,7 @@ async function optimizeRoute(
   }
 
   try {
-    console.log("[Server] 경로 최적화 요청 중...");
+    console.log(`[Server][Firebase Debug] 🚀 경로 최적화 요청 시작 | 장소: ${places.length}개 | 선호도: ${preferences}`);
     const response = await fetch(OPTIMIZE_API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -69,7 +69,7 @@ async function optimizeRoute(
 
     const data = await response.json();
     if (data.optimized_route && Array.isArray(data.optimized_route)) {
-      console.log("[Server] 경로 최적화 성공.");
+      console.log(`[Server][Firebase Debug] ✅ 경로 최적화 성공 | 반환된 장소: ${data.optimized_route.length}개`);
       return data.optimized_route;
     }
 
@@ -92,7 +92,7 @@ import { getPlacesByIds } from "@/lib/actions_helper";
  * @returns 변환된 PlanItem 배열
  */
 export async function getTravelPlan(destination: string): Promise<PlanItem[]> {
-  console.log(`[Server] "${destination}" 데이터 요청 (Firebase)`);
+  console.log(`[Server][Firebase Debug] 🔍 getTravelPlan 호출됨 | 목적지: "${destination}"`);
 
   try {
     const placesRef = collection(db, "PLACES");
@@ -115,7 +115,7 @@ export async function getTravelPlan(destination: string): Promise<PlanItem[]> {
     const querySnapshot = await getDocs(q);
 
     if (querySnapshot.empty) {
-      console.warn(`[Server] "${destination}" 관련 데이터가 없습니다.`);
+      console.warn(`[Server][Firebase Debug] ⚠️ "${destination}" 관련 데이터 없음 (0건)`);
       return [];
     } else {
       querySnapshot.forEach((doc) => {
@@ -148,7 +148,7 @@ export async function getTravelPlan(destination: string): Promise<PlanItem[]> {
       }
     });
 
-    console.log(`[Server] ${items.length}개의 장소를 가져왔습니다.`);
+    console.log(`[Server][Firebase Debug] ✅ getTravelPlan 완료 | 총 ${items.length}개 장소 반환`);
     return items;
   } catch (error) {
     console.error("[Server] Firebase 데이터 가져오기 실패:", error);
@@ -247,7 +247,7 @@ export async function getPlacesByNames(
   if (!names || names.length === 0) return [];
 
   console.log(
-    `[Server] getPlacesByNames 호출됨. 요청된 이름 수: ${names.length}`,
+    `[Server][Firebase Debug] 🛒 getPlacesByNames 호출 | 요청된 이름: ${names.length}개`,
     names.slice(0, 5)
   );
 
@@ -280,7 +280,7 @@ export async function getPlacesByNames(
         chunkResults.push(doc.data() as FirebasePlace);
       });
       console.log(
-        `[Server] 청크 결과: ${chunk.length}개 요청 -> ${chunkResults.length}개 발견.`
+        `[Server][Firebase Debug] 📦 청크 조회 결과 | 요청: ${chunk.length}개 -> 발견: ${chunkResults.length}개`
       );
       return chunkResults;
     });
@@ -288,7 +288,7 @@ export async function getPlacesByNames(
     const chunkedResults = await Promise.all(promises);
     chunkedResults.forEach((r) => results.push(...r));
 
-    console.log(`[Server] 총 매칭된 장소 수: ${results.length}`);
+    console.log(`[Server][Firebase Debug] ✅ getPlacesByNames 완료 | 총 매칭된 장소: ${results.length}개`);
     return results;
   } catch (error) {
     console.error("[Server] 일괄 장소 조회 실패:", error);
@@ -332,7 +332,7 @@ export async function extractTravelContext(
   let candidatePlacesStr = "";
 
   try {
-    console.log(`[Server] "${destinationKeyword}"에 대한 후보 장소 조회 중`);
+    console.log(`[Server][Firebase Debug] 🔎 extractTravelContext 후보 장소 조회 | 키워드: "${destinationKeyword}"`);
     const placesRef = collection(db, "PLACES");
     const q = query(
       placesRef,
@@ -346,7 +346,7 @@ export async function extractTravelContext(
 
     if (snapshot.empty) {
       console.warn(
-        `[Server] "${destinationKeyword}"에 대한 장소를 찾을 수 없습니다.`
+        `[Server][Firebase Debug] ⚠️ 후보 장소 없음 | 키워드: "${destinationKeyword}"`
       );
       candidatePlacesStr =
         "No specific database candidates found. Please suggest popular places based on your knowledge, but use placeholder IDs (e.g., 999001).";
@@ -382,7 +382,7 @@ export async function extractTravelContext(
       });
       candidatePlacesStr = candidates.join("\n");
       console.log(
-        `[Server] ${candidates.length}개의 후보 장소를 조회 및 정렬했습니다.`
+        `[Server][Firebase Debug] ✅ 후보 장소 확보 완료 | ${candidates.length}개 (평점순 정렬됨)`
       );
     }
   } catch (error) {

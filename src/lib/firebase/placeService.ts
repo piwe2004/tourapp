@@ -51,6 +51,7 @@ export async function fetchPlaceDetails(placeName: string): Promise<PlaceData> {
     try {
         const placesRef = collection(db, "PLACES");
         const q = query(placesRef, where("NAME", "==", placeName), limit(1));
+        console.log(`[Server][Firebase Debug] 🕵️ fetchPlaceDetails 조회 | 이름: "${placeName}"`);
         const querySnapshot = await getDocs(q);
 
         if (!querySnapshot.empty) {
@@ -276,6 +277,7 @@ export async function getPlacesByTheme(theme: string): Promise<PlanItem[]> {
         );
         
         const snapshot = await getDocs(q);
+        console.log(`[Server][Firebase Debug] 🎨 getPlacesByTheme 조회 | 테마: "${theme}" | 키워드: [${keywords.join(", ")}] | 결과: ${snapshot.size}개`);
         const results: PlanItem[] = [];
 
         snapshot.forEach(doc => {

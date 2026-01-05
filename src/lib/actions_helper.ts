@@ -25,7 +25,7 @@ export async function getPlacesByIds(
   if (!ids || ids.length === 0) return [];
 
   console.log(
-    `[Server] getPlacesByIds called with ${ids.length} IDs:`,
+    `[Server][Firebase Debug] 🆔 getPlacesByIds 호출 | 요청된 ID: ${ids.length}개`,
     ids.slice(0, 5)
   );
 
@@ -61,7 +61,7 @@ export async function getPlacesByIds(
         chunkResults.push(doc.data() as FirebasePlace);
       });
       console.log(
-        `[Server] ID Chunk result: ${chunk.length} requested -> ${chunkResults.length} found.`
+        `[Server][Firebase Debug] 📦 ID 청크 조회 | 요청: ${chunk.length}개 -> 발견: ${chunkResults.length}개`
       );
       return chunkResults;
     });
