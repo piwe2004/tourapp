@@ -195,3 +195,100 @@ sequenceDiagram
 - `time`: 방문 예정 시간
 - `type`: 장소 유형 (food, cafe, stay, sightseeing)
 - `isLocked`: 사용자가 고정한 장소 여부
+
+---
+
+## 6. 데이터 인터페이스 명세 (Data Interface Specification) (중요)
+
+시스템의 핵심인 데이터 통신 규격을 정의합니다. **Firebase**와 **Gemini AI** 사이에 오가는 실제 데이터의 형태를 상세히 기술합니다.
+
+### 6.1. Firebase 조회 인터페이스 (Firebase Fetch Spec)
+
+**Step 2**에서 후보군을 확보할 때 사용하는 데이터 구조입니다.
+
+**Request (Query Params)**
+
+- Collection: `PLACES`
+- Filters:
+  - `ADDRESS` (StartAt/EndAt): 목적지 키워드 (e.g., "제주")
+  - `Limit`: 100 (AI 토큰 제한 고려)
+- Sort: `RATING` (descending)
+
+**Response (Document Schema)**
+Firestore에서 반환되는 원본 문서(Document)의 형태입니다.
+
+```json
+{
+  "PLACE_ID": "100234",
+  "NAME": "성산일출봉",
+  "ADDRESS": "제주 서귀포시 성산읍",
+  "CATEGORY": {
+    "main": "관광지",
+    "sub": "자연명소 > 오름"
+  },
+  "LOC_LAT": 33.458,
+  "LOC_LNG": 126.942,
+  "RATING": 4.8,
+  "TAGS": {
+    "common": ["#일출", "#등산", "#유네스코"],
+    "winter": ["#해돋이"]
+  },
+  "IMAGE_URL": "https://firebasestorage...",
+  "STAY_TIME": 90
+}
+```
+
+---
+
+### 6.2. Gemini AI 프롬프트 컨텍스트 (Gemini Prompt Context)
+
+**Step 3**에서 AI에게 주입되는 **경량화된(Minified)** 장소 데이터 리스트입니다. 토큰 비용 절감을 위해 필수 필드만 압축하여 전달합니다.
+
+**Input Format (Stringified List)**
+
+```text
+- ID: 100234 | Name: 성산일출봉 | Loc: 33.458, 126.942 | Cat: 관광지>오름 | Tags: #일출 #유네스코 | Rating: 4.8
+- ID: 500123 | Name: 스타벅스 성산DT | Loc: 33.459, 126.940 | Cat: 카페>커피 | Tags: #오션뷰 #주차장 | Rating: 4.3
+... (최대 100개 반복)
+```
+
+**Key Optimization**:
+
+- `IMAGE_URL`, `ADDRESS`(상세주소), `Description` 등 AI의 **경로 판단에 불필요한 필드는 제거**합니다.
+- `TAGS`는 상위 5개로, `CATEGORY`는 단순화된 문자열(`Main>Sub`) 포맷으로 변환합니다.
+
+---
+
+### 6.3. Gemini AI 응답 스키마 (Gemini Response Schema)
+
+AI가 최적 경로를 계산한 뒤 반환하는 **JSON 포맷**입니다. 파싱의 정확도를 위해 **ID 기반의 단순 리스트** 형태를 취합니다.
+
+**Expected Output Format (JSON)**
+
+```json
+{
+  "theme": "자연과 함께하는 힐링 여행",
+  "itinerary": [
+    {
+      "day": 1,
+      "route_ids": [
+        "100234", // 성산일출봉
+        "500123", // 스타벅스 성산DT
+        "200999" // 섭지코지
+      ]
+    },
+    {
+      "day": 2,
+      "route_ids": [
+        "300101", // 함덕해수욕장
+        "300102" // 델문도
+      ]
+    }
+  ]
+}
+```
+
+**Design Rationale**:
+
+- **Why ID Only?**: AI가 장소 이름이나 좌표를 직접 재생성(Hallucination)하는 것을 방지하고, 오직 `ID`만 반환하게 하여 데이터 무결성을 보장합니다.
+- **Why Simple?**: 응답 토큰을 최소화하여(Latency 감소) 0.5초 이내의 빠른 응답 속도를 목표로 합니다.
