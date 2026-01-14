@@ -499,6 +499,8 @@ export async function extractTravelContext(
     // --------------------------------------------------------------------------
     // Step 5: Route Generation (Gemini)
     // --------------------------------------------------------------------------
+    const isMajorTouristCity = /제주|부산|강릉|여수|경주|속초|거제/.test(region);
+    
     const routePrompt = `
       # Role
       You are an expert travel planner for "${region}".
@@ -509,17 +511,26 @@ export async function extractTravelContext(
       # Context
       ${candidatePlacesStr}
       
-      # Constraints
-      1. Choose the best places from the list.
-      2. Sort geographically.
-      3. Volume: 4-6 places per day.
-      4. Suggest a creative Korean theme title.
+      # Critical Constraints (MUST FOLLOW)
+      1. **Accommodation Strategy (Anchoring)**:
+         - Select the **Assign ONE best accommodation** for the trip (or different ones if needed).
+         - **Check-in Time**: The accommodation visit MUST be scheduled around **15:00 ~ 16:00** (3 PM - 4 PM) to unpack and rest. It should NOT be the last place.
+         - *Flow*: Lunch -> Activity/Cafe -> **Check-in (Stay)** -> Dinner -> Night Activity.
+      
+      2. **Geographical Logic**:
+         ${isMajorTouristCity 
+           ? `- **Strict Clustering**: Since "${region}" is a major tourist area, pick spots **very close** to the accommodation to minimize travel time.` 
+           : `- **Balanced Approach**: Since "${region}" is a general area, prioritize **Top-Rated/Popular** spots even if they are slightly far, but try to keep them within reasonable driving distance from the accommodation.`}
+         - Sort routes geographically (West -> East or Cluster-based).
+
+      3. **Volume**: 4-6 places per day.
+      4. **Theme**: Suggest a creative Korean theme title.
       
       # Output JSON Schema
       {
         "theme": "string",
         "itinerary": [
-          { "day": 1, "route_ids": [123, 456] },
+          { "day": 1, "route_ids": [123, 456, 789, 101, 112] }, // sequence of PLACE_IDs
           ...
         ]
       }
