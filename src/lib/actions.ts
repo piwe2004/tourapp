@@ -302,432 +302,307 @@ export async function getPlacesByNames(
  * @param userQuery 사용자가 입력한 여행 관련 검색어 (예: "부산 맛집 여행")
  * @returns 여행 컨텍스트 객체 (TravelContext)
  */
+// Parsing Interface
+interface ParsedTravelContext {
+  region: string;
+  districts: string[];
+  people: string | null;
+  themes: string[];
+  duration: string;
+}
+
 export async function extractTravelContext(
   userQuery: string
 ): Promise<TravelContext> {
-  // ... (existing code for headers, ratelimit) ...
   const headersList = await headers();
   const ip = headersList.get("x-forwarded-for")?.split(",")[0] || "unknown";
 
-  // 1. 입력값 검증: 길이 제한 (50자)
-  if (userQuery.length > 50) {
-    throw new Error("검색어는 50자 이내여야 합니다.");
-  }
+  // 1. Validation
+  if (userQuery.length > 100) throw new Error("검색어는 100자 이내여야 합니다.");
+  if (/<script/i.test(userQuery)) throw new Error("허용되지 않는 입력입니다.");
 
-  // 2. 입력값 검증: 스크립트 태그 방지 (간이 XSS 방어)
-  if (/<script/i.test(userQuery)) {
-    throw new Error("허용되지 않는 입력이 포함되어 있습니다.");
-  }
-
-  // 3. Rate Limiting 체크
+  // 2. Rate Limiting
   const isAllowed = await checkRateLimit(ip);
-  if (!isAllowed) {
-    throw new Error("요청이 너무 많습니다. 잠시 후 다시 시도해주세요.");
-  }
+  if (!isAllowed) throw new Error("요청이 너무 많습니다. 잠시 후 다시 시도해주세요.");
 
-  const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+  const today = new Date().toISOString().split("T")[0];
 
-  // [New] 4. Firebase에서 후보 장소 조회
-  const destinationKeyword = userQuery.split(" ")[0]; // 단순 휴리스틱: 첫 단어를 목적지로 가정
-  let candidatePlacesStr = "";
+  // --------------------------------------------------------------------------
+  // Step 1: Query Parsing (Gemini) - 5 Priorities
+  // --------------------------------------------------------------------------
+  console.log(`[Server] 🧠 Gemini Query Parsing 시작: "${userQuery}"`);
+  
+  const parsePrompt = `
+    Analyze the unexpected travel query "${userQuery}" and extract the following 5 key elements in JSON format.
+    
+    # Priority & Extraction Rules
+    1. **region** (1st Priority): The major region name (e.g., "제주", "부산", "강릉", "서울").
+       - Must be a broad administrative region.
+    
+    2. **districts** (2nd Priority): A list of 2-3 specific sub-regions (Gu/Gun/Dong).
+       - IF the user specified a district (e.g. "Aewol"), include it.
+       - **CRITICAL**: IF the user did NOT specify a district, **YOU MUST RECOMMEND 2-3 districts** that best fit the **Theme** and **People**.
+         - Example: "Jeju cafe trip" -> ["애월", "한림", "노형"] (Famous for cafes)
+         - Example: "Jeju family trip" -> ["서귀포", "성산"] (Resorts/Nature)
+
+    3. **people** (3rd Priority): Companion type (Matches 'MEMBER' field).
+       - Keywords: "아이", "부모님", "커플", "친구", "혼자", "가족"
+       - If not specified, categorize based on context or set null.
+
+    4. **themes** (4th Priority): Travel style (Matches 'STYLES' field).
+       - Keywords: '힐링/휴식', '맛집 탐방', '액티비티/모험', '역사/문화', '인생샷/SNS', '호캉스'
+       - Extract as a list of strings.
+
+    5. **duration** (5th Priority): Travel duration string (e.g., "1박2일").
+       - Default to "1박2일" if not specified.
+
+    # Output JSON Schema
+    {
+      "region": "string",
+      "districts": ["string", "string"],
+      "people": "string",
+      "themes": ["string"],
+      "duration": "string"
+    }
+  `;
+
+  let parsedContext: ParsedTravelContext = { region: "제주", districts: [], people: null, themes: [], duration: "1박2일" };
 
   try {
-    console.log(`[Server][Firebase Debug] 🔎 extractTravelContext 후보 장소 조회 | 키워드: "${destinationKeyword}"`);
+    const parseResult = await geminiModel.generateContent(parsePrompt);
+    const parseResponse = await parseResult.response;
+    const jsonStr = parseResponse.text().replace(/```json|```/g, "").trim();
+    parsedContext = JSON.parse(jsonStr) as ParsedTravelContext;
+    console.log("[Server] ✅ Query Parsed:", parsedContext);
+  } catch (e) {
+    console.error("[Server] Query Parsing Failed, using defaults:", e);
+    // Fallback: simple split
+    parsedContext.region = userQuery.split(" ")[0] || "제주";
+  }
+
+  // --------------------------------------------------------------------------
+  // Step 2: Firebase Fetch (Priority 1: Region)
+  // --------------------------------------------------------------------------
+  const region = parsedContext.region || "제주"; // Fallback
+  const candidates: (FirebasePlace & { score: number })[] = [];
+  
+  try {
     const placesRef = collection(db, "PLACES");
+    // Region Scan (ADDRESS starts with region)
+    // Note: This fetches a broad set (limit 150) to apply In-Memory Scoring effectively
     const q = query(
       placesRef,
-      where("ADDRESS", ">=", destinationKeyword),
-      where("ADDRESS", "<=", destinationKeyword + "\uf8ff"),
-      limit(100) // 후보군 100개로 제한
+      where("ADDRESS", ">=", region),
+      where("ADDRESS", "<=", region + "\uf8ff"),
+      limit(300) 
     );
-
+    
     const snapshot = await getDocs(q);
-    const rawCandidates: FirebasePlace[] = [];
+    console.log(`[Server] 📦 Region Fetch (${region}): ${snapshot.size} places found.`);
 
-    if (snapshot.empty) {
-      console.warn(
-        `[Server][Firebase Debug] ⚠️ 후보 장소 없음 | 키워드: "${destinationKeyword}"`
-      );
-      candidatePlacesStr =
-        "No specific database candidates found. Please suggest popular places based on your knowledge, but use placeholder IDs (e.g., 999001).";
-    } else {
-      snapshot.forEach((doc) => {
-        rawCandidates.push(doc.data() as FirebasePlace);
-      });
+    // --------------------------------------------------------------------------
+    // Step 3: In-Memory Scoring (Priority 2, 3, 4)
+    // --------------------------------------------------------------------------
+    const { districts, people, themes } = parsedContext;
 
-      // [New] 평점(RATING) 내림차순 정렬로 최적의 후보 제공
-      rawCandidates.sort((a, b) => (b.RATING || 0) - (a.RATING || 0));
+    snapshot.forEach(doc => {
+      const data = doc.data() as FirebasePlace;
+      let score = 0;
 
-      // 100개를 초과하지 않도록 제한 (쿼리 제한이 있지만 안전장치)
-      const topCandidates = rawCandidates.slice(0, 100);
-
-      const candidates: string[] = [];
-      topCandidates.forEach((data) => {
-        // 형식: - ID: 123 | Name: 장소명 | Loc: 35.1, 129.2 | Cat: 메인>서브 | Tags: #태그1 #태그2 | Rating: 4.5
-        // 프롬프트를 위해 태그 평탄화
-        let tagStr = "";
-        if (data.TAGS) {
-          const allTags = Object.values(data.TAGS).flat();
-          tagStr = allTags.slice(0, 5).join(" "); // 상위 5개 태그
-        }
-
-        const cat = `${data.CATEGORY?.main || ""}>${data.CATEGORY?.sub || ""}`;
-        candidates.push(
-          `- ID: ${data.PLACE_ID} | Name: ${data.NAME} | Loc: ${
-            data.LOC_LAT
-          }, ${data.LOC_LNG} | Cat: ${cat} | Tags: ${tagStr} | Rating: ${
-            data.RATING || 0
-          }`
-        );
-      });
-      candidatePlacesStr = candidates.join("\n");
-      console.log(
-        `[Server][Firebase Debug] ✅ 후보 장소 확보 완료 | ${candidates.length}개 (평점순 정렬됨)`
-      );
-    }
-  } catch (error) {
-    console.error("[Server] 후보 장소 조회 중 오류 발생:", error);
-    candidatePlacesStr =
-      "No specific database candidates found. Please suggest popular places based on your knowledge, but use placeholder IDs (e.g., 999001).";
-  }
-
-  const prompt = `
-    # Role
-너는 주어진 [Candidate Places] 목록 중에서 사용자의 요청("${userQuery}")에 가장 적합한 장소들을 선택하여 순서만 나열하는 'Route Sorter'다.
-
-# Context (이 데이터를 반드시 프롬프트에 포함해야 함)
-[Candidate Places]
-${candidatePlacesStr}
-
-# 핵심 미션
-1. **Selection**: 후보군 중에서 요청에 맞는 최적의 장소(Day당 6~8개)를 'PLACE_ID'로 선택하라.
-2. **Routing**: 선택된 장소들의 'Loc' 좌표를 참고하여 동선이 꼬이지 않게(서→동, 권역별) 정렬하라.
-3. **Output**: 오직 'PLACE_ID'로 구성된 배열만 반환하라.
-   - 예시: [1018702, 2033911, 5022133, ...]
-   - 중복을 제거 해라
-   - 다른날과의 중복을 제거 해라
-4. **Accommodation Rule (숙소 앵커링)**:
-   - **Day N의 마지막 장소**: 반드시 'main: 숙박'인 ID여야 한다. (해당 지역에서 가장 동선이 좋은 숙소 선택)
-   - **Day N+1의 첫 번째 장소**: 반드시 **Day N의 마지막에 선택한 숙소 ID와 동일**해야 한다. (숙소에서 출발)
-   - *예외: 마지막 날(Last Day)의 끝은 숙소일 필요 없다.*
-
-5. **Route Sorting**:
-   - 'Loc' 좌표를 기준으로 이동 거리가 짧도록 정렬하라.
-   - 단, 숙소 규칙(1번)이 거리 규칙보다 우선한다.
-
-# Output JSON Schema (Extreme Light Version)
-{
-  "theme": "테마명(짧게)",
-  "itinerary": [
-    {
-      "day": 1,
-      "route_ids": []  // 오직 PLACE_ID만!
-    },
-    {
-      "day": 2,
-      "route_ids": []  // 오직 PLACE_ID만!
-    }
-  ]
-}
-
-# IMPORTANT:
-- [Candidate Places]에 없는 ID는 절대 만들어내지 마라.
-- 설명, 좌표, 이름 등 불필요한 필드는 모두 제거하라.
-  `;
-  // ... (rest of the function)
-
-  interface AIResponse {
-    theme: string;
-    itinerary: {
-      day: number;
-      date: string;
-      places: {
-        NAME: string;
-        name?: string; // Fallback
-        CATEGORY: { main: string; sub: string };
-        IMAGE_URL: string;
-        image_url?: string; // Fallback
-        LOC_LAT: number;
-        loc_lat?: number; // Fallback
-        coordinates?: { lat: number; lng: number }; // Fallback
-        LOC_LNG: number;
-        loc_lng?: number; // Fallback
-        ADDRESS: string;
-        address?: string; // Fallback
-        STAY_TIME: string;
-        stay_time?: string; // Fallback
-        recommendedDuration?: string; // Fallback
-        TRAVEL_TIME_TO_NEXT: string;
-        IS_AFLT: boolean;
-        RATING: number;
-        TAGS: {
-          winter?: string[];
-          common?: string[];
-          [key: string]: string[] | undefined;
-        };
-        MEMO: string;
-        memo?: string; // Fallback
-        VISIT_ORDER: number;
-      }[];
-    }[];
-  }
-
-  try {
-    let result;
-    let retryCount = 0;
-    const maxRetries = 3;
-
-    while (true) {
-      try {
-        result = await geminiModel.generateContent(prompt);
-        break;
-      } catch (error: any) {
-        if (
-          (error.message?.includes("503") ||
-            error.message?.includes("Overloaded") ||
-            error.status === 503) &&
-          retryCount < maxRetries
-        ) {
-          retryCount++;
-          console.warn(
-            `[Gemini] 모델 과부하 (503). ${retryCount}초 후 재시도합니다 (${retryCount}/${maxRetries})...`
-          );
-          await new Promise((resolve) =>
-            setTimeout(resolve, 1000 * retryCount)
-          );
-        } else {
-          throw error;
+      // [Priority 2] Districts (+50 / +40)
+      if (districts && districts.length > 0) {
+        if (data.ADDRESS && data.ADDRESS.includes(districts[0])) {
+            score += 50; // Primary recommendation match
+        } else if (districts.slice(1).some((d: string) => data.ADDRESS && data.ADDRESS.includes(d))) {
+            score += 40; // Secondary recommendation match
         }
       }
+
+      // [Priority 3] People (MEMBER field) (+30)
+      if (people && data.MEMBER && Array.isArray(data.MEMBER)) {
+        // Simple fuzzy match or exact match
+        if (data.MEMBER.some(m => m.includes(people!) || people!.includes(m))) {
+            score += 30;
+        }
+      }
+
+      // [Priority 4] Themes (STYLES field) (+20)
+      if (themes && themes.length > 0 && data.STYLES && Array.isArray(data.STYLES)) {
+        if (data.STYLES.some(s => themes.some((t: string) => s.includes(t) || t.includes(s)))) {
+            score += 20;
+        }
+      }
+
+      // Base Score: Rating fallback
+      score += (data.RATING || 0);
+
+      candidates.push({ ...data, score });
+    });
+
+    // Sort by Score
+    candidates.sort((a, b) => b.score - a.score);
+
+    // --------------------------------------------------------------------------
+    // Step 4: Candidate Selection (Category Quotas)
+    // --------------------------------------------------------------------------
+    // User Request: 식당 10~30, 숙소 5~20, 관광지 0~20, 카페 10~20
+    
+    // Group by Category
+    const grouped = {
+        food: [] as typeof candidates,
+        cafe: [] as typeof candidates,
+        stay: [] as typeof candidates,
+        sightseeing: [] as typeof candidates,
+        etc: [] as typeof candidates
+    };
+
+    candidates.forEach(c => {
+        const cat = c.CATEGORY?.main || "";
+        // [Robustness] Broader keyword matching
+        if (/식당|음식|맛집/.test(cat)) grouped.food.push(c);
+        else if (/카페|커피|베이커리|디저트/.test(cat)) grouped.cafe.push(c);
+        else if (/숙박|호텔|리조트|펜션|모텔|게스트하우스/.test(cat)) grouped.stay.push(c);
+        else if (/관광지|명소|문화|체험|공원/.test(cat)) grouped.sightseeing.push(c);
+        else grouped.etc.push(c);
+    });
+
+    // Select Top N based on constraints (Max limit used here)
+    // Food: 30, Stay: 20, Sightseeing: 20, Cafe: 20
+    // Note: Scores are already sorted descending
+    const selectedFood = grouped.food.slice(0, 30);
+    const selectedStay = grouped.stay.slice(0, 20);
+    const selectedSightseeing = grouped.sightseeing.slice(0, 20);
+    const selectedCafe = grouped.cafe.slice(0, 20);
+    
+    // Combine
+    const topCandidates = [
+        ...selectedFood,
+        ...selectedStay,
+        ...selectedSightseeing,
+        ...selectedCafe
+    ];
+    
+    console.log(`[Server] 🏆 Top Scored Candidates Selected:
+      - Food: ${selectedFood.length}
+      - Stay: ${selectedStay.length}
+      - Sightseeing: ${selectedSightseeing.length}
+      - Cafe: ${selectedCafe.length}
+      - Total: ${topCandidates.length}
+    `);
+
+    // Convert to String for Prompt
+    const candidatePlacesStr = topCandidates.map(data => {
+        const styleStr = data.STYLES?.join(",") || data.CATEGORY?.sub || "";
+        return `- ID: ${data.PLACE_ID} | Name: ${data.NAME} | Loc: ${data.LOC_LAT}, ${data.LOC_LNG} | Cat: ${data.CATEGORY?.main} | Style: ${styleStr} | Rating: ${data.RATING || 0}`;
+    }).join("\n");
+
+    // --------------------------------------------------------------------------
+    // Step 5: Route Generation (Gemini)
+    // --------------------------------------------------------------------------
+    const routePrompt = `
+      # Role
+      You are an expert travel planner for "${region}".
+      
+      # Request
+      Create a perfect "${parsedContext.duration}" itinerary for a "${parsedContext.people || 'general'}" group focusing on "${parsedContext.themes?.join(',') || 'general'}" themes.
+      
+      # Context
+      ${candidatePlacesStr}
+      
+      # Constraints
+      1. Choose the best places from the list.
+      2. Sort geographically.
+      3. Volume: 4-6 places per day.
+      4. Suggest a creative Korean theme title.
+      
+      # Output JSON Schema
+      {
+        "theme": "string",
+        "itinerary": [
+          { "day": 1, "route_ids": [123, 456] },
+          ...
+        ]
+      }
+    `;
+
+    let result;
+    let retryCount = 0;
+    while(true) {
+        try {
+            result = await geminiModel.generateContent(routePrompt);
+            break;
+        } catch (e: any) {
+            if (retryCount++ < 3 && e.status === 503) {
+                await new Promise(r => setTimeout(r, 1000 * retryCount));
+                continue;
+            }
+            throw e;
+        }
     }
 
     const response = await result.response;
-    const text = response.text();
+    const jsonStr = response.text().replace(/```json|```/g, "").trim();
+    const parsedData = JSON.parse(jsonStr);
 
-    console.log("[Gemini] 원본 응답:", text);
+    // --------------------------------------------------------------------------
+    // Step 6: Hydration & Return
+    // --------------------------------------------------------------------------
+    
+    // Optimization: Use topCandidates map first, then fallback to getPlacesByIds if needed (though unlikely if prompt followed rules)
+    // Actually, prompt constrained to candidate list, so we can trust they are likely in topCandidates or at least we should prioritize them.
+    // However, to be robust, we'll use a map of topCandidates.
+    
+    const candidatesMap = new Map(topCandidates.map(p => [String(p.PLACE_ID), p]));
+    
+    // If Gemini hallucinates IDs not in candidates (rare but possible), we filter them out or could fetch if really needed.
+    // Let's stick to candidatesMap for speed.
+    
+    const enrichedItinerary = parsedData.itinerary?.map((day: { day: number; route_ids?: (string | number)[] }) => {
+        const places = (day.route_ids || []).map((id: string | number) => {
+            const p = candidatesMap.get(String(id));
+            if (!p) return null;
+            return mapPlaceToPlanItem(p, day.day, "10:00");
+        }).filter((p: PlanItem | null) => p !== null) as PlanItem[]; // Ensure type safety
+        
+        // Time adjustment
+        places.forEach((p: PlanItem, idx: number) => {
+            p.time = `${String(10 + idx * 2).padStart(2, '0')}:00`;
+        });
 
-    // 마크다운 코드 블록에서 JSON 추출
-    const jsonStr = text.replace(/```json|```/g, "").trim();
-    const parsedData = JSON.parse(jsonStr) as AIResponse;
-
-    // 실제 일정 일수를 기반으로 종료일 계산
-    const maxDay =
-      parsedData.itinerary?.reduce((max, day) => Math.max(max, day.day), 1) ||
-      1;
-    const endDate = new Date(today);
-    endDate.setDate(endDate.getDate() + (maxDay - 1));
-    const endDateStr = endDate.toISOString().split("T")[0];
-
-    // [Modified] route_ids(새 스키마) 또는 places(구 스키마) 확인
-    // "PLACE_ID만 있는 배열" 요청에 대한 동적 처리
-    const hasRouteIds = parsedData.itinerary?.some(
-      (day) => (day as any).route_ids && Array.isArray((day as any).route_ids)
-    );
-
-    let enrichedItinerary: any[] = [];
-
-    if (hasRouteIds) {
-      // 1. 새로운 로직: ID 추출 -> Firebase 조회 -> 매핑
-      const allIds =
-        parsedData.itinerary?.flatMap((day) => (day as any).route_ids || []) ||
-        [];
-
-      const places = await getPlacesByIds(allIds);
-      const placesMap = new Map(places.map((p) => [String(p.PLACE_ID), p]));
-
-      enrichedItinerary =
-        parsedData.itinerary?.map((day) => {
-          const dayIds = (day as any).route_ids || [];
-          const dayPlaces = dayIds
-            .map((id: string | number) => {
-              const p = placesMap.get(String(id));
-              if (!p) return null; // ID not found in DB
-              return {
-                ...p, // Spread Firebase Data
-                // PlanItem 상세 필드 매핑
-                day: day.day,
-                time: "10:00", // 기본 시간, 필요 시 추후 조정
-                type: "sightseeing", // 기본값, 아래 로직에서 구체화
-                // ... 기타 필수 PlanItem 필드는 기본값 사용
-              };
-            })
-            .filter((p: any) => p !== null);
-
-          // 타입 및 구조 구체화
-          console.log(`Days ${day}`);
-          return {
+        return {
             day: day.day,
-            date: day.date,
-            places: dayPlaces.map((place: any, idx: number) => {
-              let internalType: PlanItem["type"] = "etc";
-              const mainCat = place.CATEGORY?.main || "";
-              if (mainCat.includes("식당")) internalType = "food";
-              else if (mainCat.includes("카페")) internalType = "cafe";
-              else if (mainCat.includes("숙박")) internalType = "stay";
-              else if (mainCat.includes("관광지")) internalType = "sightseeing";
+            date: "", 
+            places
+        };
+    }) || [];
 
-              const keywords = [
-                ...(place.TAGS?.common || []),
-                ...(place.TAGS?.winter || []),
-              ].map((tag: string) =>
-                tag.startsWith("#") ? tag.slice(1) : tag
-              );
+    // Date Calculation
+    const end = new Date(today);
+    const totalDays = enrichedItinerary.length || 1;
+    end.setDate(end.getDate() + totalDays - 1);
 
-              return {
-                ...place,
-                _docId: place._docId || `ai_${Math.random()}`,
-                PLACE_ID: String(place.PLACE_ID),
-                NAME: place.NAME,
-                ADDRESS: place.ADDRESS || "",
-                CATEGORY: place.CATEGORY,
-                LOC_LAT: place.LOC_LAT,
-                LOC_LNG: place.LOC_LNG,
-                IMAGE_URL: place.IMAGE_URL || null,
-                type: internalType,
-                day: day.day,
-                time: `${String(9 + idx * 2).padStart(2, "0")}:00`, // Simple sequential time
-                KEYWORDS: keywords,
-                STAY_TIME: place.STAY_TIME || 60,
-                STATS: {
-                  bookmark_count: 0,
-                  view_count: 0,
-                  review_count: 0,
-                  rating: place.RATING || 0,
-                  weight: 1,
-                },
-                TAGS: place.TAGS || {},
-                isLocked: false,
-                is_indoor: false,
-                DETAILS: {},
-              } as PlanItem;
-            }),
-          };
-        }) || [];
-    } else {
-      // 구 스키마 (AI가 전체 JSON 반환)
-      enrichedItinerary =
-        parsedData.itinerary?.map((day) => ({
-          day: day.day,
-          date: day.date,
-          places: day.places.map((place) => {
-            // 한글 카테고리를 내부 'type'으로 매핑
-            let internalType: PlanItem["type"] = "etc";
-            const mainCat = place.CATEGORY?.main || "";
-            if (mainCat.includes("식당")) internalType = "food";
-            else if (mainCat.includes("카페")) internalType = "cafe";
-            else if (mainCat.includes("숙박")) internalType = "stay";
-            else if (mainCat.includes("관광지")) internalType = "sightseeing";
-
-            // 하위 호환성을 위해 TAGS 객체를 KEYWORDS 배열로 평탄화
-            // [Modified] 첫 번째 사용 가능한 태그 배열(예: winter, summer, common) 선택
-            let extractedTags: string[] = [];
-            if (place.TAGS) {
-              const firstTagKey = Object.keys(place.TAGS)[0];
-              if (firstTagKey && Array.isArray(place.TAGS[firstTagKey])) {
-                extractedTags = place.TAGS[firstTagKey]!;
-              }
-            }
-
-            const keywords = extractedTags.map((tag) =>
-              tag.startsWith("#") ? tag.slice(1) : tag
-            );
-
-            // [Robustness] 키 정규화 (AI가 소문자로 반환할 경우 대비)
-            const aiName = place.NAME || place.name;
-            const aiLat =
-              place.LOC_LAT ||
-              place.loc_lat ||
-              place.coordinates?.lat ||
-              37.5665; // 누락 시 서울 기본값
-            const aiLng =
-              place.LOC_LNG ||
-              place.loc_lng ||
-              place.coordinates?.lng ||
-              126.978;
-            const aiAddress = place.ADDRESS || place.address || "";
-            const aiImage = place.IMAGE_URL || place.image_url || null;
-            const aiMemo = place.MEMO || place.memo || "";
-
-            // 체류 시간 파싱
-            let stayTimeVal: string | number | undefined =
-              place.STAY_TIME || place.stay_time || place.recommendedDuration;
-            if (!stayTimeVal) {
-              if (internalType === "stay") stayTimeVal = 720;
-              else if (internalType === "sightseeing") stayTimeVal = 90;
-              else stayTimeVal = 60;
-            }
-
-            return {
-              _docId: `ai_${Math.random().toString(36).substr(2, 9)}`,
-              PLACE_ID: `ai_${Math.random().toString(36).substr(2, 9)}`,
-              NAME: aiName,
-              ADDRESS: aiAddress,
-              CATEGORY: {
-                main: place.CATEGORY?.main || "AI추천",
-                sub: place.CATEGORY?.sub || internalType,
-              },
-              LOC_LAT: aiLat,
-              LOC_LNG: aiLng,
-              IMAGE_URL: aiImage,
-              GALLERY_IMAGES: null,
-              MAP_LINK: "",
-              AFFIL_LINK: null,
-              IS_AFLT: false,
-              IS_TICKET_REQUIRED: false,
-              TIME_INFO: null,
-              PARKING_INFO: null,
-              REST_INFO: null,
-              FEE_INFO: null,
-              DETAILS: {},
-              RATING: place.RATING || 0,
-              HIGHTLIGHTS: aiMemo ? [aiMemo] : [], // MEMO를 하이라이트로 사용
-              MEMO: aiMemo,
-              KEYWORDS: keywords,
-              NAME_GRAMS: [],
-
-              day: day.day,
-              time: `${String(8 + place.VISIT_ORDER * 2).padStart(2, "0")}:00`,
-              type: internalType,
-              STAY_TIME: stayTimeVal,
-              PRICE_GRADE: 0,
-              STATS: {
-                bookmark_count: 0,
-                view_count: 0,
-                review_count: 0,
-                rating: place.RATING || 0,
-                weight: 1,
-              },
-              TAGS: place.TAGS || {
-                spring: null,
-                summer: null,
-                autumn: null,
-                winter: null,
-              },
-              isLocked: false,
-              is_indoor: false,
-            } as unknown as PlanItem;
-          }),
-        })) || [];
-    } // End if hasRouteIds
-
-    // 새 스키마를 TravelContext 구조로 매핑 (풍부한 데이터 포함)
-    const mappedData: TravelContext = {
-      destination: userQuery, // 쿼리를 목적지로 대체 사용
-      theme: parsedData.theme ? [parsedData.theme] : [],
-      party: { adult: 2, child: 0 },
-      dateRange: { start: today, end: endDateStr },
-      itinerary: enrichedItinerary,
+    return {
+        destination: region,
+        theme: parsedContext.themes || [],
+        party: { adult: 2, child: 0 }, // 추후 people parsing 연동 가능
+        dateRange: { start: today, end: end.toISOString().split("T")[0] },
+        tripSummary: {
+            autoGeneratedTheme: parsedData.theme || `${region} 여행`,
+            destination: region,
+            totalPlaces: enrichedItinerary.reduce((acc: number, d: { places: PlanItem[] }) => acc + d.places.length, 0)
+        },
+        itinerary: enrichedItinerary
     };
 
-    return mappedData;
   } catch (error) {
-    console.error("[Gemini] 컨텍스트 추출 중 오류 발생:", error);
-    // 오류 발생 시 Fallback 반환
+    console.error("[Server] Critical Error in extractTravelContext:", error);
+    // Return empty fallback
     return {
-      destination: null,
-      theme: [],
-      party: { adult: 2, child: 0 },
-      dateRange: { start: today, end: today },
+        destination: parsedContext.region,
+        theme: [],
+        party: { adult: 2, child: 0 },
+        dateRange: { start: today, end: today },
+        itinerary: []
     };
   }
 }

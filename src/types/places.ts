@@ -17,5 +17,7 @@ export interface FirebasePlace {
   TAGS?: Record<string, string[]>;
   MAP_LINK?: string;
   IS_AFLT?: boolean;
-  ADDRESS?: string; // [New] 주소 필드 추가
+  ADDRESS?: string;
+  MEMBER?: string[]; // [New] 인원/동반자
+  STYLES?: string[]; // [New] 여행 스타일/목적
 }

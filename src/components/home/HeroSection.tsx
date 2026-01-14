@@ -1,12 +1,16 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 export default function HeroSection() {
     const router = useRouter();
+    const [query, setQuery] = useState('');
 
-    const handleStart = () => {
-        router.push('/start');
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!query.trim()) return;
+        router.push(`/planner?destination=${encodeURIComponent(query)}`);
     };
 
     return (
@@ -40,14 +44,32 @@ export default function HeroSection() {
                     숙소, 맛집, 관광지까지 최적의 동선을 제안합니다.
                 </p>
 
-                {/* CTA Button */}
-                <button 
-                    onClick={handleStart}
-                    className="ctaButton"
-                >
-                    여행 시작하기
-                </button>
+                {/* Search Form (Direct Input) */}
+                <form onSubmit={handleSearch} className="hero-search-form">
+                    <div className="input-wrapper">
+                        <i className="fa-solid fa-magnifying-glass search-icon"></i>
+                        <input 
+                            type="text" 
+                            className="hero-input"
+                            placeholder="어떤 여행을 원하시나요? (예: 제주도 2박3일 힐링 여행)"
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                        />
+                    </div>
+                    <button type="submit" className="search-button">
+                        시작하기
+                    </button>
+                </form>
+
+                {/* Quick Tags (Optional helper) */}
+                <div className="quick-tags">
+                   <span>추천:</span>
+                   <button type="button" onClick={() => setQuery('제주도 아이와 함께 2박3일')}>#제주도_아이와</button>
+                   <button type="button" onClick={() => setQuery('부산 맛집 탐방 1박2일')}>#부산_맛집</button>
+                   <button type="button" onClick={() => setQuery('강릉 힐링 여행 당일치기')}>#강릉_힐링</button>
+                </div>
             </div>
         </section>
     );
 }
+

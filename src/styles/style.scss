@@ -1,6 +1,6 @@
 @use "sass:color";
-@use 'variables' as *;
-@use 'mixins' as *;
+@use "variables" as *;
+@use "mixins" as *;
 
 .place-replacement-modal .modalContent {
   background-color: #ffffff;
@@ -318,7 +318,6 @@
   &.disabled {
     background-color: #cbd5e1; // bg-slate-300
     cursor: not-allowed;
-
   }
 }
 
@@ -326,7 +325,6 @@
 // Planner Modals Wrapper
 // =================================================================================================
 .planner-modals-wrapper {
-
   // Plan B Modal
   .planBModalOverlay {
     position: fixed;
@@ -667,7 +665,6 @@
   }
 
   @keyframes pulse {
-
     0%,
     100% {
       opacity: 1;
@@ -726,14 +723,18 @@
   }
 }
 
-
-
-
 // =================================================================================================
 // Planner Header
 // =================================================================================================
 .planner-header {
-  @include position(fixed, 0, 0, (right: 0));
+  @include position(
+    fixed,
+    0,
+    0,
+    (
+      right: 0,
+    )
+  );
   height: 4rem; // h-16
   background-color: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(8px);
@@ -793,11 +794,12 @@
   }
 
   .hero-badge {
-    display: inline-flex;
+    display: inline-flex; // Changed from flex to inline-flex
     align-items: center;
     gap: 0.5rem;
     padding: 0.375rem 0.75rem;
     border-radius: 9999px;
+    // Search Form Styles
     background-color: #eef2ff; // indigo-50
     color: #4338ca; // indigo-700
     font-size: 0.75rem;
@@ -805,6 +807,99 @@
     margin-bottom: 1.5rem;
     border: 1px solid #e0e7ff; // indigo-100
     animation: fadeInUp 0.5s ease-out;
+  }
+
+  // Search Form Styles
+  .hero-search-form {
+    margin-top: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: 36rem; // max-w-xl
+    position: relative;
+    z-index: 20;
+
+    @include tablet {
+      flex-direction: row;
+      background-color: #ffffff;
+      padding: 0.5rem;
+      border-radius: 9999px; // rounded-full
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); // shadow-lg
+    }
+
+    .input-wrapper {
+      position: relative;
+      flex: 1 1 0%;
+
+      .search-icon {
+        position: absolute;
+        left: 1.25rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8; // text-slate-400
+      }
+
+      .hero-input {
+        width: 100%;
+        padding: 1rem 1rem 1rem 3rem;
+        border-radius: 9999px; // rounded-full
+        border: 1px solid #e2e8f0; // border-slate-200
+        outline: none;
+        transition: all 0.2s;
+        font-size: 1rem;
+
+        @include tablet {
+          border: none;
+          padding: 0.5rem 1rem 0.5rem 3rem;
+        }
+
+        &:focus {
+          box-shadow: 0 0 0 2px #6366f1;
+        }
+      }
+    }
+
+    .search-button {
+      background-color: $primary-color;
+      color: white;
+      font-weight: 700;
+      padding: 0.75rem 1.5rem;
+      border-radius: 9999px;
+      transition: background-color 0.2s;
+      white-space: nowrap;
+
+      &:hover {
+        background-color: darken($primary-color, 5%);
+      }
+    }
+  }
+
+  .quick-tags {
+    margin-top: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: #64748b;
+    position: relative;
+    z-index: 20;
+
+    button {
+      background-color: rgba(255, 255, 255, 0.5);
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px; // rounded-full
+      color: #475569;
+      font-weight: 500;
+      transition: all 0.2s;
+      border: 1px solid transparent;
+
+      &:hover {
+        background-color: #ffffff;
+        color: $primary-color;
+        border-color: $primary-color;
+      }
+    }
   }
 
   .pulse-dot {
@@ -993,10 +1088,12 @@
   .hero-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(to top,
-        rgba(0, 0, 0, 0.4),
-        transparent,
-        transparent);
+    background: linear-gradient(
+      to top,
+      rgba(0, 0, 0, 0.4),
+      transparent,
+      transparent
+    );
   }
 
   .image-text {
@@ -1082,7 +1179,6 @@
     font-weight: 800;
     color: #1e293b; // slate-800;
   }
-
 }
 
 @keyframes fadeInUp {
@@ -1336,10 +1432,12 @@
   &-gradient {
     position: absolute;
     inset: 0;
-    background: linear-gradient(to top,
-        rgba(0, 0, 0, 0.5),
-        transparent,
-        transparent);
+    background: linear-gradient(
+      to top,
+      rgba(0, 0, 0, 0.5),
+      transparent,
+      transparent
+    );
     opacity: 0.6;
   }
 
@@ -1384,7 +1482,6 @@
     }
   }
 }
-
 
 // Home - Travel Categories (Global)
 // =================================================================================================
@@ -3785,9 +3882,11 @@
   width: 100%;
   position: relative;
   overflow: hidden;
-  background: linear-gradient(to right,
-      #e0e7ff,
-      #ede9fe); // indigo-100, violet-100
+  background: linear-gradient(
+    to right,
+    #e0e7ff,
+    #ede9fe
+  ); // indigo-100, violet-100
   padding: 0.625rem; // p-2.5
   border-radius: 0.75rem; // rounded-xl
   display: flex;
@@ -4834,10 +4933,12 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(to bottom,
-        rgba(0, 0, 0, 0.3),
-        rgba(0, 0, 0, 0.2),
-        rgba(0, 0, 0, 0.7));
+    background: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.3),
+      rgba(0, 0, 0, 0.2),
+      rgba(0, 0, 0, 0.7)
+    );
     backdrop-filter: blur(2px);
   }
 
@@ -4960,7 +5061,6 @@
 }
 
 @keyframes pulse {
-
   0%,
   100% {
     opacity: 1;
@@ -5053,7 +5153,6 @@
 }
 
 @keyframes float {
-
   0%,
   100% {
     transform: translate(33%, -33%);
@@ -5065,7 +5164,6 @@
 }
 
 @keyframes floatdelayed {
-
   0%,
   100% {
     transform: translate(-33%, 33%);
@@ -5101,9 +5199,11 @@
   }
 
   .header {
-    background: linear-gradient(to right,
-        #10b981,
-        #14b8a6); // emerald-500toteal-500
+    background: linear-gradient(
+      to right,
+      #10b981,
+      #14b8a6
+    ); // emerald-500toteal-500
     padding: 1.5rem;
     text-align: center;
     color: white;
@@ -5269,9 +5369,11 @@
   .submitBtn {
     width: 100%;
     margin-top: 1rem;
-    background: linear-gradient(to right,
-        #10b981,
-        #14b8a6); // emerald-500toteal-500
+    background: linear-gradient(
+      to right,
+      #10b981,
+      #14b8a6
+    ); // emerald-500toteal-500
     color: white;
     font-weight: 700;
     padding: 1rem;
@@ -5464,9 +5566,11 @@
   .submitBtn {
     width: 100%;
     margin-top: 1rem;
-    background: linear-gradient(to right,
-        #10b981,
-        #14b8a6); // emerald-500toteal-500
+    background: linear-gradient(
+      to right,
+      #10b981,
+      #14b8a6
+    ); // emerald-500toteal-500
     color: white;
     font-weight: 700;
     padding: 1rem;
@@ -5709,8 +5813,15 @@
   padding: 1.25rem; // p-5
   border-top: 1px solid #f1f5f9; // border-t border-slate-100
   background-color: #f8fafc; // bg-slate-50
-  @include flex(center, center, (gap:0.75rem));
+  @include flex(
+    center,
+    center,
+    (
+      gap: 0.75rem,
+    )
+  );
   background-color: $primary;
 
-  & &-inner {}
+  & &-inner {
+  }
 }
