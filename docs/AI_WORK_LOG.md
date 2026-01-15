@@ -174,3 +174,50 @@ ONLY_SEARCH: {
 
 - `src/lib/actions.ts`: `extractTravelContext` 완전 개편.
 - `src/types/places.ts`: `MEMBER`, `STYLES` 필드 추가.
+
+## 2026-01-15
+
+### 🧠 여행 의도 분석 로직 강화 (Travel Intent Anlaysis)
+
+사용자의 다양한 입력 패턴(단순 장소 검색 vs 전체 일정 요청)을 정교하게 구분하고, 이에 맞춰 데이터를 다르게 수집하도록 로직을 개선했습니다.
+
+**작업 내용:**
+
+1.  **Trip Type 구분 로직 추가**:
+
+    - `FULL_COURSE`: "1박2일", "3일간", "당일치기" 등 **기간(Duration)**과 관련된 표현이 있으면 무조건 전체 코스 생성 모드로 진입합니다. (숙소, 식당 필수 포함)
+    - `SPOT_SEARCH`: 기간 언급 없이 "제주도 카페", "맛집 추천" 등의 쿼리는 단순 장소 검색 모드로 진입합니다.
+
+2.  **동적 쿼터(Dynamic Quota) 시스템**:
+    - `SPOT_SEARCH` 모드에서는 사용자가 요청한 메인 카테고리(예: 카페)의 후보군을 **30~50개**까지 대폭 늘려 다양성을 확보합니다. (기존엔 20개 고정)
+
+**변경 파일:**
+
+- `src/lib/actions.ts`: `extractTravelContext` 프롬프트 및 할당 로직 전면 수정.
+
+**비고:**
+
+- "3일 여행" 처럼 "박" 표현이 없어도 AI가 문맥을 파악하여 2박3일 코스로 변환하도록 개선됨.
+
+### 🎨 장소 리스트 UI (Spot Search UI) 구현
+
+일정 생성 없이 단순 장소 추천을 원할 때 보여줄 전용 UI(`PlannerPlaceList`)를 구현하고, 백엔드 로직과 연동했습니다.
+
+**작업 내용:**
+
+1.  **Spot Search 로직 연결**: `src/lib/actions.ts`에서 `SPOT_SEARCH` 모드일 경우 Gemini 경로 생성을 건너뛰고, 키워드 매칭된 후보 장소(Candidates)를 즉시 반환하도록 변경 (응답 속도 2배 이상 향상).
+2.  **PlannerPlaceList 컴포넌트 신설**:
+    - Timeline 대신 좌측 패널에 표시되는 장소 리스트 뷰.
+    - [전체 | 맛집 | 카페 | 숙소 | 관광] 탭 필터링 제공.
+3.  **Map 연동 최적화**:
+    - Spot Search 모드에서는 경로 연결선(Polyline)을 숨기고(`showPath=false`), 마커만 표시하여 산만함 제거.
+    - 리스트 아이템 클릭 시 지도 하이라이트/이동 연동.
+4.  **Planner 페이지 구조 개편**:
+    - `PlannerView`에서 `travelContext.tripType`에 따라 본문 UI 조건부 렌더링.
+
+**변경 파일:**
+
+- `src/app/(pages)/planner/page.tsx`: UI 분기 처리 및 컴포넌트 통합.
+- `src/components/planner/PlannerPlaceList.tsx`: 신규 생성.
+- `src/components/planner/Map.tsx` / `PlannerMapPanel.tsx`: `showPath` prop 추가.
+- `src/lib/actions.ts`: `SPOT_SEARCH` Early Return 로직 추가.

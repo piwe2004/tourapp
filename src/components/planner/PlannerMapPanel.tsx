@@ -8,6 +8,7 @@ interface PlannerMapPanelProps {
     selectedDay: number;
     selectedItemId: string | null;
     onItemClick: (id: string) => void; // [New]
+    showPath?: boolean;
 }
 
 /**
@@ -22,7 +23,8 @@ export default function PlannerMapPanel({
     schedule,
     selectedDay,
     selectedItemId,
-    onItemClick
+    onItemClick,
+    showPath = true
 }: PlannerMapPanelProps) {
     return (
         <section className="planner-map-panel">
@@ -39,6 +41,7 @@ export default function PlannerMapPanel({
                     selectedDay={selectedDay} 
                     selectedItemId={selectedItemId}
                     onItemClick={onItemClick} 
+                    showPath={showPath}
                 />
             </div>
 

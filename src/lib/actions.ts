@@ -178,6 +178,8 @@ export interface TravelContext {
     dayFocus?: string;
     places: PlanItem[];
   }[];
+  tripType?: 'FULL_COURSE' | 'SPOT_SEARCH';
+  searchResults?: PlanItem[];
 }
 
 /**
@@ -333,63 +335,67 @@ export async function extractTravelContext(
   console.log(`[Server] 🧠 Gemini Query Parsing 시작: "${userQuery}"`);
   
   const parsePrompt = `
-    Analyze the unexpected travel query "${userQuery}" and extract the following 5 key elements in JSON format.
+    Analyze the unexpected travel query "${userQuery}" and extract the following elements in JSON format.
     
     # Priority & Extraction Rules
     1. **region** (1st Priority): The major region name (e.g., "제주", "부산", "강릉", "서울").
-       - Must be a broad administrative region.
     
-    2. **districts** (2nd Priority): A list of 2-3 specific sub-regions (Gu/Gun/Dong).
-       - IF the user specified a district (e.g. "Aewol"), include it.
-       - **CRITICAL**: IF the user did NOT specify a district, **YOU MUST RECOMMEND 2-3 districts** that best fit the **Theme** and **People**.
-         - Example: "Jeju cafe trip" -> ["애월", "한림", "노형"] (Famous for cafes)
-         - Example: "Jeju family trip" -> ["서귀포", "성산"] (Resorts/Nature)
+    2. **districts** (2nd Priority): A list of 2-3 specific sub-regions.
+       - IF user specified (e.g., "Aewol"), use it.
+       - ELSE recommend 2-3 districts based on theme/people.
 
-    3. **people** (3rd Priority): Companion type (Matches 'MEMBER' field).
-       - Keywords: "아이", "부모님", "커플", "친구", "혼자", "가족"
-       - If not specified, categorize based on context or set null.
+    3. **people** (3rd Priority): Companion type (e.g., "아이", "부모님", "커플").
 
-    4. **themes** (4th Priority): Travel style (Matches 'STYLES' field).
-       - Keywords: '힐링/휴식', '맛집 탐방', '액티비티/모험', '역사/문화', '인생샷/SNS', '호캉스'
-       - Extract as a list of strings.
+    4. **themes** (4th Priority): Travel style keywords.
 
-    5. **duration** (5th Priority): Travel duration string (e.g., "1박2일").
-       - Default to "1박2일" if not specified.
+    5. **duration** (5th Priority): Travel duration string.
+       - IMPORTANT: Detect any duration keywords like "1박2일", "2 nights", "3일간" (for 3 days), "당일치기" (1 day), "하루" (1 day).
+       - Default to "1박2일" if not specified, UNLESS it is a 'SPOT_SEARCH'.
+
+    6. **trip_type** (CRITICAL):
+       - "FULL_COURSE": If the query implies a **trip itinerary** OR mentions **duration** (e.g., "1박2일", "3일 여행", "코스 추천").
+         - Even if the user says "3 days", it implies a full course with stay and food.
+       - "SPOT_SEARCH": If the user clearly asks for **only specific places** without duration (e.g., "제주도 카페 추천", "맛집 알려줘").
+
+    7. **focus_categories**:
+       - List of categories the user explicitly asked for (e.g., ["cafe"], ["food"]).
+       - If 'FULL_COURSE', include ["food", "sightseeing", "cafe"]. Add "stay" if duration > 1 day.
 
     # Output JSON Schema
     {
       "region": "string",
-      "districts": ["string", "string"],
+      "districts": ["string"],
       "people": "string",
       "themes": ["string"],
-      "duration": "string"
+      "duration": "string",
+      "trip_type": "FULL_COURSE" | "SPOT_SEARCH",
+      "focus_categories": ["string"]
     }
   `;
 
-  let parsedContext: ParsedTravelContext = { region: "제주", districts: [], people: null, themes: [], duration: "1박2일" };
+  let parsedContext: ParsedTravelContext & { trip_type?: string; focus_categories?: string[] } = { 
+      region: "제주", districts: [], people: null, themes: [], duration: "1박2일", trip_type: "FULL_COURSE", focus_categories: [] 
+  };
 
   try {
     const parseResult = await geminiModel.generateContent(parsePrompt);
     const parseResponse = await parseResult.response;
     const jsonStr = parseResponse.text().replace(/```json|```/g, "").trim();
-    parsedContext = JSON.parse(jsonStr) as ParsedTravelContext;
+    parsedContext = JSON.parse(jsonStr);
     console.log("[Server] ✅ Query Parsed:", parsedContext);
   } catch (e) {
     console.error("[Server] Query Parsing Failed, using defaults:", e);
-    // Fallback: simple split
     parsedContext.region = userQuery.split(" ")[0] || "제주";
   }
 
   // --------------------------------------------------------------------------
   // Step 2: Firebase Fetch (Priority 1: Region)
   // --------------------------------------------------------------------------
-  const region = parsedContext.region || "제주"; // Fallback
+  const region = parsedContext.region || "제주";
   const candidates: (FirebasePlace & { score: number })[] = [];
   
   try {
     const placesRef = collection(db, "PLACES");
-    // Region Scan (ADDRESS starts with region)
-    // Note: This fetches a broad set (limit 150) to apply In-Memory Scoring effectively
     const q = query(
       placesRef,
       where("ADDRESS", ">=", region),
@@ -412,15 +418,14 @@ export async function extractTravelContext(
       // [Priority 2] Districts (+50 / +40)
       if (districts && districts.length > 0) {
         if (data.ADDRESS && data.ADDRESS.includes(districts[0])) {
-            score += 50; // Primary recommendation match
+            score += 50;
         } else if (districts.slice(1).some((d: string) => data.ADDRESS && data.ADDRESS.includes(d))) {
-            score += 40; // Secondary recommendation match
+            score += 40;
         }
       }
 
       // [Priority 3] People (MEMBER field) (+30)
       if (people && data.MEMBER && Array.isArray(data.MEMBER)) {
-        // Simple fuzzy match or exact match
         if (data.MEMBER.some(m => m.includes(people!) || people!.includes(m))) {
             score += 30;
         }
@@ -432,22 +437,25 @@ export async function extractTravelContext(
             score += 20;
         }
       }
+      
+      // Bonus: Boost focus categories in SPOT_SEARCH
+      if (parsedContext.trip_type === "SPOT_SEARCH" && parsedContext.focus_categories) {
+          const cat = data.CATEGORY?.main || "";
+          if (parsedContext.focus_categories.some(fc => cat.includes(fc) || (fc === 'food' && /식당|맛집/.test(cat)))) {
+              score += 100; // Massive boost for requested category
+          }
+      }
 
-      // Base Score: Rating fallback
       score += (data.RATING || 0);
 
       candidates.push({ ...data, score });
     });
 
-    // Sort by Score
     candidates.sort((a, b) => b.score - a.score);
 
     // --------------------------------------------------------------------------
-    // Step 4: Candidate Selection (Category Quotas)
+    // Step 4: Candidate Selection (Dynamic Quotas)
     // --------------------------------------------------------------------------
-    // User Request: 식당 10~30, 숙소 5~20, 관광지 0~20, 카페 10~20
-    
-    // Group by Category
     const grouped = {
         food: [] as typeof candidates,
         cafe: [] as typeof candidates,
@@ -458,7 +466,6 @@ export async function extractTravelContext(
 
     candidates.forEach(c => {
         const cat = c.CATEGORY?.main || "";
-        // [Robustness] Broader keyword matching
         if (/식당|음식|맛집/.test(cat)) grouped.food.push(c);
         else if (/카페|커피|베이커리|디저트/.test(cat)) grouped.cafe.push(c);
         else if (/숙박|호텔|리조트|펜션|모텔|게스트하우스/.test(cat)) grouped.stay.push(c);
@@ -466,27 +473,47 @@ export async function extractTravelContext(
         else grouped.etc.push(c);
     });
 
-    // Select Top N based on constraints (Max limit used here)
-    // Food: 30, Stay: 20, Sightseeing: 20, Cafe: 20
-    // Note: Scores are already sorted descending
-    const selectedFood = grouped.food.slice(0, 30);
-    const selectedStay = grouped.stay.slice(0, 20);
-    const selectedSightseeing = grouped.sightseeing.slice(0, 20);
-    const selectedCafe = grouped.cafe.slice(0, 20);
+    let topCandidates: typeof candidates = [];
+
+    if (parsedContext.trip_type === "SPOT_SEARCH") {
+        // [SPOT_SEARCH Strategy] heavily prioritize the focus category
+        // Ex: "Cafe tour" -> Cafe 50, Food 5, Sightseeing 5
+        console.log(`[Server] Mode: SPOT_SEARCH | Focus: ${parsedContext.focus_categories}`);
+        
+        const focus = parsedContext.focus_categories || [];
+        const isFood = focus.some(f => /food|식당|맛집/.test(f));
+        const isCafe = focus.some(f => /cafe|카페/.test(f));
+        const isStay = focus.some(f => /stay|숙소/.test(f));
+        const isSight = focus.some(f => /sight|tour|관광/.test(f));
+
+        topCandidates = [
+            ...grouped.food.slice(0, isFood ? 50 : 5),
+            ...grouped.cafe.slice(0, isCafe ? 30 : 5),
+            ...grouped.stay.slice(0, isStay ? 30 : 0), // No stay needed for simple food search unless requested
+            ...grouped.sightseeing.slice(0, isSight ? 30 : 5)
+        ];
+
+    } else {
+        // [FULL_COURSE Strategy] Balanced distribution
+        // "3일간" -> Stay needed? Yes.
+        console.log(`[Server] Mode: FULL_COURSE | Duration: ${parsedContext.duration}`);
+        
+        topCandidates = [
+            ...grouped.food.slice(0, 30),
+            ...grouped.stay.slice(0, 20),
+            ...grouped.sightseeing.slice(0, 20),
+            ...grouped.cafe.slice(0, 20)
+        ];
+    }
     
-    // Combine
-    const topCandidates = [
-        ...selectedFood,
-        ...selectedStay,
-        ...selectedSightseeing,
-        ...selectedCafe
-    ];
+    // Recalculate counts for logging
+    const count = (regex: RegExp) => topCandidates.filter(c => regex.test(c.CATEGORY?.main || "")).length;
     
     console.log(`[Server] 🏆 Top Scored Candidates Selected:
-      - Food: ${selectedFood.length}
-      - Stay: ${selectedStay.length}
-      - Sightseeing: ${selectedSightseeing.length}
-      - Cafe: ${selectedCafe.length}
+      - Food: ${count(/식당|음식|맛집/)}
+      - Stay: ${count(/숙박|호텔|리조트|펜션|모텔/)}
+      - Sightseeing: ${count(/관광지|명소|문화|체험|공원/)}
+      - Cafe: ${count(/카페|커피|베이커리|디저트/)}
       - Total: ${topCandidates.length}
     `);
 
@@ -497,8 +524,31 @@ export async function extractTravelContext(
     }).join("\n");
 
     // --------------------------------------------------------------------------
-    // Step 5: Route Generation (Gemini)
+    // Step 5: Route Generation (Gemini) OR Spot Search Return
     // --------------------------------------------------------------------------
+    
+    // [BRANCH] If SPOT_SEARCH, return early with candidates
+    if (parsedContext.trip_type === "SPOT_SEARCH") {
+        console.log(`[Server] 🚀 Mode is SPOT_SEARCH. Skipping Route Generation.`);
+        
+        const searchResults = topCandidates.map(p => mapPlaceToPlanItem(p, 1, "10:00"));
+
+        return {
+            destination: region,
+            theme: parsedContext.themes || [],
+            party: { adult: 2, child: 0 },
+            dateRange: { start: today, end: today }, // No date range really needed
+            tripSummary: {
+                autoGeneratedTheme: `${region} ${parsedContext.focus_categories?.join(', ') || '핫플레이스'} 추천`,
+                destination: region,
+                totalPlaces: searchResults.length
+            },
+            itinerary: [], // No itinerary
+            tripType: 'SPOT_SEARCH',
+            searchResults: searchResults
+        };
+    }
+
     const isMajorTouristCity = /제주|부산|강릉|여수|경주|속초|거제/.test(region);
     
     const routePrompt = `
@@ -514,8 +564,11 @@ export async function extractTravelContext(
       # Critical Constraints (MUST FOLLOW)
       1. **Accommodation Strategy (Anchoring)**:
          - Select the **Assign ONE best accommodation** for the trip (or different ones if needed).
-         - **Check-in Time**: The accommodation visit MUST be scheduled around **15:00 ~ 16:00** (3 PM - 4 PM) to unpack and rest. It should NOT be the last place.
-         - *Flow*: Lunch -> Activity/Cafe -> **Check-in (Stay)** -> Dinner -> Night Activity.
+         - **Check-in Time Policy**: 
+           - **Ideal**: 15:00 ~ 16:00 (3 PM - 4 PM) is preferred for resting.
+           - **Flexible**: You MAY schedule check-in as late as **18:00 (6 PM)** if valid or if the route requires it. 
+           - **Sequence**: Usually [Lunch -> Activity -> Check-in -> Dinner]. If check-in is late (18:00), [Lunch -> Activity -> Dinner -> Check-in] is also fine.
+
       
       2. **Geographical Logic**:
          ${isMajorTouristCity 
@@ -542,8 +595,9 @@ export async function extractTravelContext(
         try {
             result = await geminiModel.generateContent(routePrompt);
             break;
-        } catch (e: any) {
-            if (retryCount++ < 3 && e.status === 503) {
+        } catch (e: unknown) {
+            const err = e as { status?: number };
+            if (retryCount++ < 3 && err.status === 503) {
                 await new Promise(r => setTimeout(r, 1000 * retryCount));
                 continue;
             }

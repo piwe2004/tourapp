@@ -32,6 +32,7 @@ import { usePlannerStore } from '@/store/plannerStore';
 import PlannerTimeline from '@/components/planner/PlannerTimeline';
 import PlannerMapPanel from '@/components/planner/PlannerMapPanel';
 import PlannerModals from '@/components/planner/PlannerModals';
+import PlannerPlaceList from '@/components/planner/PlannerPlaceList'; // [New]
 
 export default function PlannerView() {
     return (
@@ -381,6 +382,9 @@ function PlannerContent() {
     // =========================================================================================
     // Render
     // =========================================================================================
+    
+    // [SPOT_SEARCH] 여부 판단
+    const isSpotSearch = travelContext?.tripType === 'SPOT_SEARCH';
 
     return (
         <div className="planner-page">
@@ -396,14 +400,19 @@ function PlannerContent() {
                             </div>
                         )}
                     </div>
+                    {/* Summary Info */}
                     <div className="summary-info">
-                        <div className="info-item">
-                            <i className="fa-regular fa-calendar-days text-[14px]"></i>
-                            <span>
-                                {dateRange.start.toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })} ~ {dateRange.end.toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })}
-                            </span>
-                        </div>
-                        <span className="info-divider">|</span>
+                        {!isSpotSearch && (
+                            <>
+                            <div className="info-item">
+                                <i className="fa-regular fa-calendar-days text-[14px]"></i>
+                                <span>
+                                    {dateRange.start.toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })} ~ {dateRange.end.toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })}
+                                </span>
+                            </div>
+                            <span className="info-divider">|</span>
+                            </>
+                        )}
                         <div className="info-item">
                             <i className="fa-solid fa-users text-[14px]"></i>
                             <span>성인 {guests.adult}명{guests.child > 0 ? `, 아동 ${guests.child}명` : ''}</span>
@@ -415,36 +424,45 @@ function PlannerContent() {
             <div className="plannerPageContainer">
                 {/* Main Content Area */}
                 <main className="mainContent">
-                    {/* 1. 좌측 타임라인 패널 */}
-                    <PlannerTimeline
-                        days={days}
-                        dateRange={dateRange}
-                        selectedDay={selectedDay}
-                        schedule={schedule}
-                        isLoading={isLoading}
-                        weatherData={weatherCache[selectedDay] || null}
-                        rainRisks={rainRisks}
-                        selectedItemId={selectedItemId}
-                        travelContext={travelContext}
-                        onDaySelect={setSelectedDay}
-                        onSmartMixClick={() => setIsSmartMixOpen(true)}
-                        onItemClick={handleItemClick}
-                        onDragEnd={onDragEnd}
-                        onReplaceClick={(item) => setReplaceModalState({ isOpen: true, targetItem: item, mode: 'replace' })}
-                        onLockClick={handleToggleLock}
-                        onDeleteClick={handleDeletePlace}
-                        onAddStopClick={openAddModal}
-                        onPlanBClick={() => setIsPlanBOpen(true)}
-                        onMobileMapClick={() => setIsMobileMapOpen(true)}
-                        onAddDayClick={() => setReplaceModalState({ isOpen: true, targetItem: null, mode: 'add', targetIndex: schedule.filter(i => i.day === selectedDay).length })}
-                    />
+                    {/* 1. 좌측 패널: Timeline(코스) vs PlaceList(장소검색) */}
+                    {isSpotSearch ? (
+                        <PlannerPlaceList 
+                             places={travelContext?.searchResults || []}
+                             onItemClick={handleItemClick}
+                             selectedItemId={selectedItemId}
+                        />
+                    ) : (
+                        <PlannerTimeline
+                            days={days}
+                            dateRange={dateRange}
+                            selectedDay={selectedDay}
+                            schedule={schedule}
+                            isLoading={isLoading}
+                            weatherData={weatherCache[selectedDay] || null}
+                            rainRisks={rainRisks}
+                            selectedItemId={selectedItemId}
+                            travelContext={travelContext}
+                            onDaySelect={setSelectedDay}
+                            onSmartMixClick={() => setIsSmartMixOpen(true)}
+                            onItemClick={handleItemClick}
+                            onDragEnd={onDragEnd}
+                            onReplaceClick={(item) => setReplaceModalState({ isOpen: true, targetItem: item, mode: 'replace' })}
+                            onLockClick={handleToggleLock}
+                            onDeleteClick={handleDeletePlace}
+                            onAddStopClick={openAddModal}
+                            onPlanBClick={() => setIsPlanBOpen(true)}
+                            onMobileMapClick={() => setIsMobileMapOpen(true)}
+                            onAddDayClick={() => setReplaceModalState({ isOpen: true, targetItem: null, mode: 'add', targetIndex: schedule.filter(i => i.day === selectedDay).length })}
+                        />
+                    )}
 
                     {/* 2. 우측 지도 패널 (PCOnly) */}
                     <PlannerMapPanel
-                        schedule={schedule}
-                        selectedDay={selectedDay}
+                        schedule={isSpotSearch ? (travelContext?.searchResults || []) : schedule}
+                        selectedDay={isSpotSearch ? 1 : selectedDay}
                         selectedItemId={selectedItemId}
                         onItemClick={handleItemClick}
+                        showPath={!isSpotSearch} // [New] Spot Search 모드에서는 경로선 숨김
                     />
                 </main>
 

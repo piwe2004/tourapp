@@ -21,9 +21,10 @@ interface MapProps {
   selectedDay: number;
   selectedItemId?: string | null; // 선택된 아이템 ID prop 추가
   onItemClick: (id: string) => void; // [New] 마커 클릭 핸들러
+  showPath?: boolean;
 }
 
-export default function Map({ schedule, selectedDay, selectedItemId, onItemClick }: MapProps) {
+export default function Map({ schedule, selectedDay, selectedItemId, onItemClick, showPath = true }: MapProps) {
   const mapElement = useRef<HTMLDivElement>(null);
   const mapRef = useRef<naver.maps.Map | null>(null);
   const markersRef = useRef<naver.maps.Marker[]>([]); // 마커 관리용 ref
@@ -134,7 +135,7 @@ export default function Map({ schedule, selectedDay, selectedItemId, onItemClick
     });
 
     // 7. 경로(Polyline) 그리기 - 아이템이 2개 이상일 때만 연결
-    if (pathCoords.length > 1) {
+    if (showPath && pathCoords.length > 1) {
       const polyline = new window.naver.maps.Polyline({
         map: map,
         path: pathCoords,
@@ -170,7 +171,7 @@ export default function Map({ schedule, selectedDay, selectedItemId, onItemClick
       }
     }
 
-  }, [schedule, selectedDay, selectedItemId, isMapLoaded, onItemClick]); // onItemClick 의존성 추가
+  }, [schedule, selectedDay, selectedItemId, isMapLoaded, onItemClick, showPath]); // onItemClick 의존성 추가
 
   return (
     <div className="planner-map-inner">
