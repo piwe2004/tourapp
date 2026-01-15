@@ -221,3 +221,24 @@ ONLY_SEARCH: {
 - `src/components/planner/PlannerPlaceList.tsx`: 신규 생성.
 - `src/components/planner/Map.tsx` / `PlannerMapPanel.tsx`: `showPath` prop 추가.
 - `src/lib/actions.ts`: `SPOT_SEARCH` Early Return 로직 추가.
+
+### 🚗 실시간 경로 안내 (Directions 5 Integration)
+
+장소 간 단순 직선 연결이 아닌, **실제 도로 기준의 주행 경로(Driving Route)**를 네이버 지도에 시각화했습니다.
+
+**작업 내용:**
+
+1.  **API Proxy 구축**:
+    - `src/app/api/directions/route.ts` API Route 생성.
+    - 서버 사이드에서 `X-NCP-APIGW-API-KEY-ID` 등의 보안 헤더를 처리하여 브라우저 CORS 문제 및 키 노출 방지.
+2.  **Frontend Service**:
+    - `directionService.ts`: `traoptimal`(실시간 빠른길) 옵션으로 경로 데이터를 받아와 `naver.maps.LatLng` 배열로 변환.
+3.  **Map 컴포넌트 고도화**:
+    - `Map.tsx`: `showPath`가 켜져 있고 장소가 2개 이상일 때, 비동기로 경로를 조회하여 Polyline 렌더링.
+    - API 쿼터 보호 및 성능을 위해 7개 이하 장소일 때만 호출 (초과 시 직선 Fallback).
+
+**변경 파일:**
+
+- `src/app/api/directions/route.ts`: API Proxy [New].
+- `src/services/directionService.ts`: Fetcher Service [New].
+- `src/components/planner/Map.tsx`: Polyline 로직 전면 수정.
