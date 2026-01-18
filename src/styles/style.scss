@@ -2,27 +2,20 @@
 @use "variables" as *;
 @use "mixins" as *;
 
-.place-replacement-modal .modalContent {
-  background-color: #ffffff;
-  border-radius: 1rem; // rounded-2xl
-  width: 100%;
-  max-width: 32rem; // max-w-lg
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); // shadow-2xl
-  overflow: hidden;
-  transform: scale(1);
-  animation: zoomIn 0.2s ease-out;
-}
 
 .header {
+  $topName: header;
+  @include flex(center, space-between);
+  @include position(sticky, 0, null, (z-index:10));
   padding: 1.25rem; // p-5
   border-bottom: 1px solid #f1f5f9; // border-slate-100
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background-color: #ffffff;
-  position: sticky;
-  top: 0;
-  z-index: 10;
+  background-color: $color-background;
+
+  &__default {
+    .#{$topName}__logo {
+      @include flex(center, center, (gap: 0.5rem));
+    }
+  }
 
   .title {
     font-size: 1.25rem; // text-xl
@@ -49,6 +42,8 @@
   }
 }
 
+
+
 .body {
   padding: 1.25rem; // p-5
   height: calc(100vh - 50vh);
@@ -58,6 +53,17 @@
   @include mobile {
     height: 600px; // md:h-[600px]
   }
+}
+
+.place-replacement-modal .modalContent {
+  background-color: #ffffff;
+  border-radius: 1rem; // rounded-2xl
+  width: 100%;
+  max-width: 32rem; // max-w-lg
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); // shadow-2xl
+  overflow: hidden;
+  transform: scale(1);
+  animation: zoomIn 0.2s ease-out;
 }
 
 .searchBar {
@@ -325,6 +331,7 @@
 // Planner Modals Wrapper
 // =================================================================================================
 .planner-modals-wrapper {
+
   // Plan B Modal
   .planBModalOverlay {
     position: fixed;
@@ -665,6 +672,7 @@
   }
 
   @keyframes pulse {
+
     0%,
     100% {
       opacity: 1;
@@ -727,14 +735,11 @@
 // Planner Header
 // =================================================================================================
 .planner-header {
-  @include position(
-    fixed,
+  @include position(fixed,
     0,
     0,
-    (
-      right: 0,
-    )
-  );
+    (right: 0,
+    ));
   height: 4rem; // h-16
   background-color: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(8px);
@@ -1088,12 +1093,10 @@
   .hero-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(
-      to top,
-      rgba(0, 0, 0, 0.4),
-      transparent,
-      transparent
-    );
+    background: linear-gradient(to top,
+        rgba(0, 0, 0, 0.4),
+        transparent,
+        transparent);
   }
 
   .image-text {
@@ -1432,12 +1435,10 @@
   &-gradient {
     position: absolute;
     inset: 0;
-    background: linear-gradient(
-      to top,
-      rgba(0, 0, 0, 0.5),
-      transparent,
-      transparent
-    );
+    background: linear-gradient(to top,
+        rgba(0, 0, 0, 0.5),
+        transparent,
+        transparent);
     opacity: 0.6;
   }
 
@@ -3882,11 +3883,9 @@
   width: 100%;
   position: relative;
   overflow: hidden;
-  background: linear-gradient(
-    to right,
-    #e0e7ff,
-    #ede9fe
-  ); // indigo-100, violet-100
+  background: linear-gradient(to right,
+      #e0e7ff,
+      #ede9fe); // indigo-100, violet-100
   padding: 0.625rem; // p-2.5
   border-radius: 0.75rem; // rounded-xl
   display: flex;
@@ -4933,12 +4932,10 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0.3),
-      rgba(0, 0, 0, 0.2),
-      rgba(0, 0, 0, 0.7)
-    );
+    background: linear-gradient(to bottom,
+        rgba(0, 0, 0, 0.3),
+        rgba(0, 0, 0, 0.2),
+        rgba(0, 0, 0, 0.7));
     backdrop-filter: blur(2px);
   }
 
@@ -5061,6 +5058,7 @@
 }
 
 @keyframes pulse {
+
   0%,
   100% {
     opacity: 1;
@@ -5153,6 +5151,7 @@
 }
 
 @keyframes float {
+
   0%,
   100% {
     transform: translate(33%, -33%);
@@ -5164,6 +5163,7 @@
 }
 
 @keyframes floatdelayed {
+
   0%,
   100% {
     transform: translate(-33%, 33%);
@@ -5199,11 +5199,9 @@
   }
 
   .header {
-    background: linear-gradient(
-      to right,
-      #10b981,
-      #14b8a6
-    ); // emerald-500toteal-500
+    background: linear-gradient(to right,
+        #10b981,
+        #14b8a6); // emerald-500toteal-500
     padding: 1.5rem;
     text-align: center;
     color: white;
@@ -5369,11 +5367,9 @@
   .submitBtn {
     width: 100%;
     margin-top: 1rem;
-    background: linear-gradient(
-      to right,
-      #10b981,
-      #14b8a6
-    ); // emerald-500toteal-500
+    background: linear-gradient(to right,
+        #10b981,
+        #14b8a6); // emerald-500toteal-500
     color: white;
     font-weight: 700;
     padding: 1rem;
@@ -5566,11 +5562,9 @@
   .submitBtn {
     width: 100%;
     margin-top: 1rem;
-    background: linear-gradient(
-      to right,
-      #10b981,
-      #14b8a6
-    ); // emerald-500toteal-500
+    background: linear-gradient(to right,
+        #10b981,
+        #14b8a6); // emerald-500toteal-500
     color: white;
     font-weight: 700;
     padding: 1rem;
@@ -5813,15 +5807,11 @@
   padding: 1.25rem; // p-5
   border-top: 1px solid #f1f5f9; // border-t border-slate-100
   background-color: #f8fafc; // bg-slate-50
-  @include flex(
+  @include flex(center,
     center,
-    center,
-    (
-      gap: 0.75rem,
-    )
-  );
+    (gap: 0.75rem,
+    ));
   background-color: $primary;
 
-  & &-inner {
-  }
+  & &-inner {}
 }

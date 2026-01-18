@@ -15,7 +15,7 @@ export default function Header() {
 
 function PlannerHeader() {
     const { destination, dateRange, activeEditor, setActiveEditor } = usePlannerStore();
-    
+
     // 포맷팅된 날짜 문자열 (예: 11.27 - 11.29)
     const formatDate = (d: Date) => `${d.getMonth() + 1}.${d.getDate()}`;
     const dateStr = `${formatDate(dateRange.start)} - ${formatDate(dateRange.end)}`;
@@ -41,7 +41,7 @@ function PlannerHeader() {
                     <div className="pc-title">
                         <h1 className="destination-title">{destination} 여행</h1>
                         <div className="info-row">
-                            <button 
+                            <button
                                 onClick={() => setActiveEditor('date')}
                                 className={clsx("info-button", activeEditor === 'date' && "text-indigo-600")}
                             >
@@ -49,7 +49,7 @@ function PlannerHeader() {
                                 <i className="fa-regular fa-calendar text-[10px]"></i>
                             </button>
                             <div className="header-divider"></div>
-                            <button 
+                            <button
                                 onClick={() => setActiveEditor('guest')}
                                 className={clsx("info-button", activeEditor === 'guest' && "text-indigo-600")}
                             >
@@ -67,7 +67,7 @@ function PlannerHeader() {
                         <i className="fa-regular fa-paper-plane"></i>
                         <span>일행 초대</span>
                     </button>
-                    
+
                     <div className="vertical-divider"></div>
 
                     <button className="save-button">
@@ -127,27 +127,23 @@ function DefaultHeader() {
     const isTransparent = isTransparentElement && !scrolled;
 
     return (
-        <header className={clsx("default-header", isTransparent ? "transparent" : "scrolled")}>
-            <div className="header-inner">
-                <Link href="/" className="default-logo">
-                    <div className="default-logo-icon">
-                        <i className="fa-solid fa-plane text-xl"></i>
-                    </div>
-                    <span className={clsx("default-logo-text", isTransparent ? "text-white" : "text-slate-900")}>
-                        Planni
-                    </span>
-                </Link>
+        <header className={clsx("header header__default", isTransparent ? "transparent" : "scrolled")}>
+            <Link href="/" className="header__logo">
+                <i className="fa-solid fa-plane text-xl"></i>
+                <span className={clsx("header__logo-text", isTransparent ? "text-white" : "text-slate-900")}>
+                    Planni
+                </span>
+            </Link>
 
-                <div className="flex items-center gap-3">
-                    <button className={clsx("search-button hover:border-indigo-600 hover:text-indigo-600",
-                        isTransparent && "bg-white/10 border-white/20 text-white hover:bg-white hover:text-indigo-600")}>
-                        <i className="fa-solid fa-magnifying-glass"></i>
-                    </button>
-                    <button className={clsx("settings-button hover:bg-indigo-600",
-                        isTransparent && "bg-white/10 hover:bg-white hover:text-indigo-600")}>
-                        <i className="fa-solid fa-bars"></i>
-                    </button>
-                </div>
+            <div className="header__btnBox">
+                <button className={clsx("search-button hover:border-indigo-600 hover:text-indigo-600",
+                    isTransparent && "bg-white/10 border-white/20 text-white hover:bg-white hover:text-indigo-600")}>
+                    <i className="fa-solid fa-magnifying-glass"></i>
+                </button>
+                <button className={clsx("settings-button hover:bg-indigo-600",
+                    isTransparent && "bg-white/10 hover:bg-white hover:text-indigo-600")}>
+                    <i className="fa-solid fa-bars"></i>
+                </button>
             </div>
         </header>
     );
