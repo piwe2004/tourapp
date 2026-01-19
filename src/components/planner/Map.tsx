@@ -30,11 +30,14 @@ export default function Map({ schedule, selectedDay, selectedItemId, onItemClick
   const mapRef = useRef<naver.maps.Map | null>(null);
   const markersRef = useRef<naver.maps.Marker[]>([]);
   const polylineRef = useRef<naver.maps.Polyline | null>(null);
+  const durationMarkersRef = useRef<naver.maps.Marker[]>([]);
 
   // 네이버 지도 SDK 로드 상태
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   // 실제 경로(Polyline) 좌표 상태
   const [routePath, setRoutePath] = useState<naver.maps.LatLng[]>([]);
+  // 경로 구간 정보 상태
+  const [routeSections, setRouteSections] = useState<{ pointIndex: number; pointCount: number; distance: number; duration: number }[]>([]);
 
   // 1. 네이버 맵 로드 확인
   useEffect(() => {
@@ -143,20 +146,27 @@ export default function Map({ schedule, selectedDay, selectedItemId, onItemClick
 
   }, [schedule, selectedDay, selectedItemId, isMapLoaded, onItemClick]);
 
-  // 3. 실시간 경로 데이터 가져오기 (Directions 5 API)
+  // 3-1. 경로 초기화 (showPath, isMapLoaded 변경 시)
+  useEffect(() => {
+    if (!isMapLoaded || !showPath) {
+      setRoutePath((prev) => (prev.length > 0 ? [] : prev));
+      setRouteSections((prev) => (prev.length > 0 ? [] : prev));
+    }
+  }, [showPath, isMapLoaded]);
+
+  // 3-2. 실시간 경로 데이터 가져오기 (Directions 5 API)
   useEffect(() => {
     let isCancelled = false;
-    
-    if (!isMapLoaded || !showPath) {
-        if (routePath.length > 0) setRoutePath([]);
-        return;
-    }
+
+    if (!isMapLoaded || !showPath) return;
 
     const dayItems = schedule.filter(item => item.day === selectedDay && item.LOC_LAT && item.LOC_LNG);
-    
-    // 아이템이 2개 미만이면 경로 없음
+
+    // 아이템이 2개 미만이면 경로 없음 -> 초기화는 위 3-1에서 처리되거나, 여기서 명시적으로 빈배열 set 가능하지만
+    // schedule 변경 시에도 반응해야 하므로 여기서도 체크 필요
     if (dayItems.length < 2) {
-        if (routePath.length > 0) setRoutePath([]);
+        setRoutePath([]);
+        setRouteSections([]);
         return;
     }
 
@@ -177,15 +187,19 @@ export default function Map({ schedule, selectedDay, selectedItemId, onItemClick
                 if (result && result.path) {
                     const naverPath = result.path.map(p => new window.naver.maps.LatLng(p.lat, p.lng));
                     setRoutePath(naverPath);
+                    setRouteSections(result.sections || []);
                 } else {
                     const straightPath = dayItems.map(p => new window.naver.maps.LatLng(p.LOC_LAT!, p.LOC_LNG!));
                     setRoutePath(straightPath);
+                    setRouteSections([]);
                 }
             }
         } else {
+            // 7개 초과 시 직선 경로
             if (!isCancelled) {
                 const straightPath = dayItems.map(p => new window.naver.maps.LatLng(p.LOC_LAT!, p.LOC_LNG!));
                 setRoutePath(straightPath);
+                setRouteSections([]);
             }
         }
     };
@@ -198,10 +212,12 @@ export default function Map({ schedule, selectedDay, selectedItemId, onItemClick
 
   }, [schedule, selectedDay, showPath, isMapLoaded]);
 
-  // 4. 경로(Polyline) 그리기
+  // 4. 경로(Polyline) 및 소요시간 마커 그리기
   useEffect(() => {
-    if (!mapRef.current || !isMapLoaded) return;
+    const map = mapRef.current;
+    if (!map || !isMapLoaded) return;
 
+    // Polyline 업데이트
     if (polylineRef.current) {
         polylineRef.current.setMap(null);
         polylineRef.current = null;
@@ -209,7 +225,7 @@ export default function Map({ schedule, selectedDay, selectedItemId, onItemClick
 
     if (showPath && routePath.length > 1) {
         const polyline = new window.naver.maps.Polyline({
-            map: mapRef.current,
+            map: map,
             path: routePath,
             strokeColor: "#4f46e5",
             strokeOpacity: 0.8,
@@ -220,7 +236,55 @@ export default function Map({ schedule, selectedDay, selectedItemId, onItemClick
         });
         polylineRef.current = polyline;
     }
-  }, [routePath, showPath, isMapLoaded]);
+
+    // 소요시간 마커 업데이트
+    durationMarkersRef.current.forEach(m => m.setMap(null));
+    durationMarkersRef.current = [];
+
+    if (showPath && routeSections.length > 0 && routePath.length > 0) {
+        routeSections.forEach((section) => {
+            // 섹션의 중간 지점 계산
+            const midIndex = section.pointIndex + Math.floor(section.pointCount / 2);
+            
+            if (midIndex < routePath.length) {
+                const position = routePath[midIndex];
+                const durationMin = Math.round(section.duration / 60000); // 밀리초 -> 분
+                
+                const durationText = durationMin <= 0 ? "약 1분" : `${durationMin}분`;
+
+                const content = `
+                  <div class="planner-map-duration-marker" style="
+                    background-color: white;
+                    border: 1px solid #4f46e5;
+                    color: #4f46e5;
+                    padding: 2px 6px;
+                    border-radius: 9999px;
+                    font-size: 11px;
+                    font-weight: 700;
+                    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+                    white-space: nowrap;
+                    transform: translate(-50%, -50%);
+                  ">
+                    ${durationText}
+                  </div>
+                `;
+
+                const marker = new window.naver.maps.Marker({
+                    position: position,
+                    map: map,
+                    icon: {
+                        content: content,
+                        size: new window.naver.maps.Size(0, 0),
+                        anchor: new window.naver.maps.Point(0, 0),
+                    }
+                });
+                
+                durationMarkersRef.current.push(marker);
+            }
+        });
+    }
+
+  }, [routePath, routeSections, showPath, isMapLoaded]);
 
   return (
     <div className="planner-map-inner">

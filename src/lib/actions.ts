@@ -27,9 +27,11 @@ import {
   query,
   limit,
   where,
+  QueryConstraint,
 } from "firebase/firestore";
 import { headers } from "next/headers";
 import { FirebasePlace } from "@/types/places";
+import { findRegionCodes } from "@/lib/area-codes";
 export type { FirebasePlace };
 
 // TODO: 실제 배포된 Cloud Function URL로 교체하세요
@@ -396,12 +398,36 @@ export async function extractTravelContext(
   
   try {
     const placesRef = collection(db, "PLACES");
-    const q = query(
-      placesRef,
-      where("ADDRESS", ">=", region),
-      where("ADDRESS", "<=", region + "\uf8ff"),
-      limit(300) 
-    );
+    // [Modified] findRegionCodes를 사용하여 지역 코드 심화 검색 (시군구 포함)
+    const codes = findRegionCodes(region);
+    
+    let q;
+    
+    if (codes) {
+        console.log(`[Server] Region Code Fetch: ${region} -> Area(${codes.areaCd}) ${codes.sigeCd ? "Sigungu(" + codes.sigeCd + ")" : ""}`);
+        
+        const constraints: QueryConstraint[] = [
+             where("AREA_DATA.areaCd", "==", codes.areaCd)
+        ];
+        
+        if (codes.sigeCd) {
+            constraints.push(where("AREA_DATA.sigeCd", "==", codes.sigeCd));
+        }
+        
+        q = query(
+            placesRef,
+            ...constraints,
+            limit(300)
+        );
+    } else {
+        console.log(`[Server] Region Code Not Found, using Address Fetch: ${region}`);
+        q = query(
+            placesRef,
+            where("ADDRESS", ">=", region),
+            where("ADDRESS", "<=", region + "\uf8ff"),
+            limit(300) 
+        );
+    }
     
     const snapshot = await getDocs(q);
     console.log(`[Server] 📦 Region Fetch (${region}): ${snapshot.size} places found.`);

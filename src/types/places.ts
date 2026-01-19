@@ -20,4 +20,8 @@ export interface FirebasePlace {
   ADDRESS?: string;
   MEMBER?: string[]; // [New] 인원/동반자
   STYLES?: string[]; // [New] 여행 스타일/목적
+  AREA_DATA?: {
+    areaCd: string;
+    sigeCd: string; // 시군구 코드 (필수)
+  };
 }

@@ -10,6 +10,13 @@ interface RouteResponse {
         duration: number;
       };
       path: [number, number][]; // [lng, lat]
+      section?: {
+        pointIndex: number;
+        pointCount: number;
+        distance: number;
+        duration: number;
+        name?: string;
+      }[];
     }[];
   };
 }
@@ -24,7 +31,12 @@ export async function getRoutePath(
   start: { LOC_LAT: number; LOC_LNG: number },
   goal: { LOC_LAT: number; LOC_LNG: number },
   waypoints: { LOC_LAT: number; LOC_LNG: number }[] = []
-): Promise<{ path: { lat: number; lng: number }[]; distance: number; duration: number } | null> {
+): Promise<{ 
+  path: { lat: number; lng: number }[]; 
+  distance: number; 
+  duration: number;
+  sections: { pointIndex: number; pointCount: number; distance: number; duration: number }[];
+} | null> {
   
   if (!start.LOC_LAT || !start.LOC_LNG || !goal.LOC_LAT || !goal.LOC_LNG) {
       console.warn("Invalid start or goal coordinates");
@@ -63,10 +75,31 @@ export async function getRoutePath(
         // Map.tsx usually uses naver.maps.LatLng or {lat, lng} objects.
         const path = result.path.map(([lng, lat]) => ({ lat, lng }));
         
+        // 섹션 정보 추출 (구간별 상세 정보)
+        // 경유지가 없을 경우 section 정보가 빈 배열이거나 없을 수 있음 -> 전체를 하나의 섹션으로 처리
+        let sections = [];
+        if (result.section && result.section.length > 0) {
+            sections = result.section.map(s => ({
+                pointIndex: s.pointIndex,
+                pointCount: s.pointCount,
+                distance: s.distance,
+                duration: s.duration
+            }));
+        } else {
+            // 섹션 정보가 없으면 전체 경로를 하나의 섹션으로 간주
+            sections = [{
+                pointIndex: 0,
+                pointCount: path.length,
+                distance: result.summary.distance,
+                duration: result.summary.duration
+            }];
+        }
+
         return {
             path,
             distance: result.summary.distance,
-            duration: result.summary.duration
+            duration: result.summary.duration,
+            sections
         };
     } else {
         console.warn("No route found or API error:", data.message);
