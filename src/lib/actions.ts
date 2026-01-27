@@ -47,17 +47,19 @@ const OPTIMIZE_API_URL =
  */
 async function optimizeRoute(
   places: FirebasePlace[],
-  preferences: string
+  preferences: string,
 ): Promise<FirebasePlace[]> {
   if (!OPTIMIZE_API_URL) {
     console.warn(
-      "[Server] OPTIMIZE_API_URL이 설정되지 않았습니다. 최적화를 건너뜁니다."
+      "[Server] OPTIMIZE_API_URL이 설정되지 않았습니다. 최적화를 건너뜁니다.",
     );
     return places;
   }
 
   try {
-    console.log(`[Server][Firebase Debug] 🚀 경로 최적화 요청 시작 | 장소: ${places.length}개 | 선호도: ${preferences}`);
+    console.log(
+      `[Server][Firebase Debug] 🚀 경로 최적화 요청 시작 | 장소: ${places.length}개 | 선호도: ${preferences}`,
+    );
     const response = await fetch(OPTIMIZE_API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -71,7 +73,9 @@ async function optimizeRoute(
 
     const data = await response.json();
     if (data.optimized_route && Array.isArray(data.optimized_route)) {
-      console.log(`[Server][Firebase Debug] ✅ 경로 최적화 성공 | 반환된 장소: ${data.optimized_route.length}개`);
+      console.log(
+        `[Server][Firebase Debug] ✅ 경로 최적화 성공 | 반환된 장소: ${data.optimized_route.length}개`,
+      );
       return data.optimized_route;
     }
 
@@ -94,7 +98,9 @@ import { getPlacesByIds } from "@/lib/actions_helper";
  * @returns 변환된 PlanItem 배열
  */
 export async function getTravelPlan(destination: string): Promise<PlanItem[]> {
-  console.log(`[Server][Firebase Debug] 🔍 getTravelPlan 호출됨 | 목적지: "${destination}"`);
+  console.log(
+    `[Server][Firebase Debug] 🔍 getTravelPlan 호출됨 | 목적지: "${destination}"`,
+  );
 
   try {
     const placesRef = collection(db, "PLACES");
@@ -108,7 +114,7 @@ export async function getTravelPlan(destination: string): Promise<PlanItem[]> {
         placesRef,
         where("ADDRESS", ">=", destination),
         where("ADDRESS", "<=", destination + "\uf8ff"),
-        limit(20)
+        limit(20),
       );
     } else {
       q = query(placesRef, limit(20));
@@ -117,7 +123,9 @@ export async function getTravelPlan(destination: string): Promise<PlanItem[]> {
     const querySnapshot = await getDocs(q);
 
     if (querySnapshot.empty) {
-      console.warn(`[Server][Firebase Debug] ⚠️ "${destination}" 관련 데이터 없음 (0건)`);
+      console.warn(
+        `[Server][Firebase Debug] ⚠️ "${destination}" 관련 데이터 없음 (0건)`,
+      );
       return [];
     } else {
       querySnapshot.forEach((doc) => {
@@ -150,7 +158,9 @@ export async function getTravelPlan(destination: string): Promise<PlanItem[]> {
       }
     });
 
-    console.log(`[Server][Firebase Debug] ✅ getTravelPlan 완료 | 총 ${items.length}개 장소 반환`);
+    console.log(
+      `[Server][Firebase Debug] ✅ getTravelPlan 완료 | 총 ${items.length}개 장소 반환`,
+    );
     return items;
   } catch (error) {
     console.error("[Server] Firebase 데이터 가져오기 실패:", error);
@@ -180,8 +190,12 @@ export interface TravelContext {
     dayFocus?: string;
     places: PlanItem[];
   }[];
-  tripType?: 'FULL_COURSE' | 'SPOT_SEARCH';
+  tripType?: "FULL_COURSE" | "SPOT_SEARCH";
   searchResults?: PlanItem[];
+  regionCodes?: {
+    areaCd: string;
+    sigeCd?: string;
+  };
 }
 
 /**
@@ -246,13 +260,13 @@ async function checkRateLimit(ip: string): Promise<boolean> {
  * @returns 조회된 FirebasePlace 배열
  */
 export async function getPlacesByNames(
-  names: string[]
+  names: string[],
 ): Promise<FirebasePlace[]> {
   if (!names || names.length === 0) return [];
 
   console.log(
     `[Server][Firebase Debug] 🛒 getPlacesByNames 호출 | 요청된 이름: ${names.length}개`,
-    names.slice(0, 5)
+    names.slice(0, 5),
   );
 
   const placesRef = collection(db, "PLACES");
@@ -260,7 +274,7 @@ export async function getPlacesByNames(
   // [Modified] 사용자 요청에 따라 과도한 쿼리 방지
   if (uniqueNames.length > 30) {
     console.warn(
-      `[Server] 조회할 장소가 너무 많습니다 (${uniqueNames.length}). 오류 방지를 위해 DB 조회를 건너뜁니다.`
+      `[Server] 조회할 장소가 너무 많습니다 (${uniqueNames.length}). 오류 방지를 위해 DB 조회를 건너뜁니다.`,
     );
     return [];
   }
@@ -284,7 +298,7 @@ export async function getPlacesByNames(
         chunkResults.push(doc.data() as FirebasePlace);
       });
       console.log(
-        `[Server][Firebase Debug] 📦 청크 조회 결과 | 요청: ${chunk.length}개 -> 발견: ${chunkResults.length}개`
+        `[Server][Firebase Debug] 📦 청크 조회 결과 | 요청: ${chunk.length}개 -> 발견: ${chunkResults.length}개`,
       );
       return chunkResults;
     });
@@ -292,7 +306,9 @@ export async function getPlacesByNames(
     const chunkedResults = await Promise.all(promises);
     chunkedResults.forEach((r) => results.push(...r));
 
-    console.log(`[Server][Firebase Debug] ✅ getPlacesByNames 완료 | 총 매칭된 장소: ${results.length}개`);
+    console.log(
+      `[Server][Firebase Debug] ✅ getPlacesByNames 완료 | 총 매칭된 장소: ${results.length}개`,
+    );
     return results;
   } catch (error) {
     console.error("[Server] 일괄 장소 조회 실패:", error);
@@ -313,21 +329,26 @@ interface ParsedTravelContext {
   people: string | null;
   themes: string[];
   duration: string;
+  trip_type?: "FULL_COURSE" | "SPOT_SEARCH";
+  focus_categories?: string; // Changed to string (Style Enum)
+  explicit_categories?: string[]; // New field for Place Types (Cafe, Food, etc.)
 }
 
 export async function extractTravelContext(
-  userQuery: string
+  userQuery: string,
 ): Promise<TravelContext> {
   const headersList = await headers();
   const ip = headersList.get("x-forwarded-for")?.split(",")[0] || "unknown";
 
   // 1. Validation
-  if (userQuery.length > 100) throw new Error("검색어는 100자 이내여야 합니다.");
+  if (userQuery.length > 100)
+    throw new Error("검색어는 100자 이내여야 합니다.");
   if (/<script/i.test(userQuery)) throw new Error("허용되지 않는 입력입니다.");
 
   // 2. Rate Limiting
   const isAllowed = await checkRateLimit(ip);
-  if (!isAllowed) throw new Error("요청이 너무 많습니다. 잠시 후 다시 시도해주세요.");
+  if (!isAllowed)
+    throw new Error("요청이 너무 많습니다. 잠시 후 다시 시도해주세요.");
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -335,7 +356,7 @@ export async function extractTravelContext(
   // Step 1: Query Parsing (Gemini) - 5 Priorities
   // --------------------------------------------------------------------------
   console.log(`[Server] 🧠 Gemini Query Parsing 시작: "${userQuery}"`);
-  
+
   const parsePrompt = `
     Analyze the unexpected travel query "${userQuery}" and extract the following elements in JSON format.
     
@@ -346,9 +367,11 @@ export async function extractTravelContext(
        - IF user specified (e.g., "Aewol"), use it.
        - ELSE recommend 2-3 districts based on theme/people.
 
-    3. **people** (3rd Priority): Companion type (e.g., "아이", "부모님", "커플").
+    3. **people** (3rd Priority): Companion type.
+       - STRICTLY one of: ["아이", "부모님", "배우자", "커플"].
+       - Select the single most relevant one based on the query. If none match, null.
 
-    4. **themes** (4th Priority): Travel style keywords.
+    4. **themes** (4th Priority): General travel keywords (e.g., "summer", "relax").
 
     5. **duration** (5th Priority): Travel duration string.
        - IMPORTANT: Detect any duration keywords like "1박2일", "2 nights", "3일간" (for 3 days), "당일치기" (1 day), "하루" (1 day).
@@ -359,30 +382,45 @@ export async function extractTravelContext(
          - Even if the user says "3 days", it implies a full course with stay and food.
        - "SPOT_SEARCH": If the user clearly asks for **only specific places** without duration (e.g., "제주도 카페 추천", "맛집 알려줘").
 
-    7. **focus_categories**:
-       - List of categories the user explicitly asked for (e.g., ["cafe"], ["food"]).
-       - If 'FULL_COURSE', include ["food", "sightseeing", "cafe"]. Add "stay" if duration > 1 day.
+    7. **focus_categories** (Style Mapping):
+       - STRICTLY one of: ['힐링/휴식', '맛집 탐방', '액티비티/모험', '역사/문화', '인생샷/SNS', '호캉스'].
+       - Select the ONE best matching style for the query.
+
+    8. **explicit_categories** (Place Type):
+       - List of categories the user explicitly asked for (e.g., ["cafe"], ["food"], ["stay"], ["sightseeing"]).
+       - Used for filtering specific place types.
 
     # Output JSON Schema
     {
       "region": "string",
       "districts": ["string"],
-      "people": "string",
+      "people": "string", // Enum: "아이", "부모님", "배우자", "커플"
       "themes": ["string"],
       "duration": "string",
       "trip_type": "FULL_COURSE" | "SPOT_SEARCH",
-      "focus_categories": ["string"]
+      "focus_categories": "string", // Enum: '힐링/휴식', '맛집 탐방', ...
+      "explicit_categories": ["string"]
     }
   `;
 
-  let parsedContext: ParsedTravelContext & { trip_type?: string; focus_categories?: string[] } = { 
-      region: "제주", districts: [], people: null, themes: [], duration: "1박2일", trip_type: "FULL_COURSE", focus_categories: [] 
+  let parsedContext: ParsedTravelContext = {
+    region: "제주",
+    districts: [],
+    people: null,
+    themes: [],
+    duration: "1박2일",
+    trip_type: "FULL_COURSE",
+    focus_categories: undefined,
+    explicit_categories: [],
   };
 
   try {
     const parseResult = await geminiModel.generateContent(parsePrompt);
     const parseResponse = await parseResult.response;
-    const jsonStr = parseResponse.text().replace(/```json|```/g, "").trim();
+    const jsonStr = parseResponse
+      .text()
+      .replace(/```json|```/g, "")
+      .trim();
     parsedContext = JSON.parse(jsonStr);
     console.log("[Server] ✅ Query Parsed:", parsedContext);
   } catch (e) {
@@ -395,84 +433,133 @@ export async function extractTravelContext(
   // --------------------------------------------------------------------------
   const region = parsedContext.region || "제주";
   const candidates: (FirebasePlace & { score: number })[] = [];
-  
+
   try {
     const placesRef = collection(db, "PLACES");
     // [Modified] findRegionCodes를 사용하여 지역 코드 심화 검색 (시군구 포함)
     const codes = findRegionCodes(region);
-    
-    let q;
-    
+    let snapshot;
+
     if (codes) {
-        console.log(`[Server] Region Code Fetch: ${region} -> Area(${codes.areaCd}) ${codes.sigeCd ? "Sigungu(" + codes.sigeCd + ")" : ""}`);
-        
-        const constraints: QueryConstraint[] = [
-             where("AREA_DATA.areaCd", "==", codes.areaCd)
-        ];
-        
-        if (codes.sigeCd) {
-            constraints.push(where("AREA_DATA.sigeCd", "==", codes.sigeCd));
-        }
-        
-        q = query(
-            placesRef,
-            ...constraints,
-            limit(300)
+      console.log(
+        `[Server] Region Code Fetch: ${region} -> Area(${codes.areaCd}) ${codes.sigeCd ? "Sigungu(" + codes.sigeCd + ")" : ""}`,
+      );
+
+      const constraints: QueryConstraint[] = [
+        where("AREA_DATA.areaCd", "==", codes.areaCd),
+      ];
+
+      if (codes.sigeCd) {
+        constraints.push(where("AREA_DATA.sigeCd", "==", codes.sigeCd));
+      }
+
+      const q = query(placesRef, ...constraints, limit(300));
+      snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+        console.warn(
+          `[Server] ⚠️ AREA_DATA query returned 0 results for code ${codes.areaCd}. Falling back to ADDRESS search.`,
         );
+        // Fallback to ADDRESS search
+        const fallbackQ = query(
+          placesRef,
+          where("ADDRESS", ">=", region),
+          where("ADDRESS", "<=", region + "\uf8ff"),
+          limit(300),
+        );
+        snapshot = await getDocs(fallbackQ);
+      }
     } else {
-        console.log(`[Server] Region Code Not Found, using Address Fetch: ${region}`);
-        q = query(
-            placesRef,
-            where("ADDRESS", ">=", region),
-            where("ADDRESS", "<=", region + "\uf8ff"),
-            limit(300) 
-        );
+      console.log(
+        `[Server] Region Code Not Found, using Address Fetch: ${region}`,
+      );
+      const q = query(
+        placesRef,
+        where("ADDRESS", ">=", region),
+        where("ADDRESS", "<=", region + "\uf8ff"),
+        limit(300),
+      );
+      snapshot = await getDocs(q);
     }
-    
-    const snapshot = await getDocs(q);
-    console.log(`[Server] 📦 Region Fetch (${region}): ${snapshot.size} places found.`);
+    console.log(
+      `[Server] 📦 Region Fetch (${region}): ${snapshot.size} places found.`,
+    );
 
     // --------------------------------------------------------------------------
     // Step 3: In-Memory Scoring (Priority 2, 3, 4)
     // --------------------------------------------------------------------------
     const { districts, people, themes } = parsedContext;
 
-    snapshot.forEach(doc => {
+    snapshot.forEach((doc) => {
       const data = doc.data() as FirebasePlace;
       let score = 0;
 
       // [Priority 2] Districts (+50 / +40)
       if (districts && districts.length > 0) {
         if (data.ADDRESS && data.ADDRESS.includes(districts[0])) {
-            score += 50;
-        } else if (districts.slice(1).some((d: string) => data.ADDRESS && data.ADDRESS.includes(d))) {
-            score += 40;
+          score += 50;
+        } else if (
+          districts
+            .slice(1)
+            .some((d: string) => data.ADDRESS && data.ADDRESS.includes(d))
+        ) {
+          score += 40;
         }
       }
 
       // [Priority 3] People (MEMBER field) (+30)
       if (people && data.MEMBER && Array.isArray(data.MEMBER)) {
-        if (data.MEMBER.some(m => m.includes(people!) || people!.includes(m))) {
-            score += 30;
+        if (
+          data.MEMBER.some((m) => m.includes(people!) || people!.includes(m))
+        ) {
+          score += 30;
         }
       }
 
-      // [Priority 4] Themes (STYLES field) (+20)
-      if (themes && themes.length > 0 && data.STYLES && Array.isArray(data.STYLES)) {
-        if (data.STYLES.some(s => themes.some((t: string) => s.includes(t) || t.includes(s)))) {
-            score += 20;
+      // [Priority 4] Themes (General Keywords) (+20)
+      if (
+        themes &&
+        themes.length > 0 &&
+        data.STYLES &&
+        Array.isArray(data.STYLES)
+      ) {
+        if (
+          data.STYLES.some((s) =>
+            themes.some((t: string) => s.includes(t) || t.includes(s)),
+          )
+        ) {
+          score += 20;
         }
       }
-      
-      // Bonus: Boost focus categories in SPOT_SEARCH
-      if (parsedContext.trip_type === "SPOT_SEARCH" && parsedContext.focus_categories) {
-          const cat = data.CATEGORY?.main || "";
-          if (parsedContext.focus_categories.some(fc => cat.includes(fc) || (fc === 'food' && /식당|맛집/.test(cat)))) {
-              score += 100; // Massive boost for requested category
-          }
+
+      // [Priority 5] Focus Categories (STYLES Enum) (+50)
+      if (
+        parsedContext.focus_categories &&
+        data.STYLES &&
+        Array.isArray(data.STYLES)
+      ) {
+        if (data.STYLES.includes(parsedContext.focus_categories)) {
+          score += 50;
+        }
       }
 
-      score += (data.RATING || 0);
+      // Bonus: Boost explicit categories in SPOT_SEARCH
+      if (
+        parsedContext.trip_type === "SPOT_SEARCH" &&
+        parsedContext.explicit_categories
+      ) {
+        const cat = data.CATEGORY?.main || "";
+        if (
+          parsedContext.explicit_categories.some(
+            (fc) =>
+              cat.includes(fc) || (fc === "food" && /식당|맛집/.test(cat)),
+          )
+        ) {
+          score += 100; // Massive boost for requested category
+        }
+      }
+
+      score += data.RATING || 0;
 
       candidates.push({ ...data, score });
     });
@@ -483,58 +570,66 @@ export async function extractTravelContext(
     // Step 4: Candidate Selection (Dynamic Quotas)
     // --------------------------------------------------------------------------
     const grouped = {
-        food: [] as typeof candidates,
-        cafe: [] as typeof candidates,
-        stay: [] as typeof candidates,
-        sightseeing: [] as typeof candidates,
-        etc: [] as typeof candidates
+      food: [] as typeof candidates,
+      cafe: [] as typeof candidates,
+      stay: [] as typeof candidates,
+      sightseeing: [] as typeof candidates,
+      etc: [] as typeof candidates,
     };
 
-    candidates.forEach(c => {
-        const cat = c.CATEGORY?.main || "";
-        if (/식당|음식|맛집/.test(cat)) grouped.food.push(c);
-        else if (/카페|커피|베이커리|디저트/.test(cat)) grouped.cafe.push(c);
-        else if (/숙박|호텔|리조트|펜션|모텔|게스트하우스/.test(cat)) grouped.stay.push(c);
-        else if (/관광지|명소|문화|체험|공원/.test(cat)) grouped.sightseeing.push(c);
-        else grouped.etc.push(c);
+    candidates.forEach((c) => {
+      const cat = c.CATEGORY?.main || "";
+      if (/식당|음식|맛집/.test(cat)) grouped.food.push(c);
+      else if (/카페|커피|베이커리|디저트/.test(cat)) grouped.cafe.push(c);
+      else if (/숙박|숙소|호텔|리조트|펜션|모텔|게스트하우스/.test(cat))
+        grouped.stay.push(c);
+      else if (/관광|명소|문화|체험|공원/.test(cat))
+        grouped.sightseeing.push(c);
+      else grouped.etc.push(c);
     });
 
     let topCandidates: typeof candidates = [];
 
     if (parsedContext.trip_type === "SPOT_SEARCH") {
-        // [SPOT_SEARCH Strategy] heavily prioritize the focus category
-        // Ex: "Cafe tour" -> Cafe 50, Food 5, Sightseeing 5
-        console.log(`[Server] Mode: SPOT_SEARCH | Focus: ${parsedContext.focus_categories}`);
-        
-        const focus = parsedContext.focus_categories || [];
-        const isFood = focus.some(f => /food|식당|맛집/.test(f));
-        const isCafe = focus.some(f => /cafe|카페/.test(f));
-        const isStay = focus.some(f => /stay|숙소/.test(f));
-        const isSight = focus.some(f => /sight|tour|관광/.test(f));
+      // [SPOT_SEARCH Strategy] heavily prioritize the explicit category
+      // Ex: "Cafe tour" -> Cafe 50, Food 5, Sightseeing 5
+      console.log(
+        `[Server] Mode: SPOT_SEARCH | Focus Style: ${parsedContext.focus_categories} | Explicit: ${parsedContext.explicit_categories}`,
+      );
 
-        topCandidates = [
-            ...grouped.food.slice(0, isFood ? 50 : 5),
-            ...grouped.cafe.slice(0, isCafe ? 30 : 5),
-            ...grouped.stay.slice(0, isStay ? 30 : 0), // No stay needed for simple food search unless requested
-            ...grouped.sightseeing.slice(0, isSight ? 30 : 5)
-        ];
+      const explicit = parsedContext.explicit_categories || [];
+      const isAll = explicit.length === 0; // If no explicit category, show all
 
+      const isFood = isAll || explicit.some((f) => /food|식당|맛집/.test(f));
+      const isCafe = isAll || explicit.some((f) => /cafe|카페/.test(f));
+      const isStay = isAll || explicit.some((f) => /stay|숙소/.test(f));
+      const isSight = isAll || explicit.some((f) => /sight|tour|관광/.test(f));
+
+      topCandidates = [
+        ...grouped.food.slice(0, isFood ? 30 : 5),
+        ...grouped.cafe.slice(0, isCafe ? 30 : 5),
+        ...grouped.stay.slice(0, isStay ? 30 : 0),
+        ...grouped.sightseeing.slice(0, isSight ? 30 : 5),
+      ];
     } else {
-        // [FULL_COURSE Strategy] Balanced distribution
-        // "3일간" -> Stay needed? Yes.
-        console.log(`[Server] Mode: FULL_COURSE | Duration: ${parsedContext.duration}`);
-        
-        topCandidates = [
-            ...grouped.food.slice(0, 30),
-            ...grouped.stay.slice(0, 20),
-            ...grouped.sightseeing.slice(0, 20),
-            ...grouped.cafe.slice(0, 20)
-        ];
+      // [FULL_COURSE Strategy] Balanced distribution
+      // "3일간" -> Stay needed? Yes.
+      console.log(
+        `[Server] Mode: FULL_COURSE | Duration: ${parsedContext.duration}`,
+      );
+
+      topCandidates = [
+        ...grouped.food.slice(0, 30),
+        ...grouped.stay.slice(0, 20),
+        ...grouped.sightseeing.slice(0, 20),
+        ...grouped.cafe.slice(0, 20),
+      ];
     }
-    
+
     // Recalculate counts for logging
-    const count = (regex: RegExp) => topCandidates.filter(c => regex.test(c.CATEGORY?.main || "")).length;
-    
+    const count = (regex: RegExp) =>
+      topCandidates.filter((c) => regex.test(c.CATEGORY?.main || "")).length;
+
     console.log(`[Server] 🏆 Top Scored Candidates Selected:
       - Food: ${count(/식당|음식|맛집/)}
       - Stay: ${count(/숙박|호텔|리조트|펜션|모텔/)}
@@ -544,45 +639,54 @@ export async function extractTravelContext(
     `);
 
     // Convert to String for Prompt
-    const candidatePlacesStr = topCandidates.map(data => {
+    const candidatePlacesStr = topCandidates
+      .map((data) => {
         const styleStr = data.STYLES?.join(",") || data.CATEGORY?.sub || "";
         return `- ID: ${data.PLACE_ID} | Name: ${data.NAME} | Loc: ${data.LOC_LAT}, ${data.LOC_LNG} | Cat: ${data.CATEGORY?.main} | Style: ${styleStr} | Rating: ${data.RATING || 0}`;
-    }).join("\n");
+      })
+      .join("\n");
 
     // --------------------------------------------------------------------------
     // Step 5: Route Generation (Gemini) OR Spot Search Return
     // --------------------------------------------------------------------------
-    
+
     // [BRANCH] If SPOT_SEARCH, return early with candidates
     if (parsedContext.trip_type === "SPOT_SEARCH") {
-        console.log(`[Server] 🚀 Mode is SPOT_SEARCH. Skipping Route Generation.`);
-        
-        const searchResults = topCandidates.map(p => mapPlaceToPlanItem(p, 1, "10:00"));
+      console.log(
+        `[Server] 🚀 Mode is SPOT_SEARCH. Skipping Route Generation.`,
+      );
 
-        return {
-            destination: region,
-            theme: parsedContext.themes || [],
-            party: { adult: 2, child: 0 },
-            dateRange: { start: today, end: today }, // No date range really needed
-            tripSummary: {
-                autoGeneratedTheme: `${region} ${parsedContext.focus_categories?.join(', ') || '핫플레이스'} 추천`,
-                destination: region,
-                totalPlaces: searchResults.length
-            },
-            itinerary: [], // No itinerary
-            tripType: 'SPOT_SEARCH',
-            searchResults: searchResults
-        };
+      const searchResults = topCandidates.map((p) =>
+        mapPlaceToPlanItem(p, 1, "10:00"),
+      );
+
+      return {
+        destination: region,
+        theme: parsedContext.themes || [],
+        party: { adult: 2, child: 0 },
+        dateRange: { start: today, end: today }, // No date range really needed
+        tripSummary: {
+          autoGeneratedTheme: `${region} ${parsedContext.focus_categories || parsedContext.explicit_categories?.join(", ") || "핫플레이스"} 추천`,
+          destination: region,
+          totalPlaces: searchResults.length,
+        },
+        itinerary: [], // No itinerary
+        tripType: "SPOT_SEARCH",
+        searchResults: searchResults,
+        regionCodes: codes || undefined, // [New] 지역 코드 추가
+      };
     }
 
-    const isMajorTouristCity = /제주|부산|강릉|여수|경주|속초|거제/.test(region);
-    
+    const isMajorTouristCity = /제주|부산|강릉|여수|경주|속초|거제/.test(
+      region,
+    );
+
     const routePrompt = `
       # Role
       You are an expert travel planner for "${region}".
       
       # Request
-      Create a perfect "${parsedContext.duration}" itinerary for a "${parsedContext.people || 'general'}" group focusing on "${parsedContext.themes?.join(',') || 'general'}" themes.
+      Create a perfect "${parsedContext.duration}" itinerary for a "${parsedContext.people || "general"}" group focusing on "${parsedContext.themes?.join(",") || "general"}" themes.
       
       # Context
       ${candidatePlacesStr}
@@ -597,9 +701,11 @@ export async function extractTravelContext(
 
       
       2. **Geographical Logic**:
-         ${isMajorTouristCity 
-           ? `- **Strict Clustering**: Since "${region}" is a major tourist area, pick spots **very close** to the accommodation to minimize travel time.` 
-           : `- **Balanced Approach**: Since "${region}" is a general area, prioritize **Top-Rated/Popular** spots even if they are slightly far, but try to keep them within reasonable driving distance from the accommodation.`}
+         ${
+           isMajorTouristCity
+             ? `- **Strict Clustering**: Since "${region}" is a major tourist area, pick spots **very close** to the accommodation to minimize travel time.`
+             : `- **Balanced Approach**: Since "${region}" is a general area, prioritize **Top-Rated/Popular** spots even if they are slightly far, but try to keep them within reasonable driving distance from the accommodation.`
+         }
          - Sort routes geographically (West -> East or Cluster-based).
 
       3. **Volume**: 4-6 places per day.
@@ -617,55 +723,65 @@ export async function extractTravelContext(
 
     let result;
     let retryCount = 0;
-    while(true) {
-        try {
-            result = await geminiModel.generateContent(routePrompt);
-            break;
-        } catch (e: unknown) {
-            const err = e as { status?: number };
-            if (retryCount++ < 3 && err.status === 503) {
-                await new Promise(r => setTimeout(r, 1000 * retryCount));
-                continue;
-            }
-            throw e;
+    while (true) {
+      try {
+        result = await geminiModel.generateContent(routePrompt);
+        break;
+      } catch (e: unknown) {
+        const err = e as { status?: number };
+        if (retryCount++ < 3 && err.status === 503) {
+          await new Promise((r) => setTimeout(r, 1000 * retryCount));
+          continue;
         }
+        throw e;
+      }
     }
 
     const response = await result.response;
-    const jsonStr = response.text().replace(/```json|```/g, "").trim();
+    const jsonStr = response
+      .text()
+      .replace(/```json|```/g, "")
+      .trim();
     const parsedData = JSON.parse(jsonStr);
 
     // --------------------------------------------------------------------------
     // Step 6: Hydration & Return
     // --------------------------------------------------------------------------
-    
+
     // Optimization: Use topCandidates map first, then fallback to getPlacesByIds if needed (though unlikely if prompt followed rules)
     // Actually, prompt constrained to candidate list, so we can trust they are likely in topCandidates or at least we should prioritize them.
     // However, to be robust, we'll use a map of topCandidates.
-    
-    const candidatesMap = new Map(topCandidates.map(p => [String(p.PLACE_ID), p]));
-    
+
+    const candidatesMap = new Map(
+      topCandidates.map((p) => [String(p.PLACE_ID), p]),
+    );
+
     // If Gemini hallucinates IDs not in candidates (rare but possible), we filter them out or could fetch if really needed.
     // Let's stick to candidatesMap for speed.
-    
-    const enrichedItinerary = parsedData.itinerary?.map((day: { day: number; route_ids?: (string | number)[] }) => {
-        const places = (day.route_ids || []).map((id: string | number) => {
-            const p = candidatesMap.get(String(id));
-            if (!p) return null;
-            return mapPlaceToPlanItem(p, day.day, "10:00");
-        }).filter((p: PlanItem | null) => p !== null) as PlanItem[]; // Ensure type safety
-        
-        // Time adjustment
-        places.forEach((p: PlanItem, idx: number) => {
-            p.time = `${String(10 + idx * 2).padStart(2, '0')}:00`;
-        });
 
-        return {
+    const enrichedItinerary =
+      parsedData.itinerary?.map(
+        (day: { day: number; route_ids?: (string | number)[] }) => {
+          const places = (day.route_ids || [])
+            .map((id: string | number) => {
+              const p = candidatesMap.get(String(id));
+              if (!p) return null;
+              return mapPlaceToPlanItem(p, day.day, "10:00");
+            })
+            .filter((p: PlanItem | null) => p !== null) as PlanItem[]; // Ensure type safety
+
+          // Time adjustment
+          places.forEach((p: PlanItem, idx: number) => {
+            p.time = `${String(10 + idx * 2).padStart(2, "0")}:00`;
+          });
+
+          return {
             day: day.day,
-            date: "", 
-            places
-        };
-    }) || [];
+            date: "",
+            places,
+          };
+        },
+      ) || [];
 
     // Date Calculation
     const end = new Date(today);
@@ -673,27 +789,30 @@ export async function extractTravelContext(
     end.setDate(end.getDate() + totalDays - 1);
 
     return {
+      destination: region,
+      theme: parsedContext.themes || [],
+      party: { adult: 2, child: 0 }, // 추후 people parsing 연동 가능
+      dateRange: { start: today, end: end.toISOString().split("T")[0] },
+      tripSummary: {
+        autoGeneratedTheme: parsedData.theme || `${region} 여행`,
         destination: region,
-        theme: parsedContext.themes || [],
-        party: { adult: 2, child: 0 }, // 추후 people parsing 연동 가능
-        dateRange: { start: today, end: end.toISOString().split("T")[0] },
-        tripSummary: {
-            autoGeneratedTheme: parsedData.theme || `${region} 여행`,
-            destination: region,
-            totalPlaces: enrichedItinerary.reduce((acc: number, d: { places: PlanItem[] }) => acc + d.places.length, 0)
-        },
-        itinerary: enrichedItinerary
+        totalPlaces: enrichedItinerary.reduce(
+          (acc: number, d: { places: PlanItem[] }) => acc + d.places.length,
+          0,
+        ),
+      },
+      itinerary: enrichedItinerary,
+      regionCodes: codes || undefined,
     };
-
   } catch (error) {
     console.error("[Server] Critical Error in extractTravelContext:", error);
     // Return empty fallback
     return {
-        destination: parsedContext.region,
-        theme: [],
-        party: { adult: 2, child: 0 },
-        dateRange: { start: today, end: today },
-        itinerary: []
+      destination: parsedContext.region,
+      theme: [],
+      party: { adult: 2, child: 0 },
+      dateRange: { start: today, end: today },
+      itinerary: [],
     };
   }
 }

@@ -19,7 +19,7 @@ import { FirebasePlace } from "@/types/places";
 export function mapPlaceToPlanItem(
   place: FirebasePlace,
   day: number = 1,
-  time: string = "10:00"
+  time: string = "10:00",
 ): PlanItem {
   // 카테고리 매핑 로직
   let type: PlanItem["type"] = "etc";
@@ -63,6 +63,7 @@ export function mapPlaceToPlanItem(
     NAME: place.NAME,
     ADDRESS: place.ADDRESS || "",
     SUB_REGION: place.SUB_REGION || null,
+    AREA_DATA: place.AREA_DATA,
     CATEGORY: {
       main: place.CATEGORY?.main || "",
       sub: place.CATEGORY?.sub || "",
