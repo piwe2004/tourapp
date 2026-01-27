@@ -48,6 +48,7 @@ export default function RootLayout({
           crossOrigin="anonymous" 
           referrerPolicy="no-referrer" 
         />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <Script

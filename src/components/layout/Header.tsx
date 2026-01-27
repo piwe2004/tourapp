@@ -111,10 +111,12 @@ function PlannerHeader() {
     );
 }
 
+import styles from './Header.module.scss';
+
 function DefaultHeader() {
     const [scrolled, setScrolled] = useState(false);
     const pathname = usePathname();
-    const isTransparentElement = pathname === '/'; // 홈에서만 투명
+    const isTransparentElement = pathname === '/'; 
 
     useEffect(() => {
         const handleScroll = () => {
@@ -125,24 +127,29 @@ function DefaultHeader() {
     }, []);
 
     const isTransparent = isTransparentElement && !scrolled;
-
+    
     return (
-        <header className={clsx("header header__default", isTransparent ? "transparent" : "scrolled")}>
-            <Link href="/" className="header__logo">
-                <i className="fa-solid fa-plane text-xl"></i>
-                <span className={clsx("header__logo-text", isTransparent ? "text-white" : "text-slate-900")}>
+        <header className={clsx(styles.header, { [styles.scrolled]: !isTransparent })}>
+            {/* Logo */}
+            <Link href="/" className={styles.logo}>
+                <div className={styles.logoIcon}>
+                    <i className="fa-solid fa-plane"></i>
+                </div>
+                <span className={styles.logoText}>
                     Planni
                 </span>
             </Link>
 
-            <div className="header__btnBox">
-                <button className={clsx("search-button hover:border-indigo-600 hover:text-indigo-600",
-                    isTransparent && "bg-white/10 border-white/20 text-white hover:bg-white hover:text-indigo-600")}>
+            {/* Right Icons */}
+            <div className={styles.navRight}>
+                {/* Search Icon Button */}
+                <button className={styles.iconButton}>
                     <i className="fa-solid fa-magnifying-glass"></i>
                 </button>
-                <button className={clsx("settings-button hover:bg-indigo-600",
-                    isTransparent && "bg-white/10 hover:bg-white hover:text-indigo-600")}>
-                    <i className="fa-solid fa-bars"></i>
+
+                {/* Profile Avatar */}
+                <button className={styles.profileButton}>
+                    U
                 </button>
             </div>
         </header>

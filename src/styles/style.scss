@@ -1,6 +1,6 @@
 @use "sass:color";
-@use "variables" as *;
-@use "mixins" as *;
+@use '@/styles/variables' as *;
+@use '@/styles/mixins' as *;
 
 
 .header {
@@ -874,7 +874,7 @@
       white-space: nowrap;
 
       &:hover {
-        background-color: darken($primary-color, 5%);
+        background-color: color.adjust($primary-color, $lightness: -5%);
       }
     }
   }
@@ -5813,5 +5813,5 @@
     ));
   background-color: $primary;
 
-  & &-inner {}
+
 }

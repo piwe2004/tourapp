@@ -1,4 +1,4 @@
-@use 'variables' as *;
+@use '@/styles/variables' as *;
 
 @mixin flex($items: null, $justify: null, $other: ()) {
   display: flex;
