@@ -32,3 +32,7 @@
 ### [2026-01-27] 디자인 시스템 가이드 분석 및 적용
 - **작업 내용:** 외부 Design System Guide를 분석하여 docs/design_system.md 문서화. _variables.scss에 그라디언트 및 그림자 변수 업데이트, HeroSection 컴포넌트(입력창, 카드)를 디자인 스펙(56px height, pill shape)에 맞춰 정밀 수정.
 - **변경 파일:** docs/design_system.md (New), src/styles/_variables.scss, src/components/home/HeroSection.module.scss`n- **비고:** Tailwind -> SCSS 리팩토링 후 디자인 디테일 업그레이드 완료.
+
+### [2026-01-27] 일정 상세 화면(Planner Timeline) UI 리팩토링
+- **작업 내용:** 사용자가 제공한 스크린샷 디자인에 맞춰 PlannerTimeline, DayItems, ContentBody 전면 리팩토링. PlannerTimeline.module.scss 도입으로 스타일 분리 및 디자인 시스템 적용.
+- **변경 파일:** src/components/planner/PlannerTimeline.tsx, src/components/planner/PlannerTimeline.module.scss (New), src/components/planner/DayItems.tsx, src/components/planner/day-item-parts/ContentBody.tsx`n- **비고:** 타임라인 수직선 구조 개선 및 카드 내부 레이아웃 최적화 완료.

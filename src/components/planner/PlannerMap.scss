@@ -1,0 +1,74 @@
+@use '@/styles/variables' as *;
+
+// Global Map Marker Styles (Naver Map creates these outside React scope)
+.planner-map-marker-container {
+  position: relative;
+  cursor: pointer;
+  
+  &:hover .planner-map-marker-circle {
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+  
+  &:hover .planner-map-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -10px);
+  }
+}
+
+.planner-map-marker-circle {
+  width: 32px;
+  height: 32px;
+  background-color: $primary; // Indigo from variables
+  border: 3px solid $white;
+  border-radius: 50%;
+  color: $white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transform: translate(-50%, -50%); // Center anchor
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &.active {
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
+    background-color: $indigo-800;
+    z-index: 50;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.planner-map-tooltip {
+  position: absolute;
+  bottom: 100%; // Above marker
+  left: 50%;
+  transform: translate(-50%, 0);
+  background-color: $white;
+  color: $slate-800;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  pointer-events: none;
+  margin-bottom: 24px; // Spacing from marker center
+  z-index: 100;
+
+  .planner-map-tooltip-arrow {
+    position: absolute;
+    bottom: -4px;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    width: 8px;
+    height: 8px;
+    background-color: $white;
+  }
+}

@@ -16,6 +16,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { PlanItem } from '@/types/place';
 import { getRoutePath } from '@/services/directionService';
+import './PlannerMap.scss'; // [New] Global Map Marker Styles
 
 interface MapProps {
   schedule: PlanItem[];

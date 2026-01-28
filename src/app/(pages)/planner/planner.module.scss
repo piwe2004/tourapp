@@ -1,0 +1,150 @@
+@use '@/styles/variables' as *;
+
+.plannerPage {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: $slate-100;
+  overflow: hidden;
+
+  // Global Header (Top Level)
+  .plannerHeader {
+    background-color: $white;
+    border-bottom: 1px solid $slate-200;
+    padding: 1rem 1.5rem;
+    z-index: $z-sticky;
+    flex-shrink: 0;
+
+    .headerContent {
+      max-width: 1920px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      .headerTop {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+
+        .destinationName {
+          font-size: 1.5rem;
+          font-weight: 800;
+          color: $text-primary;
+          letter-spacing: -0.02em;
+        }
+
+        .themeTag {
+          background: linear-gradient(135deg, $indigo-50 0%, $white 100%);
+          color: $primary;
+          border: 1px solid $indigo-100;
+          padding: 0.375rem 0.75rem;
+          border-radius: $radius-full;
+          font-size: 0.8125rem;
+          font-weight: 600;
+          display: flex;
+          align-items: center;
+          gap: 0.375rem;
+          box-shadow: $shadow-sm;
+
+          i {
+            font-size: 0.75rem;
+          }
+        }
+      }
+
+      .summaryInfo {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        background-color: $slate-50;
+        padding: 0.5rem 1rem;
+        border-radius: $radius-lg;
+        border: 1px solid $slate-100;
+
+        .infoItem {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          color: $slate-600;
+          font-size: 0.875rem;
+          font-weight: 500;
+
+          i {
+            color: $slate-400;
+          }
+        }
+
+        .infoDivider {
+          color: $slate-300;
+          font-size: 0.75rem;
+        }
+      }
+    }
+  }
+
+  // Main Split Layout
+  .mainContent {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    height: calc(100vh - 72px); // Adjust based on header height
+
+    // Left Panel (Timeline)
+    .leftPanel {
+      width: 40%; // User request: 40%
+      min-width: 400px;
+      max-width: 600px;
+      background-color: $slate-50;
+      border-right: 1px solid $slate-200;
+      display: flex;
+      flex-direction: column;
+      z-index: 10;
+      box-shadow: 4px 0 24px rgba(0,0,0,0.04);
+      position: relative;
+    }
+
+    // Right Panel (Map)
+    .rightPanel {
+      flex: 1; // 60%+
+      position: relative;
+      background-color: $slate-200;
+      
+      // Make map fill this container
+      :global(.naver-map) {
+        width: 100% !important;
+        height: 100% !important;
+      }
+    }
+  }
+}
+
+// Media Query for Mobile
+@media (max-width: 1024px) {
+  .plannerPage {
+    .mainContent {
+      flex-direction: column;
+
+      .leftPanel {
+        width: 100%;
+        max-width: none;
+        flex: 1;
+        border-right: none;
+      }
+
+      .rightPanel {
+        display: none; // Hidden on mobile by default
+        
+        &.mobileOpen {
+            display: block;
+            position: fixed;
+            inset: 0;
+            z-index: $z-modal;
+        }
+      }
+    }
+  }
+}
+
+// Global Map Marker Styles (Naver Map creates these outside React scope)
+

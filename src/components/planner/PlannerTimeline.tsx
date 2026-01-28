@@ -19,8 +19,7 @@ import { WeatherData } from '@/lib/weather/service';
 import { TravelContext } from '@/lib/actions';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import DayItems from '@/components/planner/DayItems';
-import Map from '@/components/planner/Map';
-import DaySelector from '@/components/planner/DaySelector';
+import styles from './PlannerTimeline.module.scss';
 
 interface PlannerTimelineProps {
     days: number[];
@@ -83,46 +82,54 @@ export default function PlannerTimeline({
     const getRainRisk = (itemId: string) => rainRisks.find(r => r.item.PLACE_ID === itemId);
 
     return (
-        <section className="relative w-full h-full flex flex-col bg-slate-50 overflow-hidden">
+        <section className={styles.container}>
             {/* 1. Header Area: Date & Weather */}
-            <div className="shrink-0 bg-white border-b border-slate-200 z-10 shadow-sm">
-                <DaySelector
-                    days={days}
-                    dateRange={dateRange}
-                    selectedDay={selectedDay}
-                    onDaySelect={onDaySelect}
-                    onSmartMixClick={onSmartMixClick}
-                    weatherData={weatherData}
-                />
+            <div className={styles.header}>
+                <div className={styles.dateSelector}>
+                    {days.map(day => {
+                        const d = new Date(dateRange.start);
+                        d.setDate(d.getDate() + (day - 1));
+                        const dateStr = `${String(d.getMonth() + 1)}.${String(d.getDate()).padStart(2, '0')}`;
+                        const weekDay = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
+                        const isActive = selectedDay === day;
+                        
+                        return (
+                            <button 
+                                key={day} 
+                                onClick={() => onDaySelect(day)}
+                                className={isActive ? styles.active : ''}
+                            >
+                                {dateStr} ({weekDay})
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* Weather Widget (From Screenshot) */}
+                <div className={styles.weatherWidget}>
+                     <div className={styles.iconBox}>
+                        {weatherData?.sky === '맑음' ? (
+                            <i className="fa-solid fa-sun text-orange-500"></i>
+                         ) : weatherData?.pty !== '없음' ? (
+                            <i className="fa-solid fa-umbrella text-blue-500"></i>
+                         ) : (
+                            <i className="fa-solid fa-cloud text-slate-400"></i>
+                         )}
+                     </div>
+                     <div className={styles.info}>
+                        <div className={styles.summary}>
+                            {weatherData ? `${weatherData.sky} ${weatherData.tmp}` : '날씨 정보 로딩중'}
+                        </div>
+                        <div className={styles.detail}>
+                            <span>제주시</span>
+                            {weatherData?.pty !== '없음' && <span className="text-blue-500">오후에 비 예상, 우산 챙기세요 ☔</span>}
+                        </div>
+                     </div>
+                </div>
             </div>
 
-            {/* 2. Mobile Map Preview */}
-            <div className="lg:hidden relative h-32 w-full shrink-0 border-b border-slate-200 bg-slate-100">
-                <Map schedule={schedule} selectedDay={selectedDay} selectedItemId={selectedItemId} onItemClick={onItemClick} />
-                <button
-                    className="absolute bottom-2 right-2 px-3 py-1.5 bg-white/90 backdrop-blur-sm shadow-md rounded-lg text-xs font-bold text-slate-700 hover:bg-white transition-colors z-10 border border-slate-200"
-                    onClick={onMobileMapClick}
-                >
-                    지도 크게 보기
-                </button>
-            </div>
-
-            {/* 3. Timeline List */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 pb-20">
-
-                {/* Day Focus Header */}
-                {!isLoading && currentDayFocus && (
-                    <div className="mb-8 p-6 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl text-white shadow-lg relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl transform translate-x-10 -translate-y-10 group-hover:scale-110 transition-transform duration-700"></div>
-                        <span className="inline-block px-2 py-0.5 rounded bg-white/20 backdrop-blur-md text-[10px] font-bold mb-2 border border-white/20">
-                            DAY {selectedDay} TRIP THEME
-                        </span>
-                        <h3 className="text-xl md:text-2xl font-black leading-snug drop-shadow-md">
-                            "{currentDayFocus}"
-                        </h3>
-                    </div>
-                )}
-
+            {/* 2. Timeline List */}
+            <div className={styles.timelineList}>
                 {isLoading ? (
                     <LoadingSkeleton />
                 ) : (
@@ -132,39 +139,35 @@ export default function PlannerTimeline({
                                 <div
                                     {...provided.droppableProps}
                                     ref={provided.innerRef}
-                                    className="relative flex flex-col gap-0 min-h-[300px]"
-                                // Gap is handled by individual items padding to ensure continuous line connection
                                 >
-                                    {/* The continuous vertical line is drawn inside individual items or by a global absolute line. 
-                                        Here, we can use a global absolute line if spacing is uniform, but with varying card heights, 
-                                        it's better to let cards handle their segment or draw a long line behind.
-                                        
-                                        Approach: Absolute line on the left.
-                                    */}
-                                    <div className="absolute top-4 bottom-4 left-[21px] w-0.5 bg-slate-200 -z-10"></div>
-
                                     {currentDayItems.map((item, index) => (
                                         <Draggable draggableId={item.PLACE_ID.toString()} index={index} key={item.PLACE_ID}>
                                             {(provided, snapshot) => (
-                                                <div className="relative mb-4">
-                                                    {/* Wrapper for margin control */}
-                                                    <DayItems
-                                                        item={item}
+                                                <div
+                                                    ref={provided.innerRef}
+                                                    {...provided.draggableProps}
+                                                    {...provided.dragHandleProps}
+                                                    style={provided.draggableProps.style}
+                                                    className={styles.dayItem}
+                                                >
+                                                    {/* Marker */}
+                                                    <div className={styles.marker}></div>
+
+                                                    {/* Card Content */}
+                                                     <DayItems 
+                                                        item={item} 
                                                         index={index}
+                                                        rainRisk={getRainRisk(item.PLACE_ID)}
+                                                        onPlanBClick={onPlanBClick}
                                                         onClick={() => onItemClick(item.PLACE_ID)}
                                                         selected={selectedItemId === item.PLACE_ID}
-                                                        innerRef={provided.innerRef}
-                                                        draggableProps={provided.draggableProps}
-                                                        dragHandleProps={provided.dragHandleProps}
-                                                        isDragging={snapshot.isDragging}
                                                         onReplaceClick={() => onReplaceClick(item)}
                                                         onLockClick={() => onLockClick(item.PLACE_ID)}
                                                         onDeleteClick={() => onDeleteClick(item.PLACE_ID)}
                                                         onAddStopClick={() => onAddStopClick(index + 1)}
-                                                        onPlanBClick={onPlanBClick}
-                                                        rainRisk={getRainRisk(item.PLACE_ID)}
                                                         isLastItem={index === currentDayItems.length - 1}
-                                                    />
+                                                        className={styles.card}
+                                                     />
                                                 </div>
                                             )}
                                         </Draggable>
@@ -176,16 +179,10 @@ export default function PlannerTimeline({
                     </DragDropContext>
                 )}
 
-                {/* Add Item Button */}
-                <button
-                    onClick={onAddDayClick}
-                    className="w-full mt-4 py-4 border-2 border-dashed border-slate-300 rounded-2xl text-slate-400 font-bold hover:border-emerald-400 hover:text-emerald-500 hover:bg-emerald-50/50 transition-all flex items-center justify-center gap-2"
-                >
-                    <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center group-hover:bg-emerald-200">
-                        <i className="fa-solid fa-plus text-sm text-slate-500 group-hover:text-emerald-600"></i>
-                    </div>
-                    일정 추가하기
-                </button>
+                 {/* Add Item Button */}
+                 <button className={styles.addItemBtn} onClick={onAddDayClick}>
+                    + 일정 추가하기
+                 </button>
             </div>
         </section>
     );
