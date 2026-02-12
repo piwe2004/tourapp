@@ -111,12 +111,12 @@ function PlannerHeader() {
     );
 }
 
-import styles from './Header.module.scss';
+
 
 function DefaultHeader() {
     const [scrolled, setScrolled] = useState(false);
     const pathname = usePathname();
-    const isTransparentElement = pathname === '/'; 
+    const isTransparentElement = pathname === '/';
 
     useEffect(() => {
         const handleScroll = () => {
@@ -127,28 +127,31 @@ function DefaultHeader() {
     }, []);
 
     const isTransparent = isTransparentElement && !scrolled;
-    
+
     return (
-        <header className={clsx(styles.header, { [styles.scrolled]: !isTransparent })}>
+        <header className={clsx(
+            "fixed top-0 left-0 right-0 z-sticky h-[72px] flex items-center justify-between px-6 lg:px-8 transition-all duration-300 bg-transparent",
+            { "bg-white shadow-sm border-b border-gray-200": !isTransparent }
+        )}>
             {/* Logo */}
-            <Link href="/" className={styles.logo}>
-                <div className={styles.logoIcon}>
+            <Link href="/" className="flex items-center gap-2 cursor-pointer">
+                <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center text-white text-lg">
                     <i className="fa-solid fa-plane"></i>
                 </div>
-                <span className={styles.logoText}>
+                <span className="text-xl font-bold text-slate-900 tracking-tight">
                     Planni
                 </span>
             </Link>
 
             {/* Right Icons */}
-            <div className={styles.navRight}>
+            <div className="flex items-center gap-3">
                 {/* Search Icon Button */}
-                <button className={styles.iconButton}>
-                    <i className="fa-solid fa-magnifying-glass"></i>
+                <button className="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 transition-all duration-200 bg-transparent hover:bg-slate-100 hover:text-primary">
+                    <i className="fa-solid fa-magnifying-glass text-lg"></i>
                 </button>
 
                 {/* Profile Avatar */}
-                <button className={styles.profileButton}>
+                <button className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-800 font-semibold transition-all duration-200 hover:shadow-[0_0_0_2px_#4338ca]">
                     U
                 </button>
             </div>

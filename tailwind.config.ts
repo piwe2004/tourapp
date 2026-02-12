@@ -35,6 +35,15 @@ const config: Config = {
       },
       backgroundImage: {
         "hero-gradient": "linear-gradient(135deg, #4338CA 0%, #3B82F6 100%)", // Adjusted to IndigoBlue
+        "gradient-card":
+          "linear-gradient(135deg, #818cf8 0%, #a855f7 50%, #ec4899 100%)", // indigo-400 -> purple-500 -> pink-500
+      },
+      zIndex: {
+        dropdown: "1000",
+        sticky: "1100",
+        fixed: "1200",
+        "modal-backdrop": "2000",
+        modal: "2010",
       },
       keyframes: {
         "fade-in-up": {
@@ -42,17 +51,17 @@ const config: Config = {
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
         "fade-in-right": {
-            "0%": { opacity: "0", transform: "translateX(20px)" },
-            "100%": { opacity: "1", transform: "translateX(0)" },
+          "0%": { opacity: "0", transform: "translateX(20px)" },
+          "100%": { opacity: "1", transform: "translateX(0)" },
         },
         "spin-slow": {
           "0%": { transform: "rotate(0deg)" },
           "100%": { transform: "rotate(360deg)" },
         },
         "bounce-slow": {
-            "0%, 100%": { transform: "translateY(-5%)" },
-            "50%": { transform: "translateY(5%)" },
-        }
+          "0%, 100%": { transform: "translateY(-5%)" },
+          "50%": { transform: "translateY(5%)" },
+        },
       },
       animation: {
         "fade-in-up": "fade-in-up 0.8s ease-out forwards",

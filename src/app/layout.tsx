@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    template:'%s | Planni',
-    default:'Planni - 고민 없이 떠나는 우리만의 여행'
+    template: '%s | Planni',
+    default: 'Planni - 고민 없이 떠나는 우리만의 여행'
   },
   description: "여행 갈 때마다 계획 짜느라 머리 아프셨죠? 이제 '플래니'한테 맡겨주세요. 날씨부터 맛집, 숙소 동선까지 알아서 척척 정리해 드릴게요. 지도 보며 헤매지 말고, 맘 편히 떠나기만 하세요!",
 };
@@ -41,12 +41,12 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <head>
-        <link 
-          rel="stylesheet" 
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" 
-          integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" 
-          crossOrigin="anonymous" 
-          referrerPolicy="no-referrer" 
+        <link
+          rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+          integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
+          crossOrigin="anonymous"
+          referrerPolicy="no-referrer"
         />
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
       </head>
