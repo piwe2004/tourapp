@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import "@/app/globals.css";
 import "@/styles/globals.scss";
 import "@/styles/style.scss";
 import Header from '@/components/layout/Header';
@@ -49,6 +50,15 @@ export default function RootLayout({
           referrerPolicy="no-referrer"
         />
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+        {/* 태블릿 디자인용 폰트 및 아이콘 */}
+        <link
+          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+          rel="stylesheet"
+        />
+        <link
+          href="https://fonts.googleapis.com/icon?family=Material+Icons+Round"
+          rel="stylesheet"
+        />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <Script

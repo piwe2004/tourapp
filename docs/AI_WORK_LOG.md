@@ -184,7 +184,6 @@ ONLY_SEARCH: {
 **작업 내용:**
 
 1.  **Trip Type 구분 로직 추가**:
-
     - `FULL_COURSE`: "1박2일", "3일간", "당일치기" 등 **기간(Duration)**과 관련된 표현이 있으면 무조건 전체 코스 생성 모드로 진입합니다. (숙소, 식당 필수 포함)
     - `SPOT_SEARCH`: 기간 언급 없이 "제주도 카페", "맛집 추천" 등의 쿼리는 단순 장소 검색 모드로 진입합니다.
 
@@ -242,3 +241,45 @@ ONLY_SEARCH: {
 - `src/app/api/directions/route.ts`: API Proxy [New].
 - `src/services/directionService.ts`: Fetcher Service [New].
 - `src/components/planner/Map.tsx`: Polyline 로직 전면 수정.
+
+## 2026-02-16
+
+### 태블릿 홈 디자인 통합 (Tablet Home Design Integration)
+
+사용자가 제공한 태블릿 디자인을 홈 페이지에 직접 통합했습니다. 별도 컴포넌트 파일로 분리하지 않고 단일 페이지 파일에 모든 UI 로직을 작성하여 코드 구조를 단순화했습니다.
+
+**작업 내용:**
+
+1. **페이지 구조 전면 개편**:
+   - 기존의 HeroSection, TravelCategories, PopularDestinations 컴포넌트 제거
+   - 태블릿 전용 전체 화면 레이아웃으로 교체
+
+2. **UI 구성 요소** (모두 page.tsx 내부에 직접 작성):
+   - **Sidebar Navigation**: 왼쪽 고정 사이드바, 로고 + 네비게이션 메뉴(홈/저장/여행) + 프로필 이미지
+   - **Hero Section**: 배경 이미지 + 그라데이션 오버레이, AI Discovery 배지, 메인 타이틀 ("당신의 취향에 딱 맞는 최적의 장소를 찾아보세요")
+   - **Search Hub**: AI 검색 입력창, 트렌딩 검색어 칩(데이트 맛집, 감성 카페 등), 동행자 선택 카드(혼자/연인과/친구와/가족과), 추천 장소 리스트
+   - **PlaceCard**: 내부 함수 컴포넌트로 정의하여 장소 카드 렌더링 (이미지, 평점, 제목, 위치, 태그)
+
+3. **상태 관리**:
+   - `activePage`: 현재 선택된 네비게이션 메뉴
+   - `searchQuery`: 검색어 입력값
+   - `selectedCompanion`: 선택된 동행자 타입
+
+4. **반응형 대응**:
+   - Hero Section은 lg 브레이크포인트 이상에서만 표시 (`hidden lg:flex`)
+   - 모바일에서는 Search Hub만 전체 화면으로 표시
+
+**변경 파일:**
+
+- `src/app/(pages)/(home)/page.tsx`: 전체 코드 재작성 (487B → 약 25KB)
+
+**다음 계획:**
+
+- 잘못 생성된 `tablet-home` 디렉토리 정리 필요 (src/app/(pages)/tablet-home, src/app/tablet-home)
+- 실제 Firebase 데이터와 연동하여 추천 장소 동적으로 표시
+- 검색 기능 구현 (현재는 console.log만 출력)
+
+**비고:**
+
+- Material Icons Round 폰트가 이미 로드되어 있어 별도 설정 불필요
+- Tailwind 커스텀 색상(primary-tablet, background-tablet-light)이 이미 설정되어 있음

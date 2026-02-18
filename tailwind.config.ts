@@ -16,6 +16,9 @@ const config: Config = {
           DEFAULT: "#4338CA", // Deep Indigo (Main)
           hover: "#3730A3", // Darker Indigo (Hover)
           tint: "#E0E7FF", // Light Indigo (Bg)
+          // Tablet Design Colors (청록색 계열)
+          tablet: "#13ecc8", // 태블릿 디자인 메인 컬러
+          "tablet-dark": "#0ebca0", // 태블릿 디자인 호버 컬러
         },
         secondary: {
           DEFAULT: "#FF5722", // Warm Orange (Point)
@@ -28,10 +31,27 @@ const config: Config = {
         // Neutral Colors (Slate Scale Aliases if needed, or just use slate-*)
         surface: "#FFFFFF",
         "bg-main": "#F8FAFC", // Slate-50
+        // Tablet Design Backgrounds
+        "background-tablet-light": "#f6f8f8", // 태블릿 라이트 배경
       },
       fontFamily: {
         sans: ["Pretendard", "var(--font-geist-sans)", "sans-serif"],
         mono: ["var(--font-geist-mono)", "monospace"],
+        // Tablet Design Font
+        display: [
+          "Plus Jakarta Sans",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "Apple SD Gothic Neo",
+          "Malgun Gothic",
+          "sans-serif",
+        ],
+      },
+      borderRadius: {
+        DEFAULT: "1rem", // 16px
+        lg: "2rem", // 32px - 태블릿 디자인용
+        xl: "3rem", // 48px - 태블릿 디자인용
+        full: "9999px",
       },
       backgroundImage: {
         "hero-gradient": "linear-gradient(135deg, #4338CA 0%, #3B82F6 100%)", // Adjusted to IndigoBlue
