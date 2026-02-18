@@ -66,7 +66,7 @@ export default function TabletSearchHub() {
     };
 
     return (
-        <section className="flex-1 h-full overflow-y-auto bg-background-tablet-light relative">
+        <section className="flex-1 h-full overflow-y-auto bg-light relative">
             <div className="max-w-4xl mx-auto px-8 py-10 lg:py-14 flex flex-col gap-10">
                 {/* 모바일 헤더 (작은 화면용) */}
                 <div className="lg:hidden flex items-center justify-between mb-2">
@@ -84,13 +84,13 @@ export default function TabletSearchHub() {
                     <div className="relative group">
                         {/* 왼쪽 아이콘 */}
                         <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none">
-                            <span className="material-icons-round text-primary-tablet text-3xl group-focus-within:scale-110 transition-transform">
+                            <span className="material-icons-round text-primary text-3xl group-focus-within:scale-110 transition-transform">
                                 auto_awesome
                             </span>
                         </div>
                         {/* 검색 입력창 */}
                         <input
-                            className="block w-full pl-16 pr-16 py-6 bg-white border-2 border-transparent focus:border-primary-tablet/50 text-gray-900 rounded-full text-xl shadow-lg shadow-gray-200/50 focus:ring-4 focus:ring-primary-tablet/10 transition-all placeholder:text-gray-400"
+                            className="block w-full pl-16 pr-16 py-6 bg-white border-2 border-transparent focus:border-primary/50 text-gray-900 rounded-full text-xl shadow-lg shadow-gray-200/50 focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-gray-400"
                             id="search"
                             placeholder="강남역 조용한 노트북 카페 찾아줘..."
                             type="text"
@@ -104,7 +104,7 @@ export default function TabletSearchHub() {
                         <div className="absolute inset-y-0 right-2 flex items-center">
                             <button
                                 onClick={handleSearch}
-                                className="w-12 h-12 bg-primary-tablet hover:bg-primary-tablet-dark rounded-full flex items-center justify-center text-gray-900 transition-colors shadow-md"
+                                className="w-12 h-12 bg-primary hover:bg-primary-hover rounded-full flex items-center justify-center text-gray-900 transition-colors shadow-md"
                             >
                                 <span className="material-icons-round text-2xl">arrow_forward</span>
                             </button>
@@ -115,7 +115,7 @@ export default function TabletSearchHub() {
                 {/* 트렌딩 검색어 */}
                 <div className="space-y-3">
                     <div className="flex items-center gap-2 mb-2 ml-1">
-                        <span className="material-icons-round text-primary-tablet text-sm">trending_up</span>
+                        <span className="material-icons-round text-primary text-sm">trending_up</span>
                         <span className="text-sm font-bold uppercase tracking-wider text-gray-400">
                             Trending Searches
                         </span>
@@ -125,7 +125,7 @@ export default function TabletSearchHub() {
                             <button
                                 key={index}
                                 onClick={() => setSearchQuery(item.text)}
-                                className="px-5 py-2.5 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-primary-tablet/10 hover:border-primary-tablet/30 hover:text-primary-tablet-dark transition-all font-medium text-sm shadow-sm flex items-center gap-2"
+                                className="px-5 py-2.5 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-primary/10 hover:border-primary/30 hover:text-primary-hover transition-all font-medium text-sm shadow-sm flex items-center gap-2"
                             >
                                 <span>{item.icon}</span> {item.text}
                             </button>
@@ -145,17 +145,17 @@ export default function TabletSearchHub() {
                                 <button
                                     key={option.id}
                                     onClick={() => setSelectedCompanion(option.id)}
-                                    className="group relative bg-white rounded-lg p-6 text-left shadow-sm border border-gray-100 hover:border-primary-tablet hover:shadow-lg hover:shadow-primary-tablet/10 transition-all duration-300"
+                                    className="group relative bg-white rounded-lg p-6 text-left shadow-sm border border-gray-100 hover:border-primary hover:shadow-lg hover:shadow-primary/10 transition-all duration-300"
                                 >
                                     {/* 이모지 아이콘 */}
                                     <div
                                         className={`w-12 h-12 rounded-full mb-4 flex items-center justify-center text-2xl transition-colors ${option.color === 'blue'
-                                                ? 'bg-blue-50 text-blue-500 group-hover:bg-blue-100'
-                                                : option.color === 'pink'
-                                                    ? 'bg-pink-50 text-pink-500 group-hover:bg-pink-100'
-                                                    : option.color === 'green'
-                                                        ? 'bg-green-50 text-green-500 group-hover:bg-green-100'
-                                                        : 'bg-orange-50 text-orange-500 group-hover:bg-orange-100'
+                                            ? 'bg-blue-50 text-blue-500 group-hover:bg-blue-100'
+                                            : option.color === 'pink'
+                                                ? 'bg-pink-50 text-pink-500 group-hover:bg-pink-100'
+                                                : option.color === 'green'
+                                                    ? 'bg-green-50 text-green-500 group-hover:bg-green-100'
+                                                    : 'bg-orange-50 text-orange-500 group-hover:bg-orange-100'
                                             }`}
                                     >
                                         {option.emoji}
@@ -166,8 +166,8 @@ export default function TabletSearchHub() {
                                     {/* 선택 체크박스 */}
                                     <div
                                         className={`absolute top-6 right-6 w-6 h-6 rounded-full border-2 transition-all ${isSelected
-                                                ? 'border-primary-tablet bg-primary-tablet'
-                                                : 'border-gray-200 group-hover:border-primary-tablet'
+                                            ? 'border-primary bg-primary'
+                                            : 'border-gray-200 group-hover:border-primary'
                                             }`}
                                     >
                                         {isSelected && (
@@ -186,7 +186,7 @@ export default function TabletSearchHub() {
                 <div className="space-y-4 pb-10">
                     <div className="flex items-center justify-between">
                         <h3 className="text-xl font-bold text-gray-800">내 주변 추천 장소</h3>
-                        <button className="text-primary-tablet hover:text-primary-tablet-dark font-medium text-sm flex items-center">
+                        <button className="text-primary hover:text-primary-hover font-medium text-sm flex items-center">
                             더보기 <span className="material-icons-round text-base">chevron_right</span>
                         </button>
                     </div>

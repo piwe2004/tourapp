@@ -117,6 +117,7 @@ function DefaultHeader() {
     const [scrolled, setScrolled] = useState(false);
     const pathname = usePathname();
     const isTransparentElement = pathname === '/';
+    const [activePage, setActivePage] = useState('home');
 
     useEffect(() => {
         const handleScroll = () => {
@@ -128,32 +129,67 @@ function DefaultHeader() {
 
     const isTransparent = isTransparentElement && !scrolled;
 
+    const NAV_ITEMS = [
+        { id: 'home', icon: 'home', label: '홈' },
+        { id: 'saved', icon: 'bookmark_border', label: '보관함' },
+        { id: 'add', icon: 'add', label: '추가', mobileOnly: true }, // Mobile FAB placeholder
+        { id: 'travel', icon: 'flight_takeoff', label: '경로' },
+        { id: 'profile', icon: 'person_outline', label: '프로필' },
+    ] as const;
+
     return (
-        <header className={clsx(
-            "fixed top-0 left-0 right-0 z-sticky h-[72px] flex items-center justify-between px-6 lg:px-8 transition-all duration-300 bg-transparent",
-            { "bg-white shadow-sm border-b border-gray-200": !isTransparent }
-        )}>
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-2 cursor-pointer">
-                <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center text-white text-lg">
-                    <i className="fa-solid fa-plane"></i>
-                </div>
-                <span className="text-xl font-bold text-slate-900 tracking-tight">
+        <header className="flex items-center justify-between md:h-full border-gray-100 md:border-t-0 md:border-r md:flex-col md:py-8 md:bg-white pt-6 px-6 md:p-0">
+            <Link href="/" title="메인페이지" className="flex items-center gap-2 relative md:mb-12 shrink">
+                <h1 className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-lg md:w-12 md:h-12 md:text-2xl after:content-['P'] shadow-lg shadow-primary/30"></h1>
+                <p className="text-2xl font-extrabold tracking-tight md:text-[0px] md:absolute md:top-0">
                     Planni
-                </span>
+                </p>
             </Link>
+            <nav className="h-[72px] fixed bottom-0 left-0 w-full border-t border-gray-100 z-50 md:relative md:w-24 md:h-full md:border-0 bg-white/90 backdrop-blur-lg">
 
-            {/* Right Icons */}
-            <div className="flex items-center gap-3">
-                {/* Search Icon Button */}
-                <button className="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 transition-all duration-200 bg-transparent hover:bg-slate-100 hover:text-primary">
-                    <i className="fa-solid fa-magnifying-glass text-lg"></i>
-                </button>
+                {/* Nav Items Container */}
+                <div className="flex justify-between items-center h-full px-6 md:px-0 md:flex-col md:justify-start md:gap-8 md:w-full">
+                    {NAV_ITEMS.map((item) => {
+                        const isActive = activePage === item.id;
 
-                {/* Profile Avatar */}
-                <button className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-800 font-semibold transition-all duration-200 hover:shadow-[0_0_0_2px_#4338ca]">
-                    U
-                </button>
+                        // "Add" button Special Style (Mobile FAB-like)
+                        if (item.id === 'add') {
+                            return (
+                                <div key={item.id} className="relative md:hidden -top-5">
+                                    <button className="w-14 h-14 bg-primary rounded-full flex items-center justify-center shadow-lg shadow-primary/40 text-black transform active:scale-95 transition-transform border-4 border-background-tablet-light">
+                                        <span className="material-icons-round text-3xl">add</span>
+                                    </button>
+                                </div>
+                            );
+                        }
+
+                        return (
+                            <button
+                                key={item.id}
+                                onClick={() => setActivePage(item.id)}
+                                className={`h-[40px] flex flex-col items-center justify-between md:gap-1 md:h-auto w-12 md:w-full group transition-all
+                                    ${isActive ? 'text-primary' : 'text-slate-400 hover:text-slate-600'}`}
+                            >
+                                {/* Desktop Icon Background */}
+                                <div className={`h-[18px] md:flex md:w-12 md:h-12 items-center justify-center rounded-2xl transition-all duration-300
+                                    ${isActive ? 'md:bg-primary/10' : 'text-gray-400 group-hover:bg-gray-100'}`}>
+                                    <span className="material-icons-round text-2xl">{item.icon}</span>
+                                </div>
+                                {/* Label */}
+                                <span className={`text-[10px] md:text-[13px] font-light md:font-normal md:mt-1 ${isActive ? ' font-normal md:font-semibold' : ''}`}>
+                                    {item.label}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+            </nav>
+            <div className="w-10 h-10 rounded-full border-2 overflow-hidden border-white shadow-sm md:w-12 md:h-12 shrink">
+                <img
+                    alt="User profile"
+                    className="w-full h-full object-cover"
+                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuD_pbUD2fhWrNqEY8ZOx7Fw7OLYZsZPhiBWc6bcxSwNqpOfBlNxNRx3MwHtNflMqIFgyvwq2RDFiQpiXpz-13t9oGQHasW-mN5Y_xcpTjzCe_g5ErZIh5wlKipgyDuxXbUkcOKuomEWJRHGFzPsiC64gcpUO_M0yjK2VgIIx2vSJ5IT2AZ1k_dt1wIZ49ms9qQCODbrCR4x5_mvaskJnKXJYWQLGt4xX298Il3azsRpxtr7YI2uDV-_gmFxnKD12s-oDJjt0Hbb6qk"
+                />
             </div>
         </header>
     );

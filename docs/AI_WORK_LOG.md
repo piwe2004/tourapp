@@ -282,4 +282,4 @@ ONLY_SEARCH: {
 **비고:**
 
 - Material Icons Round 폰트가 이미 로드되어 있어 별도 설정 불필요
-- Tailwind 커스텀 색상(primary-tablet, background-tablet-light)이 이미 설정되어 있음
+- Tailwind 커스텀 색상(primary, background-tablet-light)이 이미 설정되어 있음

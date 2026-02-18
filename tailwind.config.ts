@@ -5,6 +5,7 @@ const config: Config = {
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/app/(pages)/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {
@@ -13,32 +14,50 @@ const config: Config = {
         foreground: "var(--foreground)",
         // Brand Colors
         primary: {
-          DEFAULT: "#4338CA", // Deep Indigo (Main)
-          hover: "#3730A3", // Darker Indigo (Hover)
-          tint: "#E0E7FF", // Light Indigo (Bg)
-          // Tablet Design Colors (청록색 계열)
-          tablet: "#13ecc8", // 태블릿 디자인 메인 컬러
-          "tablet-dark": "#0ebca0", // 태블릿 디자인 호버 컬러
+          DEFAULT: "#13ECC8",
+          hover: "#0d9488",
+          tint: "#E0E7FF",
+          "50": "#f0fdfa",
+          "100": "#ccfbf1",
+          "300": "#5eead4",
+          "400": "#2dd4bf",
+          "600": "#0d9488", // primary-dark
         },
         secondary: {
-          DEFAULT: "#FF5722", // Warm Orange (Point)
+          DEFAULT: "#4f46e5",
+          hover: "#312e81",
+          "50": "#eef2ff",
+          "100": "#e0e7ff",
+          "500": "#6366f1",
+          "900": "#312e81",
+        },
+        accent: {
+          DEFAULT: "#f97316",
+          hover: "#ea580c",
+          "50": "eef2ff",
+          "100": "#ffedd5",
         },
         // Semantic Colors
         alert: {
-          DEFAULT: "#D32F2F", // Rainy Red
+          DEFAULT: "#D32F2F",
           bg: "#FFEBEE",
         },
         // Neutral Colors (Slate Scale Aliases if needed, or just use slate-*)
-        surface: "#FFFFFF",
-        "bg-main": "#F8FAFC", // Slate-50
+        surface: {
+          DEFAULT: "#FFFFFF",
+          dark: "#162e2a", // Added for mobile dark mode
+        },
+        main: "#F8FAFC", // Slate-50
         // Tablet Design Backgrounds
-        "background-tablet-light": "#f6f8f8", // 태블릿 라이트 배경
+        light: "#f6f8f8", // 태블릿 라이트 배경
+        dark: "#10221f", // Added for mobile dark mode
       },
       fontFamily: {
         sans: ["Pretendard", "var(--font-geist-sans)", "sans-serif"],
         mono: ["var(--font-geist-mono)", "monospace"],
-        // Tablet Design Font
+        // Tablet/Mobile Design Font
         display: [
+          "Pretendard",
           "Plus Jakarta Sans",
           "-apple-system",
           "BlinkMacSystemFont",
@@ -54,9 +73,13 @@ const config: Config = {
         full: "9999px",
       },
       backgroundImage: {
-        "hero-gradient": "linear-gradient(135deg, #4338CA 0%, #3B82F6 100%)", // Adjusted to IndigoBlue
+        "hero-gradient": "linear-gradient(135deg, #4338CA 0%, #3B82F6 100%)",
         "gradient-card":
-          "linear-gradient(135deg, #818cf8 0%, #a855f7 50%, #ec4899 100%)", // indigo-400 -> purple-500 -> pink-500
+          "linear-gradient(135deg, #818cf8 0%, #a855f7 50%, #ec4899 100%)",
+      },
+      boxShadow: {
+        soft: "0 4px 20px -2px rgba(19, 236, 200, 0.15)", // Mobile design shadow
+        card: "0 10px 40px -10px rgba(0,0,0,0.05)", // Mobile design shadow
       },
       zIndex: {
         dropdown: "1000",

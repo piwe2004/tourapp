@@ -27,7 +27,7 @@ export default function TabletSidebar({ currentPage = 'home' }: TabletSidebarPro
         <nav className="w-20 md:w-24 h-full bg-white flex flex-col items-center py-8 border-r border-gray-100 flex-shrink-0 z-20 shadow-sm">
             {/* 로고 아이콘 */}
             <div className="mb-12">
-                <div className="w-12 h-12 bg-primary-tablet rounded-xl flex items-center justify-center shadow-lg shadow-primary-tablet/30">
+                <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/30">
                     <span className="material-icons-round text-gray-900 text-3xl">explore</span>
                 </div>
             </div>
@@ -45,8 +45,8 @@ export default function TabletSidebar({ currentPage = 'home' }: TabletSidebarPro
                             {/* 아이콘 배경 */}
                             <div
                                 className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-all duration-300 ${isActive
-                                        ? 'bg-primary-tablet/10 text-primary-tablet'
-                                        : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
+                                    ? 'bg-primary/10 text-primary'
+                                    : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
                                     }`}
                             >
                                 <span className="material-icons-round text-2xl">{item.icon}</span>
@@ -54,8 +54,8 @@ export default function TabletSidebar({ currentPage = 'home' }: TabletSidebarPro
                             {/* 라벨 */}
                             <span
                                 className={`text-[10px] font-semibold transition-colors ${isActive
-                                        ? 'text-primary-tablet'
-                                        : 'text-gray-400 group-hover:text-gray-600'
+                                    ? 'text-primary'
+                                    : 'text-gray-400 group-hover:text-gray-600'
                                     }`}
                             >
                                 {item.label}
@@ -67,7 +67,7 @@ export default function TabletSidebar({ currentPage = 'home' }: TabletSidebarPro
 
             {/* 프로필 이미지 */}
             <div className="mt-auto">
-                <button className="w-12 h-12 rounded-full overflow-hidden border-2 border-transparent hover:border-primary-tablet transition-colors">
+                <button className="w-12 h-12 rounded-full overflow-hidden border-2 border-transparent hover:border-primary transition-colors">
                     <img
                         alt="User Profile"
                         className="w-full h-full object-cover"

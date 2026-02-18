@@ -26,7 +26,7 @@ export default function TabletHeroSection() {
                     {/* AI Discovery 배지 */}
                     <div className="bg-white/20 backdrop-blur-md self-start px-4 py-2 rounded-full mb-6 border border-white/30">
                         <span className="text-sm font-semibold tracking-wide uppercase flex items-center gap-2">
-                            <span className="w-2 h-2 bg-primary-tablet rounded-full animate-pulse"></span>
+                            <span className="w-2 h-2 bg-primary rounded-full animate-pulse"></span>
                             AI Discovery
                         </span>
                     </div>
@@ -34,7 +34,7 @@ export default function TabletHeroSection() {
                     {/* 메인 타이틀 */}
                     <h1 className="text-4xl xl:text-5xl font-extrabold leading-tight mb-4 drop-shadow-sm">
                         당신의 취향에 딱 맞는<br />
-                        <span className="text-primary-tablet">최적의 장소</span>를 찾아보세요
+                        <span className="text-primary">최적의 장소</span>를 찾아보세요
                     </h1>
 
                     {/* 서브 타이틀 */}
