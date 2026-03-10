@@ -1,4 +1,9 @@
-import { FirebasePlace, LodgingDetail, AttractionDetail, RestaurantDetail } from '../types/places';
+import type {
+  FirebasePlace,
+  LodgingDetail,
+  AttractionDetail,
+  RestaurantDetail,
+} from "../types/places";
 
 // Mock Lodging Data (5 items)
 export const mockLodgings: FirebasePlace[] = [
@@ -42,8 +47,8 @@ export const mockLodgings: FirebasePlace[] = [
       parkinglodging: "가능(100대)",
       reservationlodging: "전화",
       scalelodging: "5000㎡",
-      accomcountlodging: "200"
-    } as LodgingDetail
+      accomcountlodging: "200",
+    } as LodgingDetail,
   },
   {
     PLACE_ID: 1002,
@@ -85,15 +90,15 @@ export const mockLodgings: FirebasePlace[] = [
       parkinglodging: "가능(5대)",
       reservationlodging: "전화",
       scalelodging: "200㎡",
-      accomcountlodging: "20"
-    } as LodgingDetail
+      accomcountlodging: "20",
+    } as LodgingDetail,
   },
   {
     PLACE_ID: 1003,
     NAME: "제주 그랜드 호텔",
     CATEGORY: { main: "숙소", sub: "호텔" },
-    LOC_LAT: 33.500000,
-    LOC_LNG: 126.520000,
+    LOC_LAT: 33.5,
+    LOC_LNG: 126.52,
     IMAGE_URL: "https://via.placeholder.com/300x200?text=Grand+Hotel",
     ADDRESS: "제주특별자치도 제주시 연동 77",
     RATING: 4.2,
@@ -128,15 +133,15 @@ export const mockLodgings: FirebasePlace[] = [
       parkinglodging: "가능(타워)",
       reservationlodging: "홈페이지",
       scalelodging: "10000㎡",
-      accomcountlodging: "1000"
-    } as LodgingDetail
+      accomcountlodging: "1000",
+    } as LodgingDetail,
   },
   {
     PLACE_ID: 1004,
     NAME: "바다보다 게스트하우스",
     CATEGORY: { main: "숙소", sub: "게스트하우스" },
-    LOC_LAT: 33.550000,
-    LOC_LNG: 126.800000,
+    LOC_LAT: 33.55,
+    LOC_LNG: 126.8,
     IMAGE_URL: "https://via.placeholder.com/300x200?text=Guesthouse",
     ADDRESS: "제주특별자치도 제주시 구좌읍 99",
     RATING: 4.9,
@@ -171,15 +176,15 @@ export const mockLodgings: FirebasePlace[] = [
       parkinglodging: "가능(주변)",
       reservationlodging: "문자",
       scalelodging: "100㎡",
-      accomcountlodging: "30"
-    } as LodgingDetail
+      accomcountlodging: "30",
+    } as LodgingDetail,
   },
   {
     PLACE_ID: 1005,
     NAME: "한라산 캠핑장",
     CATEGORY: { main: "숙소", sub: "캠핑" },
-    LOC_LAT: 33.360000,
-    LOC_LNG: 126.530000,
+    LOC_LAT: 33.36,
+    LOC_LNG: 126.53,
     IMAGE_URL: "https://via.placeholder.com/300x200?text=Camping",
     ADDRESS: "제주특별자치도 제주시 516로",
     RATING: 4.6,
@@ -214,9 +219,9 @@ export const mockLodgings: FirebasePlace[] = [
       parkinglodging: "가능",
       reservationlodging: "현장",
       scalelodging: "50000㎡",
-      accomcountlodging: "200"
-    } as LodgingDetail
-  }
+      accomcountlodging: "200",
+    } as LodgingDetail,
+  },
 ];
 
 // Mock Attraction Data (5 items)
@@ -225,8 +230,8 @@ export const mockAttractions: FirebasePlace[] = [
     PLACE_ID: 2001,
     NAME: "성산일출봉",
     CATEGORY: { main: "관광지", sub: "자연" },
-    LOC_LAT: 33.4580,
-    LOC_LNG: 126.9420,
+    LOC_LAT: 33.458,
+    LOC_LNG: 126.942,
     IMAGE_URL: "https://via.placeholder.com/300x200?text=Sunrise+Peak",
     ADDRESS: "제주특별자치도 서귀포시 성산읍",
     RATING: 4.9,
@@ -241,15 +246,15 @@ export const mockAttractions: FirebasePlace[] = [
       parking: "가능",
       chkbabycarriage: "불가(등산로)",
       chkpet: "불가",
-      chkcreditcard: "가능"
-    } as AttractionDetail
+      chkcreditcard: "가능",
+    } as AttractionDetail,
   },
   {
     PLACE_ID: 2002,
     NAME: "아르떼뮤지엄",
     CATEGORY: { main: "관광지", sub: "문화" },
-    LOC_LAT: 33.3900,
-    LOC_LNG: 126.3500,
+    LOC_LAT: 33.39,
+    LOC_LNG: 126.35,
     IMAGE_URL: "https://via.placeholder.com/300x200?text=Arte+Museum",
     ADDRESS: "제주특별자치도 제주시 애월읍",
     RATING: 4.7,
@@ -264,15 +269,15 @@ export const mockAttractions: FirebasePlace[] = [
       parking: "가능(대형)",
       chkbabycarriage: "가능",
       chkpet: "불가",
-      chkcreditcard: "가능"
-    } as AttractionDetail
+      chkcreditcard: "가능",
+    } as AttractionDetail,
   },
   {
     PLACE_ID: 2003,
     NAME: "한림공원",
     CATEGORY: { main: "관광지", sub: "공원" },
-    LOC_LAT: 33.3900,
-    LOC_LNG: 126.2400,
+    LOC_LAT: 33.39,
+    LOC_LNG: 126.24,
     IMAGE_URL: "https://via.placeholder.com/300x200?text=Hallim+Park",
     ADDRESS: "제주특별자치도 제주시 한림읍",
     RATING: 4.5,
@@ -287,15 +292,15 @@ export const mockAttractions: FirebasePlace[] = [
       parking: "가능",
       chkbabycarriage: "가능",
       chkpet: "가능(리드줄필수)",
-      chkcreditcard: "가능"
-    } as AttractionDetail
+      chkcreditcard: "가능",
+    } as AttractionDetail,
   },
   {
     PLACE_ID: 2004,
     NAME: "우도 서빈백사",
     CATEGORY: { main: "관광지", sub: "해변" },
-    LOC_LAT: 33.5000,
-    LOC_LNG: 126.9500,
+    LOC_LAT: 33.5,
+    LOC_LNG: 126.95,
     IMAGE_URL: "https://via.placeholder.com/300x200?text=Udo+Beach",
     ADDRESS: "제주특별자치도 제주시 우도면",
     RATING: 4.8,
@@ -310,15 +315,15 @@ export const mockAttractions: FirebasePlace[] = [
       parking: "가능(협소)",
       chkbabycarriage: "어려움",
       chkpet: "가능",
-      chkcreditcard: "없음"
-    } as AttractionDetail
+      chkcreditcard: "없음",
+    } as AttractionDetail,
   },
   {
     PLACE_ID: 2005,
     NAME: "제주민속촌",
     CATEGORY: { main: "관광지", sub: "문화" },
-    LOC_LAT: 33.3200,
-    LOC_LNG: 126.8300,
+    LOC_LAT: 33.32,
+    LOC_LNG: 126.83,
     IMAGE_URL: "https://via.placeholder.com/300x200?text=Folk+Village",
     ADDRESS: "제주특별자치도 서귀포시 표선면",
     RATING: 4.4,
@@ -333,9 +338,9 @@ export const mockAttractions: FirebasePlace[] = [
       parking: "가능",
       chkbabycarriage: "가능(대여가능)",
       chkpet: "가능(소형견)",
-      chkcreditcard: "가능"
-    } as AttractionDetail
-  }
+      chkcreditcard: "가능",
+    } as AttractionDetail,
+  },
 ];
 
 // Mock Cafe Data (5 items)
@@ -344,8 +349,8 @@ export const mockCafes: FirebasePlace[] = [
     PLACE_ID: 3001,
     NAME: "바다 뷰 카페",
     CATEGORY: { main: "음식점", sub: "카페" },
-    LOC_LAT: 33.4800,
-    LOC_LNG: 126.4000,
+    LOC_LAT: 33.48,
+    LOC_LNG: 126.4,
     IMAGE_URL: "https://via.placeholder.com/300x200?text=Ocean+Cafe",
     ADDRESS: "제주특별자치도 제주시 애월읍",
     RATING: 4.6,
@@ -362,15 +367,15 @@ export const mockCafes: FirebasePlace[] = [
       opentimefood: "10:00~20:00",
       restdatefood: "매주 월요일",
       parkingfood: "가능",
-      reservationfood: "불가"
-    } as RestaurantDetail
+      reservationfood: "불가",
+    } as RestaurantDetail,
   },
   {
     PLACE_ID: 3002,
     NAME: "숲속 작은 찻집",
     CATEGORY: { main: "음식점", sub: "카페" },
-    LOC_LAT: 33.4200,
-    LOC_LNG: 126.6000,
+    LOC_LAT: 33.42,
+    LOC_LNG: 126.6,
     IMAGE_URL: "https://via.placeholder.com/300x200?text=Forest+Tea",
     ADDRESS: "제주특별자치도 제주시 조천읍",
     RATING: 4.8,
@@ -387,15 +392,15 @@ export const mockCafes: FirebasePlace[] = [
       opentimefood: "11:00~19:00",
       restdatefood: "화요일",
       parkingfood: "가능",
-      reservationfood: "가능"
-    } as RestaurantDetail
+      reservationfood: "가능",
+    } as RestaurantDetail,
   },
   {
     PLACE_ID: 3003,
     NAME: "힙한 창고형 카페",
     CATEGORY: { main: "음식점", sub: "카페" },
-    LOC_LAT: 33.2500,
-    LOC_LNG: 126.5600,
+    LOC_LAT: 33.25,
+    LOC_LNG: 126.56,
     IMAGE_URL: "https://via.placeholder.com/300x200?text=Hip+Cafe",
     ADDRESS: "제주특별자치도 서귀포시",
     RATING: 4.3,
@@ -412,15 +417,15 @@ export const mockCafes: FirebasePlace[] = [
       opentimefood: "09:00~22:00",
       restdatefood: "연중무휴",
       parkingfood: "불가",
-      reservationfood: "불가"
-    } as RestaurantDetail
+      reservationfood: "불가",
+    } as RestaurantDetail,
   },
   {
     PLACE_ID: 3004,
     NAME: "노을 맛집 카페",
     CATEGORY: { main: "음식점", sub: "카페" },
-    LOC_LAT: 33.3000,
-    LOC_LNG: 126.1800,
+    LOC_LAT: 33.3,
+    LOC_LNG: 126.18,
     IMAGE_URL: "https://via.placeholder.com/300x200?text=Sunset+Cafe",
     ADDRESS: "제주특별자치도 제주시 한경면",
     RATING: 4.7,
@@ -437,15 +442,15 @@ export const mockCafes: FirebasePlace[] = [
       opentimefood: "12:00~21:00",
       restdatefood: "수요일",
       parkingfood: "가능",
-      reservationfood: "불가"
-    } as RestaurantDetail
+      reservationfood: "불가",
+    } as RestaurantDetail,
   },
   {
     PLACE_ID: 3005,
     NAME: "감귤 농장 카페",
     CATEGORY: { main: "음식점", sub: "카페" },
-    LOC_LAT: 33.2800,
-    LOC_LNG: 126.6500,
+    LOC_LAT: 33.28,
+    LOC_LNG: 126.65,
     IMAGE_URL: "https://via.placeholder.com/300x200?text=Farm+Cafe",
     ADDRESS: "제주특별자치도 서귀포시 남원읍",
     RATING: 4.9,
@@ -462,9 +467,9 @@ export const mockCafes: FirebasePlace[] = [
       opentimefood: "09:00~18:00",
       restdatefood: "연중무휴",
       parkingfood: "가능",
-      reservationfood: "체험예약필수"
-    } as RestaurantDetail
-  }
+      reservationfood: "체험예약필수",
+    } as RestaurantDetail,
+  },
 ];
 
 // Mock Restaurant Data (5 items)
@@ -473,8 +478,8 @@ export const mockRestaurants: FirebasePlace[] = [
     PLACE_ID: 4001,
     NAME: "제주 흑돼지 명가",
     CATEGORY: { main: "음식점", sub: "한식" },
-    LOC_LAT: 33.5000,
-    LOC_LNG: 126.5400,
+    LOC_LAT: 33.5,
+    LOC_LNG: 126.54,
     IMAGE_URL: "https://via.placeholder.com/300x200?text=Black+Pork",
     ADDRESS: "제주특별자치도 제주시",
     RATING: 4.8,
@@ -491,15 +496,15 @@ export const mockRestaurants: FirebasePlace[] = [
       opentimefood: "16:00~23:00",
       restdatefood: "연중무휴",
       parkingfood: "가능",
-      reservationfood: "가능"
-    } as RestaurantDetail
+      reservationfood: "가능",
+    } as RestaurantDetail,
   },
   {
     PLACE_ID: 4002,
     NAME: "해녀의 집",
     CATEGORY: { main: "음식점", sub: "해산물" },
-    LOC_LAT: 33.5500,
-    LOC_LNG: 126.7500,
+    LOC_LAT: 33.55,
+    LOC_LNG: 126.75,
     IMAGE_URL: "https://via.placeholder.com/300x200?text=Seafood",
     ADDRESS: "제주특별자치도 제주시 구좌읍",
     RATING: 4.5,
@@ -516,15 +521,15 @@ export const mockRestaurants: FirebasePlace[] = [
       opentimefood: "08:00~17:00",
       restdatefood: "파도심한날",
       parkingfood: "가능",
-      reservationfood: "불가"
-    } as RestaurantDetail
+      reservationfood: "불가",
+    } as RestaurantDetail,
   },
   {
     PLACE_ID: 4003,
     NAME: "갈치조림 맛집",
     CATEGORY: { main: "음식점", sub: "한식" },
-    LOC_LAT: 33.2500,
-    LOC_LNG: 126.4000,
+    LOC_LAT: 33.25,
+    LOC_LNG: 126.4,
     IMAGE_URL: "https://via.placeholder.com/300x200?text=Galchi",
     ADDRESS: "제주특별자치도 서귀포시 중문",
     RATING: 4.6,
@@ -541,15 +546,15 @@ export const mockRestaurants: FirebasePlace[] = [
       opentimefood: "10:00~21:00",
       restdatefood: "목요일",
       parkingfood: "가능",
-      reservationfood: "가능"
-    } as RestaurantDetail
+      reservationfood: "가능",
+    } as RestaurantDetail,
   },
   {
     PLACE_ID: 4004,
     NAME: "고기국수 전문점",
     CATEGORY: { main: "음식점", sub: "국수" },
-    LOC_LAT: 33.4900,
-    LOC_LNG: 126.5000,
+    LOC_LAT: 33.49,
+    LOC_LNG: 126.5,
     IMAGE_URL: "https://via.placeholder.com/300x200?text=Noodles",
     ADDRESS: "제주특별자치도 제주시",
     RATING: 4.4,
@@ -566,15 +571,15 @@ export const mockRestaurants: FirebasePlace[] = [
       opentimefood: "09:00~19:00",
       restdatefood: "수요일",
       parkingfood: "협소",
-      reservationfood: "불가"
-    } as RestaurantDetail
+      reservationfood: "불가",
+    } as RestaurantDetail,
   },
   {
     PLACE_ID: 4005,
     NAME: "오션 뷰 횟집",
     CATEGORY: { main: "음식점", sub: "회" },
-    LOC_LAT: 33.4500,
-    LOC_LNG: 126.3000,
+    LOC_LAT: 33.45,
+    LOC_LNG: 126.3,
     IMAGE_URL: "https://via.placeholder.com/300x200?text=Sashimi",
     ADDRESS: "제주특별자치도 제주시 애월읍",
     RATING: 4.7,
@@ -591,14 +596,14 @@ export const mockRestaurants: FirebasePlace[] = [
       opentimefood: "12:00~22:00",
       restdatefood: "연중무휴",
       parkingfood: "가능",
-      reservationfood: "필수"
-    } as RestaurantDetail
-  }
+      reservationfood: "필수",
+    } as RestaurantDetail,
+  },
 ];
 
 export const allMockPlaces = [
   ...mockLodgings,
   ...mockAttractions,
   ...mockCafes,
-  ...mockRestaurants
+  ...mockRestaurants,
 ];

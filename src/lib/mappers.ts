@@ -11,7 +11,7 @@
  */
 
 import { PlanItem } from "@/types/place";
-import { FirebasePlace } from "@/types/places";
+import type { FirebasePlace } from "@/types/places";
 
 /**
  * @desc Firebase PLACE 데이터를 앱 내부 PlanItem으로 변환

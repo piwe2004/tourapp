@@ -138,25 +138,25 @@ function DefaultHeader() {
     ] as const;
 
     return (
-        <header className="flex items-center justify-between md:h-full border-gray-100 md:border-t-0 md:border-r md:flex-col md:py-8 md:bg-white pt-6 px-6 md:p-0">
-            <Link href="/" title="메인페이지" className="flex items-center gap-2 relative md:mb-12 shrink">
-                <h1 className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-lg md:w-12 md:h-12 md:text-2xl after:content-['P'] shadow-lg shadow-primary/30"></h1>
-                <p className="text-2xl font-extrabold tracking-tight md:text-[0px] md:absolute md:top-0">
+        <header className="flex items-center justify-between xl:justify-start xl:h-full border-gray-100 xl:border-t-0 xl:border-r xl:flex-col xl:py-8 xl:bg-white pt-6 px-6 xl:p-0">
+            <Link href="/" title="메인페이지" className="flex items-center gap-2 relative xl:mb-12 shrink">
+                <h1 className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-lg xl:w-12 xl:h-12 xl:text-2xl after:content-['P'] shadow-lg shadow-primary/30"></h1>
+                <p className="text-2xl font-extrabold tracking-tight xl:text-[0px] xl:absolute xl:top-0">
                     Planni
                 </p>
             </Link>
-            <nav className="h-[72px] fixed bottom-0 left-0 w-full border-t border-gray-100 z-50 md:relative md:w-24 md:h-full md:border-0 bg-white/90 backdrop-blur-lg">
+            <nav className="h-[72px] fixed bottom-0 left-0 w-full border-t border-gray-100 z-50 xl:relative xl:w-24 xl:h-auto xl:border-0 bg-white/90 backdrop-blur-lg">
 
                 {/* Nav Items Container */}
-                <div className="flex justify-between items-center h-full px-6 md:px-0 md:flex-col md:justify-start md:gap-8 md:w-full">
+                <div className="flex justify-between items-center h-full px-6 xl:px-0 xl:flex-col xl:justify-start xl:gap-8 xl:w-full">
                     {NAV_ITEMS.map((item) => {
                         const isActive = activePage === item.id;
 
                         // "Add" button Special Style (Mobile FAB-like)
                         if (item.id === 'add') {
                             return (
-                                <div key={item.id} className="relative md:hidden -top-5">
-                                    <button className="w-14 h-14 bg-primary rounded-full flex items-center justify-center shadow-lg shadow-primary/40 text-black transform active:scale-95 transition-transform border-4 border-background-tablet-light">
+                                <div key={item.id} className="relative xl:hidden -top-5">
+                                    <button className="w-14 h-14 bg-primary rounded-full flex items-center justify-center shadow-lg shadow-primary/40 text-black transform active:scale-95 transition-transform">
                                         <span className="material-icons-round text-3xl">add</span>
                                     </button>
                                 </div>
@@ -167,16 +167,16 @@ function DefaultHeader() {
                             <button
                                 key={item.id}
                                 onClick={() => setActivePage(item.id)}
-                                className={`h-[40px] flex flex-col items-center justify-between md:gap-1 md:h-auto w-12 md:w-full group transition-all
+                                className={`h-[40px] flex flex-col items-center justify-between xl:gap-1 xl:h-auto w-12 xl:w-full group transition-all
                                     ${isActive ? 'text-primary' : 'text-slate-400 hover:text-slate-600'}`}
                             >
                                 {/* Desktop Icon Background */}
-                                <div className={`h-[18px] md:flex md:w-12 md:h-12 items-center justify-center rounded-2xl transition-all duration-300
-                                    ${isActive ? 'md:bg-primary/10' : 'text-gray-400 group-hover:bg-gray-100'}`}>
+                                <div className={`h-[18px] xl:flex xl:w-12 xl:h-12 items-center justify-center rounded-2xl transition-all duration-300
+                                    ${isActive ? 'xl:bg-primary/10' : 'text-gray-400 group-hover:bg-gray-100'}`}>
                                     <span className="material-icons-round text-2xl">{item.icon}</span>
                                 </div>
                                 {/* Label */}
-                                <span className={`text-[10px] md:text-[13px] font-light md:font-normal md:mt-1 ${isActive ? ' font-normal md:font-semibold' : ''}`}>
+                                <span className={`text-[10px] xl:text-[13px] font-light xl:font-normal xl:mt-1 ${isActive ? ' font-normal xl:font-semibold' : ''}`}>
                                     {item.label}
                                 </span>
                             </button>
@@ -184,7 +184,7 @@ function DefaultHeader() {
                     })}
                 </div>
             </nav>
-            <div className="w-10 h-10 rounded-full border-2 overflow-hidden border-white shadow-sm md:w-12 md:h-12 shrink">
+            <div className="w-10 h-10 rounded-full border-2 overflow-hidden border-white shadow-sm xl:w-12 xl:h-12 shrink xl:mt-auto">
                 <img
                     alt="User profile"
                     className="w-full h-full object-cover"

@@ -14,29 +14,31 @@ const config: Config = {
         foreground: "var(--foreground)",
         // Brand Colors
         primary: {
-          DEFAULT: "#13ECC8",
-          hover: "#0d9488",
+          DEFAULT: "#4338CA",
+          hover: "#3730A3",
           tint: "#E0E7FF",
-          "50": "#f0fdfa",
-          "100": "#ccfbf1",
-          "300": "#5eead4",
-          "400": "#2dd4bf",
-          "600": "#0d9488", // primary-dark
-        },
-        secondary: {
-          DEFAULT: "#4f46e5",
-          hover: "#312e81",
           "50": "#eef2ff",
           "100": "#e0e7ff",
-          "500": "#6366f1",
-          "900": "#312e81",
+          "300": "#818cf8",
+          "400": "#6366f1",
+          "600": "#4338ca", // primary-dark
+        },
+        secondary: {
+          DEFAULT: "#FF5722",
+          hover: "#EA4335",
+          "50": "#fff3e0",
+          "100": "#ffe0b2",
+          "500": "#ff9800",
+          "900": "#e65100",
+          footer: "#0f1a2c",
         },
         accent: {
-          DEFAULT: "#f97316",
-          hover: "#ea580c",
-          "50": "eef2ff",
-          "100": "#ffedd5",
+          DEFAULT: "#D32F2F",
+          hover: "#C62828",
+          "50": "#ffebee",
+          "100": "#ffcdd2",
         },
+
         // Semantic Colors
         alert: {
           DEFAULT: "#D32F2F",

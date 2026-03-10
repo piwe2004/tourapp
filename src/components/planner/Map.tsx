@@ -16,7 +16,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { PlanItem } from '@/types/place';
 import { getRoutePath } from '@/services/directionService';
-import './PlannerMap.scss'; // [New] Global Map Marker Styles
 
 interface MapProps {
   schedule: PlanItem[];
@@ -129,20 +128,20 @@ export default function Map({ schedule, selectedDay, selectedItemId, onItemClick
         map.morph(new window.naver.maps.LatLng(selectedItem.LOC_LAT, selectedItem.LOC_LNG), 14);
       }
     } else {
-        if (dayItems.length > 0) {
-            // 마커들이 모두 보이도록 바운드 조정
-            const bounds = new window.naver.maps.LatLngBounds(
-                 new window.naver.maps.LatLng(dayItems[0].LOC_LAT!, dayItems[0].LOC_LNG!),
-                 new window.naver.maps.LatLng(dayItems[0].LOC_LAT!, dayItems[0].LOC_LNG!)
-            );
-            dayItems.forEach(item => {
-                bounds.extend(new window.naver.maps.LatLng(item.LOC_LAT!, item.LOC_LNG!));
-            });
-            map.fitBounds(bounds, { top: 50, bottom: 50, left: 50, right: 50 });
-        } else {
-            map.setCenter(center);
-            map.setZoom(11);
-        }
+      if (dayItems.length > 0) {
+        // 마커들이 모두 보이도록 바운드 조정
+        const bounds = new window.naver.maps.LatLngBounds(
+          new window.naver.maps.LatLng(dayItems[0].LOC_LAT!, dayItems[0].LOC_LNG!),
+          new window.naver.maps.LatLng(dayItems[0].LOC_LAT!, dayItems[0].LOC_LNG!)
+        );
+        dayItems.forEach(item => {
+          bounds.extend(new window.naver.maps.LatLng(item.LOC_LAT!, item.LOC_LNG!));
+        });
+        map.fitBounds(bounds, { top: 50, bottom: 50, left: 50, right: 50 });
+      } else {
+        map.setCenter(center);
+        map.setZoom(11);
+      }
     }
 
   }, [schedule, selectedDay, selectedItemId, isMapLoaded, onItemClick]);
@@ -166,49 +165,49 @@ export default function Map({ schedule, selectedDay, selectedItemId, onItemClick
     // 아이템이 2개 미만이면 경로 없음 -> 초기화는 위 3-1에서 처리되거나, 여기서 명시적으로 빈배열 set 가능하지만
     // schedule 변경 시에도 반응해야 하므로 여기서도 체크 필요
     if (dayItems.length < 2) {
-        setRoutePath([]);
-        setRouteSections([]);
-        return;
+      setRoutePath([]);
+      setRouteSections([]);
+      return;
     }
 
     const fetchDirections = async () => {
-        // API 제한 고려: 최대 5개 경유지 + 시작 + 끝 = 7개 포인트까지 한 번에 가능
-        if (dayItems.length <= 7) {
-            const start = dayItems[0];
-            const goal = dayItems[dayItems.length - 1];
-            const waypoints = dayItems.slice(1, -1);
+      // API 제한 고려: 최대 5개 경유지 + 시작 + 끝 = 7개 포인트까지 한 번에 가능
+      if (dayItems.length <= 7) {
+        const start = dayItems[0];
+        const goal = dayItems[dayItems.length - 1];
+        const waypoints = dayItems.slice(1, -1);
 
-            const result = await getRoutePath(
-                { LOC_LAT: start.LOC_LAT!, LOC_LNG: start.LOC_LNG! },
-                { LOC_LAT: goal.LOC_LAT!, LOC_LNG: goal.LOC_LNG! },
-                waypoints.map(p => ({ LOC_LAT: p.LOC_LAT!, LOC_LNG: p.LOC_LNG! }))
-            );
+        const result = await getRoutePath(
+          { LOC_LAT: start.LOC_LAT!, LOC_LNG: start.LOC_LNG! },
+          { LOC_LAT: goal.LOC_LAT!, LOC_LNG: goal.LOC_LNG! },
+          waypoints.map(p => ({ LOC_LAT: p.LOC_LAT!, LOC_LNG: p.LOC_LNG! }))
+        );
 
-            if (!isCancelled) {
-                if (result && result.path) {
-                    const naverPath = result.path.map(p => new window.naver.maps.LatLng(p.lat, p.lng));
-                    setRoutePath(naverPath);
-                    setRouteSections(result.sections || []);
-                } else {
-                    const straightPath = dayItems.map(p => new window.naver.maps.LatLng(p.LOC_LAT!, p.LOC_LNG!));
-                    setRoutePath(straightPath);
-                    setRouteSections([]);
-                }
-            }
-        } else {
-            // 7개 초과 시 직선 경로
-            if (!isCancelled) {
-                const straightPath = dayItems.map(p => new window.naver.maps.LatLng(p.LOC_LAT!, p.LOC_LNG!));
-                setRoutePath(straightPath);
-                setRouteSections([]);
-            }
+        if (!isCancelled) {
+          if (result && result.path) {
+            const naverPath = result.path.map(p => new window.naver.maps.LatLng(p.lat, p.lng));
+            setRoutePath(naverPath);
+            setRouteSections(result.sections || []);
+          } else {
+            const straightPath = dayItems.map(p => new window.naver.maps.LatLng(p.LOC_LAT!, p.LOC_LNG!));
+            setRoutePath(straightPath);
+            setRouteSections([]);
+          }
         }
+      } else {
+        // 7개 초과 시 직선 경로
+        if (!isCancelled) {
+          const straightPath = dayItems.map(p => new window.naver.maps.LatLng(p.LOC_LAT!, p.LOC_LNG!));
+          setRoutePath(straightPath);
+          setRouteSections([]);
+        }
+      }
     };
 
     fetchDirections();
-    
+
     return () => {
-        isCancelled = true;
+      isCancelled = true;
     };
 
   }, [schedule, selectedDay, showPath, isMapLoaded]);
@@ -220,22 +219,22 @@ export default function Map({ schedule, selectedDay, selectedItemId, onItemClick
 
     // Polyline 업데이트
     if (polylineRef.current) {
-        polylineRef.current.setMap(null);
-        polylineRef.current = null;
+      polylineRef.current.setMap(null);
+      polylineRef.current = null;
     }
 
     if (showPath && routePath.length > 1) {
-        const polyline = new window.naver.maps.Polyline({
-            map: map,
-            path: routePath,
-            strokeColor: "#4f46e5",
-            strokeOpacity: 0.8,
-            strokeWeight: 5,
-            strokeStyle: "solid",
-            strokeLineCap: "round",
-            strokeLineJoin: "round",
-        });
-        polylineRef.current = polyline;
+      const polyline = new window.naver.maps.Polyline({
+        map: map,
+        path: routePath,
+        strokeColor: "#4f46e5",
+        strokeOpacity: 0.8,
+        strokeWeight: 5,
+        strokeStyle: "solid",
+        strokeLineCap: "round",
+        strokeLineJoin: "round",
+      });
+      polylineRef.current = polyline;
     }
 
     // 소요시간 마커 업데이트
@@ -243,17 +242,17 @@ export default function Map({ schedule, selectedDay, selectedItemId, onItemClick
     durationMarkersRef.current = [];
 
     if (showPath && routeSections.length > 0 && routePath.length > 0) {
-        routeSections.forEach((section) => {
-            // 섹션의 중간 지점 계산
-            const midIndex = section.pointIndex + Math.floor(section.pointCount / 2);
-            
-            if (midIndex < routePath.length) {
-                const position = routePath[midIndex];
-                const durationMin = Math.round(section.duration / 60000); // 밀리초 -> 분
-                
-                const durationText = durationMin <= 0 ? "약 1분" : `${durationMin}분`;
+      routeSections.forEach((section) => {
+        // 섹션의 중간 지점 계산
+        const midIndex = section.pointIndex + Math.floor(section.pointCount / 2);
 
-                const content = `
+        if (midIndex < routePath.length) {
+          const position = routePath[midIndex];
+          const durationMin = Math.round(section.duration / 60000); // 밀리초 -> 분
+
+          const durationText = durationMin <= 0 ? "약 1분" : `${durationMin}분`;
+
+          const content = `
                   <div class="planner-map-duration-marker" style="
                     background-color: white;
                     border: 1px solid #4f46e5;
@@ -270,19 +269,19 @@ export default function Map({ schedule, selectedDay, selectedItemId, onItemClick
                   </div>
                 `;
 
-                const marker = new window.naver.maps.Marker({
-                    position: position,
-                    map: map,
-                    icon: {
-                        content: content,
-                        size: new window.naver.maps.Size(0, 0),
-                        anchor: new window.naver.maps.Point(0, 0),
-                    }
-                });
-                
-                durationMarkersRef.current.push(marker);
+          const marker = new window.naver.maps.Marker({
+            position: position,
+            map: map,
+            icon: {
+              content: content,
+              size: new window.naver.maps.Size(0, 0),
+              anchor: new window.naver.maps.Point(0, 0),
             }
-        });
+          });
+
+          durationMarkersRef.current.push(marker);
+        }
+      });
     }
 
   }, [routePath, routeSections, showPath, isMapLoaded]);

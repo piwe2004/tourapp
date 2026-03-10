@@ -12,7 +12,7 @@
 
 import { db } from "@/lib/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import { FirebasePlace } from "@/types/places";
+import type { FirebasePlace } from "@/types/places";
 
 // ... (imports remain the same as previous files, ensuring necessary imports like 'where', 'documentId' etc if needed)
 
@@ -20,13 +20,13 @@ import { FirebasePlace } from "@/types/places";
  * @desc 주어진 PLACE_ID 목록에 해당하는 Firebase 데이터를 일괄 조회 (숫자형/문자열 ID 모두 대응)
  */
 export async function getPlacesByIds(
-  ids: (string | number)[]
+  ids: (string | number)[],
 ): Promise<FirebasePlace[]> {
   if (!ids || ids.length === 0) return [];
 
   console.log(
     `[Server][Firebase Debug] 🆔 getPlacesByIds 호출 | 요청된 ID: ${ids.length}개`,
-    ids.slice(0, 5)
+    ids.slice(0, 5),
   );
 
   const placesRef = collection(db, "PLACES");
@@ -37,7 +37,7 @@ export async function getPlacesByIds(
   const uniqueIds = Array.from(new Set(ids));
   if (uniqueIds.length > 30) {
     console.warn(
-      `[Server] Too many IDs to fetch (${uniqueIds.length}). Skipping to prevent error.`
+      `[Server] Too many IDs to fetch (${uniqueIds.length}). Skipping to prevent error.`,
     );
     return [];
   }
@@ -61,7 +61,7 @@ export async function getPlacesByIds(
         chunkResults.push(doc.data() as FirebasePlace);
       });
       console.log(
-        `[Server][Firebase Debug] 📦 ID 청크 조회 | 요청: ${chunk.length}개 -> 발견: ${chunkResults.length}개`
+        `[Server][Firebase Debug] 📦 ID 청크 조회 | 요청: ${chunk.length}개 -> 발견: ${chunkResults.length}개`,
       );
       return chunkResults;
     });

@@ -63,7 +63,7 @@ export default function RootLayout({
           strategy="beforeInteractive"
           src={`https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID}&submodules=geocoder`}
         />
-        <div className="md:flex md:flex-row h-screen w-screen bg-light font-display text-slate-800">
+        <div className="xl:flex xl:flex-row h-screen w-screen bg-light font-display text-slate-800">
           {/* Header */}
           <Header />
           {/* Main Content */}

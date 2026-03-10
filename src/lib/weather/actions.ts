@@ -1,7 +1,8 @@
-'use server';
+"use server";
 
 import { getWeatherForDate, WeatherData } from "./service";
-import { checkRainySchedule, RainyScheduleItem } from "./plan-b";
+import { checkRainySchedule } from "./plan-b";
+import type { RainyScheduleItem } from "./plan-b";
 import { PlanItem } from "@/types/place";
 export type { RainyScheduleItem };
 
@@ -11,7 +12,11 @@ export type { RainyScheduleItem };
  * @param lng 경도
  * @param date 날짜 (YYYY-MM-DD)
  */
-export async function getWeather(lat: number, lng: number, date: string): Promise<WeatherData> {
+export async function getWeather(
+  lat: number,
+  lng: number,
+  date: string,
+): Promise<WeatherData> {
   // 에러 핸들링은 service 내부에서 Fallback 처리되므로 바로 호출
   return await getWeatherForDate(lat, lng, date);
 }
@@ -21,6 +26,9 @@ export async function getWeather(lat: number, lng: number, date: string): Promis
  * @param schedule 전체 일정 배열
  * @param date 여행 시작 날짜
  */
-export async function getPlanBRecommendations(schedule: PlanItem[], date: string): Promise<RainyScheduleItem[]> {
+export async function getPlanBRecommendations(
+  schedule: PlanItem[],
+  date: string,
+): Promise<RainyScheduleItem[]> {
   return await checkRainySchedule(schedule, date);
 }

@@ -19,7 +19,6 @@ import { WeatherData } from '@/lib/weather/service';
 import { TravelContext } from '@/lib/actions';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import DayItems from '@/components/planner/DayItems';
-import styles from './PlannerTimeline.module.scss';
 
 interface PlannerTimelineProps {
     days: number[];
@@ -92,10 +91,10 @@ export default function PlannerTimeline({
                         const dateStr = `${String(d.getMonth() + 1)}.${String(d.getDate()).padStart(2, '0')}`;
                         const weekDay = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
                         const isActive = selectedDay === day;
-                        
+
                         return (
-                            <button 
-                                key={day} 
+                            <button
+                                key={day}
                                 onClick={() => onDaySelect(day)}
                                 className={isActive ? styles.active : ''}
                             >
@@ -107,16 +106,16 @@ export default function PlannerTimeline({
 
                 {/* Weather Widget (From Screenshot) */}
                 <div className={styles.weatherWidget}>
-                     <div className={styles.iconBox}>
+                    <div className={styles.iconBox}>
                         {weatherData?.sky === '맑음' ? (
                             <i className="fa-solid fa-sun text-orange-500"></i>
-                         ) : weatherData?.pty !== '없음' ? (
+                        ) : weatherData?.pty !== '없음' ? (
                             <i className="fa-solid fa-umbrella text-blue-500"></i>
-                         ) : (
+                        ) : (
                             <i className="fa-solid fa-cloud text-slate-400"></i>
-                         )}
-                     </div>
-                     <div className={styles.info}>
+                        )}
+                    </div>
+                    <div className={styles.info}>
                         <div className={styles.summary}>
                             {weatherData ? `${weatherData.sky} ${weatherData.tmp}` : '날씨 정보 로딩중'}
                         </div>
@@ -124,7 +123,7 @@ export default function PlannerTimeline({
                             <span>제주시</span>
                             {weatherData?.pty !== '없음' && <span className="text-blue-500">오후에 비 예상, 우산 챙기세요 ☔</span>}
                         </div>
-                     </div>
+                    </div>
                 </div>
             </div>
 
@@ -154,8 +153,8 @@ export default function PlannerTimeline({
                                                     <div className={styles.marker}></div>
 
                                                     {/* Card Content */}
-                                                     <DayItems 
-                                                        item={item} 
+                                                    <DayItems
+                                                        item={item}
                                                         index={index}
                                                         rainRisk={getRainRisk(item.PLACE_ID)}
                                                         onPlanBClick={onPlanBClick}
@@ -167,7 +166,7 @@ export default function PlannerTimeline({
                                                         onAddStopClick={() => onAddStopClick(index + 1)}
                                                         isLastItem={index === currentDayItems.length - 1}
                                                         className={styles.card}
-                                                     />
+                                                    />
                                                 </div>
                                             )}
                                         </Draggable>
@@ -179,10 +178,10 @@ export default function PlannerTimeline({
                     </DragDropContext>
                 )}
 
-                 {/* Add Item Button */}
-                 <button className={styles.addItemBtn} onClick={onAddDayClick}>
+                {/* Add Item Button */}
+                <button className={styles.addItemBtn} onClick={onAddDayClick}>
                     + 일정 추가하기
-                 </button>
+                </button>
             </div>
         </section>
     );

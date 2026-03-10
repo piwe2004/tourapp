@@ -16,7 +16,6 @@ interface ContentBodyProps {
 /**
  * @desc 카드 내부의 실제 컨텐츠 (Premium Redesign)
  */
-import styles from '../PlannerTimeline.module.scss'; // Component-level styles
 
 export function ContentBody({
     item,
@@ -27,7 +26,7 @@ export function ContentBody({
 
     return (
         <div className={styles.cardContentWrapper}> {/* Wrapper if needed, or just fragment */}
-            
+
             {/* 1. Top Right Info (Time & Badges) */}
             <div className={styles.timeBadge}>
                 <Clock size={12} />
@@ -46,7 +45,7 @@ export function ContentBody({
                 {/* 2. Left Icon / Visual */}
                 <div className={styles.iconVisual}>
                     {/* Use logic to determine icon or image */}
-                    <i className={cn("text-2xl", getIcon(item.type))}></i> 
+                    <i className={cn("text-2xl", getIcon(item.type))}></i>
                 </div>
 
                 {/* 3. Text Info */}

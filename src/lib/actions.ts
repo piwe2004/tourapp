@@ -30,7 +30,7 @@ import {
   QueryConstraint,
 } from "firebase/firestore";
 import { headers } from "next/headers";
-import { FirebasePlace } from "@/types/places";
+import type { FirebasePlace } from "@/types/places";
 import { findRegionCodes } from "@/lib/area-codes";
 export type { FirebasePlace };
 

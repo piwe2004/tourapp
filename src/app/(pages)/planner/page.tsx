@@ -459,7 +459,7 @@ function PlannerContent() {
                 </div>
 
                 {/* 2. 우측 지도 패널 (PCOnly) */}
-                <div className={`flex-1 relative bg-slate-200 ${isMobileMapOpen ? 'fixed inset-0 z-modal' : 'max-lg:hidden'}`}>
+                <div className={`flex-1 relative bg-slate-200 ${isMobileMapOpen ? 'fixed inset-0 z-modal' : 'max-xl:hidden'}`}>
                     <PlannerMapPanel
                         schedule={isSpotSearch ? (travelContext?.searchResults || []) : schedule}
                         selectedDay={isSpotSearch ? 1 : selectedDay}
